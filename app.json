@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Kaarya",
+    "slug": "kaarya",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "kaarya",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6B35"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.kaarya.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundColor": "#FF6B35"
+      },
+      "package": "com.kaarya.app"
+    },
+    "web": {
+      "output": "static",
+      "bundler": "metro"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FF6B35",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 120
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
