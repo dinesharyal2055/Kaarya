@@ -1,4 +1,5 @@
 const initSqlJs = require('sql.js');
+const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 
@@ -25,6 +26,7 @@ async function getDb() {
   db.run('PRAGMA foreign_keys = ON');
 
   initSchema();
+  seedDemoAccounts();
   seedJobs();
   seedConversations();
   save();
@@ -209,6 +211,59 @@ function initSchema() {
       created_at TEXT DEFAULT (datetime('now'))
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS fcm_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      token TEXT NOT NULL UNIQUE,
+      created_at TEXT DEFAULT (datetime('now')),
+      expires_at TEXT NOT NULL
+    )
+  `);
+
+  // Index for fast token lookups by user
+  db.run('CREATE INDEX IF NOT EXISTS idx_fcm_tokens_user ON fcm_tokens(user_id)');
+
+  // Saved jobs — providers can bookmark jobs to review later
+  db.run(`
+    CREATE TABLE IF NOT EXISTS saved_jobs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id),
+      job_id INTEGER NOT NULL REFERENCES jobs(id),
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, job_id)
+    )
+  `);
+  db.run('CREATE INDEX IF NOT EXISTS idx_saved_jobs_user ON saved_jobs(user_id)');
+}
+
+/**
+ * Insert the 4 permanent demo accounts.
+ * Uses INSERT OR IGNORE with fixed IDs so it is idempotent — calling it
+ * repeatedly never creates duplicates. Accounts are skipped if they already exist.
+ */
+function seedDemoAccounts() {
+  // Hash password at runtime so it is correct every time
+  const pwHash = bcrypt.hashSync('demo1234', 10);
+
+  const demoUsers = [
+    // Service Providers (verified)
+    [100, 'Ganesh Pandey',   'ganesh@kaarya.demo', '9801000001', 'provider', 1],
+    [101, 'Abhinav Kaphle',  'abhinav@kaarya.demo','9801000002', 'provider', 1],
+    // Task Posters (verified so they can log in without OTP)
+    [102, 'Dinesh Aryal',    'dinesh@kaarya.demo', '9801000003', 'seeker',  1],
+    [103, 'Suman Adhikari',  'suman@kaarya.demo', '9801000004', 'seeker',  1],
+  ];
+
+  for (const [id, name, email, phone, role, isVerified] of demoUsers) {
+    db.run(
+      `INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role, is_verified, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+      [id, name, email, phone, pwHash, role, isVerified]
+    );
+  }
+  console.log('[db] Demo accounts ready (password: demo1234)');
 }
 
 function seedJobs() {
@@ -216,27 +271,25 @@ function seedJobs() {
   const count = result.length > 0 ? result[0].values[0][0] : 0;
   if (count > 0) return;
 
-  // Insert a demo seeker so FK constraint is satisfied for seeded jobs
-  // Password: password123
-  db.run(`
-    INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role)
-    VALUES (2, 'Demo Seeker', 'demo@kaarya.com', '9800000001', '$2a$10$aKK1lJ1zcrgGz0aZoEMhxuHUDaULmHfh2Vs3qfOA1wgnSImZ41PNC', 'seeker')
-  `);
-
+  // Assign 8 demo jobs across Dinesh (id=102) and Suman (id=103)
+  // Dinesh: 4 jobs (plumbing, painting, appliance, moving)
+  // Suman: 4 jobs (cleaning, electrical, carpentry, appliance)
   const jobs = [
-    ['Fix leaking kitchen tap', 'Kitchen tap has been dripping for days. Need a plumber ASAP.', 'plumbing', 'Thamel', 800, 1200],
-    ['Paint 2 bedroom walls', 'Two bedrooms need fresh paint. White color preferred.', 'painting', 'Lazimpat', 8000, 12000],
-    ['AC not cooling properly', 'Split AC unit is not cooling the room efficiently.', 'appliance', 'Jhamsikhel', 2000, 3500],
-    ['Move 3-seater sofa to 2nd floor', 'Need help moving a heavy 3-seater sofa from ground to 2nd floor.', 'moving', 'Kumaripati', 1500, 2000],
-    ['Deep clean 2BHK apartment', 'Full deep cleaning of a 2-bedroom apartment including kitchen and bathrooms.', 'cleaning', 'Baneshwor', 3500, 5000],
-    ['Fix electrical switchboard', 'One switchboard has a loose connection causing flickering lights.', 'electrical', 'Putalisadak', 500, 800],
-    ['Assemble IKEA wardrobes', 'Two IKEA KALLAX wardrobes need assembly. All parts and tools provided.', 'carpentry', 'Samakhushi', 2500, 4000],
-    ['Computer virus removal', 'Laptop infected with malware, running very slow. Need full cleanup.', 'appliance', 'Maharajgunj', 1000, 1500],
+    // Dinesh Aryal (id=102) — 4 jobs
+    [102, 'Fix leaking kitchen tap', 'Kitchen tap has been dripping for days. Need a plumber ASAP.', 'plumbing', 'Thamel', 800, 1200],
+    [102, 'Paint 2 bedroom walls', 'Two bedrooms need fresh paint. White color preferred.', 'painting', 'Lazimpat', 8000, 12000],
+    [102, 'AC not cooling properly', 'Split AC unit is not cooling the room efficiently.', 'appliance', 'Jhamsikhel', 2000, 3500],
+    [102, 'Move 3-seater sofa to 2nd floor', 'Need help moving a heavy 3-seater sofa from ground to 2nd floor.', 'moving', 'Kumaripati', 1500, 2000],
+    // Suman Adhikari (id=103) — 4 jobs
+    [103, 'Deep clean 2BHK apartment', 'Full deep cleaning of a 2-bedroom apartment including kitchen and bathrooms.', 'cleaning', 'Baneshwor', 3500, 5000],
+    [103, 'Fix electrical switchboard', 'One switchboard has a loose connection causing flickering lights.', 'electrical', 'Putalisadak', 500, 800],
+    [103, 'Assemble IKEA wardrobes', 'Two IKEA KALLAX wardrobes need assembly. All parts and tools provided.', 'carpentry', 'Samakhushi', 2500, 4000],
+    [103, 'Computer virus removal', 'Laptop infected with malware, running very slow. Need full cleanup.', 'appliance', 'Maharajgunj', 1000, 1500],
   ];
 
   const insert = db.prepare(
     `INSERT INTO jobs (seeker_id, title, description, category, location, budget_min, budget_max, status, urgency)
-     VALUES (2, ?, ?, ?, ?, ?, ?, 'open', 'normal')`
+     VALUES (?, ?, ?, ?, ?, ?, ?, 'open', 'normal')`
   );
 
   for (const job of jobs) {
@@ -254,32 +307,20 @@ function seedConversations() {
   const count = result.length > 0 ? result[0].values[0][0] : 0;
   if (count > 0) return;
 
-  // Insert a demo provider so FK constraint is satisfied
-  // Password: password123
-  db.run(`
-    INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role)
-    VALUES (3, 'Demo Provider', 'demo.provider@kaarya.com', '9800000003', '$2a$10$aKK1lJ1zcrgGz0aZoEMhxuHUDaULmHfh2Vs3qfOA1wgnSImZ41PNC', 'provider')
-  `);
-
-  // Also insert the test users (ids 10 and 11 for integration testing)
-  // Password: password123
-  db.run(`
-    INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role)
-    VALUES (10, 'Seeker One', '9900000001@kaarya.local', '9900000001', '$2a$10$aKK1lJ1zcrgGz0aZoEMhxuHUDaULmHfh2Vs3qfOA1wgnSImZ41PNC', 'seeker')
-  `);
-  db.run(`
-    INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role)
-    VALUES (11, 'Provider One', '9900000002@kaarya.local', '9900000002', '$2a$10$aKK1lJ1zcrgGz0aZoEMhxuHUDaULmHfh2Vs3qfOA1wgnSImZ41PNC', 'provider')
-  `);
-
-  // Conversation 1: seeker (id=10) and provider (id=11) on job 1
+  // Demo conversation: Ganesh Pandey (id=100, provider) ↔ Dinesh Aryal (id=102, seeker)
+  // on job 1 ("Fix leaking kitchen tap", posted by Dinesh).
+  // This lets you immediately test the messaging UI after logging in as either user.
   db.run('INSERT OR IGNORE INTO conversations (id, job_id) VALUES (1, 1)');
-  db.run('INSERT OR IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (1, 10)');
-  db.run('INSERT OR IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (1, 11)');
-  db.run('INSERT INTO messages (conversation_id, sender_id, content, is_read) VALUES (1, 10, \'Hi, is this job still available?\', 1)');
-  db.run('INSERT INTO messages (conversation_id, sender_id, content, is_read) VALUES (1, 11, \'Yes it is! When do you need it done?\', 0)');
+  db.run('INSERT OR IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (1, 100)');
+  db.run('INSERT OR IGNORE INTO conversation_participants (conversation_id, user_id) VALUES (1, 102)');
+  // Message 1: Dinesh (seeker) initiates
+  db.run("INSERT OR IGNORE INTO messages (id, conversation_id, sender_id, content, is_read) VALUES (1, 1, 102, 'Hi, is this job still available?', 1)");
+  // Message 2: Ganesh (provider) replies
+  db.run("INSERT OR IGNORE INTO messages (id, conversation_id, sender_id, content, is_read) VALUES (2, 1, 100, 'Yes it is! I can come by this afternoon. Are you available around 3 PM?', 0)");
+  // Message 3: Dinesh responds
+  db.run("INSERT OR IGNORE INTO messages (id, conversation_id, sender_id, content, is_read) VALUES (3, 1, 102, 'Perfect, 3 PM works for me. The address is in Thamel. I will share the exact location.', 0)");
 
-  console.log('[db] Seeded demo conversations');
+  console.log('[db] Demo conversations seeded (Ganesh ↔ Dinesh on job 1)');
 }
 
 module.exports = { getDb, save };

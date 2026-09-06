@@ -46,6 +46,9 @@ export interface JobListParams {
   category?: string;
   area?: string;
   status?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  sortBy?: 'newest' | 'oldest' | 'price_low' | 'price_high';
   page?: number;
 }
 
@@ -71,7 +74,7 @@ export async function createJob(data: {
     title: data.title,
     description: data.description,
     category: data.category,
-    area: data.location,
+    location: data.location,
     budgetMin: data.budgetMin,
     budgetMax: data.budgetMax,
     negotiationMode: data.negotiationMode as any,

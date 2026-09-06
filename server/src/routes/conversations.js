@@ -2,8 +2,14 @@ const express = require('express');
 const { getDb, save } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
+const { sendToUser } = require('../fcm');
 
 const router = express.Router();
+
+// Fire-and-forget push helper
+function pushNotify(userId, payload) {
+  sendToUser(userId, payload).catch(() => {});
+}
 
 // Helper: check if user is a participant in a conversation
 async function isParticipant(db, conversationId, userId) {
@@ -154,7 +160,7 @@ router.get('/', requireAuth, async (req, res) => {
           const msgRow = msgResult[0].values[0];
           lastMessage = {
             id: msgRow[0],
-            senderId: msgRow[1],
+            senderId: String(msgRow[1]),
             text: msgRow[2],
             readAt: msgRow[3] === 1 ? msgRow[4] : null,
             createdAt: msgRow[4],
@@ -283,7 +289,7 @@ router.get('/:id/messages', requireAuth, async (req, res) => {
         messages.push({
           id: row[0],
           conversationId: row[1],
-          senderId: row[2],
+          senderId: String(row[2]),
           text: row[3],
           readAt: row[4] === 1 ? row[5] : null,
           createdAt: row[5],
@@ -355,13 +361,22 @@ router.post('/:id/messages', requireAuth, async (req, res) => {
       [id, req.userId]
     );
     if (otherParticipants.length > 0 && otherParticipants[0].values.length > 0) {
+      const senderInfo = db.exec('SELECT name FROM users WHERE id = ?', [req.userId]);
+      const senderName = senderInfo.length > 0 ? senderInfo[0].values[0][0] : 'Someone';
+      const preview = content.length > 60 ? content.substring(0, 57) + '…' : content;
+
       for (const row of otherParticipants[0].values) {
         const recipientId = row[0];
         createNotification(db, recipientId, 'new_message',
-          'New message',
-          content.length > 60 ? content.substring(0, 57) + '…' : content,
+          `Message from ${senderName}`,
+          preview,
           { conversationId: String(id) }
         );
+        pushNotify(recipientId, {
+          title: `Message from ${senderName}`,
+          body: preview,
+          data: { type: 'new_message', conversationId: String(id) },
+        });
       }
       save();
     }

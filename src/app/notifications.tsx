@@ -6,44 +6,39 @@ import { FlatList, Pressable, StyleSheet, Text, View, RefreshControl } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { notifApi } from '@/lib/api';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import type { Notification } from '@/types';
 
-// ─── Icon & color map for each notification type ────────────────────
-
 type NotifType = Notification['type'];
 
-const TYPE_META: Record<NotifType, { icon: string; color: string; label: string }> = {
-  new_offer:             { icon: 'gavel',            color: KaaryaColors.brand[500], label: 'New Offer' },
-  offer_accepted:        { icon: 'check-circle',    color: KaaryaColors.success,    label: 'Offer Accepted' },
-  offer_rejected:        { icon: 'close-circle',    color: KaaryaColors.danger,    label: 'Not Selected' },
-  offer_countered:       { icon: 'swap-horizontal', color: KaaryaColors.warning,   label: 'Counter Offer' },
-  new_message:           { icon: 'email-outline',    color: KaaryaColors.brand[500], label: 'New Message' },
-  job_started:           { icon: 'play-circle',     color: KaaryaColors.brand[500], label: 'Job Started' },
-  job_completed:         { icon: 'check-circle',    color: KaaryaColors.success,    label: 'Job Complete' },
-  review_received:       { icon: 'star',             color: '#F59E0B',              label: 'New Review' },
-  verification_approved:  { icon: 'shield-check',    color: KaaryaColors.success,   label: 'Verified' },
-  verification_rejected: { icon: 'shield-off',      color: KaaryaColors.danger,    label: 'Verification' },
+const TYPE_META: Record<NotifType, { icon: string; color: string; labelKey: string }> = {
+  new_offer:             { icon: 'gavel',            color: KaaryaColors.brand[500], labelKey: 'notifications.type.newOffer' },
+  offer_accepted:        { icon: 'check-circle',    color: KaaryaColors.success,    labelKey: 'notifications.type.offerAccepted' },
+  offer_rejected:        { icon: 'close-circle',    color: KaaryaColors.danger,    labelKey: 'notifications.type.notSelected' },
+  offer_countered:       { icon: 'swap-horizontal', color: KaaryaColors.warning,   labelKey: 'notifications.type.counterOffer' },
+  new_message:           { icon: 'email-outline',    color: KaaryaColors.brand[500], labelKey: 'notifications.type.newMessage' },
+  job_started:           { icon: 'play-circle',     color: KaaryaColors.brand[500], labelKey: 'notifications.type.jobStarted' },
+  job_completed:         { icon: 'check-circle',    color: KaaryaColors.success,    labelKey: 'notifications.type.jobComplete' },
+  review_received:       { icon: 'star',             color: '#F59E0B',              labelKey: 'notifications.type.newReview' },
+  verification_approved:  { icon: 'shield-check',    color: KaaryaColors.success,   labelKey: 'notifications.type.verified' },
+  verification_rejected:  { icon: 'shield-off',      color: KaaryaColors.danger,    labelKey: 'notifications.type.verification' },
 };
 
-// ─── Relative time ──────────────────────────────────────────────────
-
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string, t: (key: string) => string): string {
   const d = new Date(dateStr);
   const now = new Date();
   const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-  if (diff < 60)  return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 172800) return 'yesterday';
+  if (diff < 60)  return t('common.justNow');
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ${t('common.ago')}`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ${t('common.ago')}`;
+  if (diff < 172800) return t('common.yesterday');
   return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric' });
 }
 
-// ─── Single notification card ───────────────────────────────────────
-
-function NotifCard({ item, onPress }: { item: Notification; onPress: () => void }) {
-  const meta = TYPE_META[item.type] ?? { icon: 'bell', color: KaaryaColors.brand[500], label: 'Notification' };
+function NotifCard({ item, onPress, t }: { item: Notification; onPress: () => void; t: (key: string) => string }) {
+  const meta = TYPE_META[item.type] ?? { icon: 'bell', color: KaaryaColors.brand[500], labelKey: 'notifications.type.notification' };
 
   return (
     <Pressable
@@ -57,7 +52,7 @@ function NotifCard({ item, onPress }: { item: Notification; onPress: () => void 
       <View style={styles.cardBody}>
         <Text style={[styles.cardTitle, !item.read && styles.cardTitleUnread]}>{item.title}</Text>
         <Text style={styles.cardBody2} numberOfLines={2}>{item.body}</Text>
-        <Text style={styles.cardTime}>{relativeTime(item.createdAt)}</Text>
+        <Text style={styles.cardTime}>{relativeTime(item.createdAt, t)}</Text>
       </View>
       {!item.read && (
         <View style={[styles.unreadDot, { backgroundColor: meta.color }]} />
@@ -66,9 +61,8 @@ function NotifCard({ item, onPress }: { item: Notification; onPress: () => void 
   );
 }
 
-// ─── Main screen ───────────────────────────────────────────────────
-
 export default function NotificationsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -83,20 +77,18 @@ export default function NotificationsScreen() {
       setNotifications(data.notifications ?? []);
       setUnreadCount(data.unreadCount ?? 0);
     } catch {
-      // Silently fail — notifications are non-critical
+      // Silently fail
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
-  // Load on mount and whenever screen regains focus
   useFocusEffect(
     useCallback(() => { load(); }, [load])
   );
 
   const handlePress = async (item: Notification) => {
-    // Mark as read
     if (!item.read) {
       try {
         await notifApi.markRead(item.id);
@@ -107,7 +99,6 @@ export default function NotificationsScreen() {
       } catch { /* non-critical */ }
     }
 
-    // Navigate based on type + data
     const data = item.data ?? {};
     if (item.type === 'new_offer' && data.jobId) {
       router.push(`/job/${data.jobId}`);
@@ -122,7 +113,6 @@ export default function NotificationsScreen() {
     ) {
       router.push('/offers');
     } else if (item.type === 'new_message') {
-      // Chat not fully implemented — fall back to messages tab
       router.push('/(tabs)/messages');
     }
   };
@@ -139,15 +129,14 @@ export default function NotificationsScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
           {unreadCount > 0 ? (
             <Pressable onPress={handleMarkAllRead} style={styles.markAllBtn}>
-              <Text style={styles.markAllText}>Mark all read</Text>
+              <Text style={styles.markAllText}>{t('notifications.markAllRead')}</Text>
             </Pressable>
           ) : (
             <View style={{ width: 80 }} />
@@ -156,15 +145,13 @@ export default function NotificationsScreen() {
 
         {loading ? (
           <View style={styles.centerState}>
-            <Text style={styles.loadingText}>Loading...</Text>
+            <Text style={styles.loadingText}>{t('common.loading')}</Text>
           </View>
         ) : notifications.length === 0 ? (
           <View style={styles.centerState}>
             <MaterialCommunityIcons name="bell-off-outline" size={64} color={KaaryaColors.muted} />
-            <Text style={styles.emptyTitle}>No notifications</Text>
-            <Text style={styles.emptyText}>
-              You're all caught up! We'll notify you when something happens.
-            </Text>
+            <Text style={styles.emptyTitle}>{t('notifications.noNotifications')}</Text>
+            <Text style={styles.emptyText}>{t('notifications.noNotificationsHint')}</Text>
           </View>
         ) : (
           <FlatList
@@ -180,7 +167,7 @@ export default function NotificationsScreen() {
               />
             }
             renderItem={({ item }) => (
-              <NotifCard item={item} onPress={() => handlePress(item)} />
+              <NotifCard item={item} onPress={() => handlePress(item)} t={t} />
             )}
           />
         )}

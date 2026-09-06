@@ -7,11 +7,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius, Shadows } from '@/constants/theme';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 
 export default function EditProfileScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, updateProfile, refreshUser, uploadAvatar } = useAuth();
 
@@ -31,7 +33,7 @@ export default function EditProfileScreen() {
   async function pickImage() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission needed', 'Please grant photo library access to change your profile photo.');
+      Alert.alert(t('editProfile.permissionTitle'), t('editProfile.photoLibraryMessage'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -48,7 +50,7 @@ export default function EditProfileScreen() {
   async function takePhoto() {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission needed', 'Please grant camera access to take a profile photo.');
+      Alert.alert(t('editProfile.permissionTitle'), t('editProfile.cameraMessage'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -63,7 +65,7 @@ export default function EditProfileScreen() {
 
   async function handleAvatarUpload(asset: ImagePicker.ImagePickerAsset) {
     if (!asset.base64) {
-      Alert.alert('Error', 'Could not read the selected image. Please try again.');
+      Alert.alert(t('common.error'), t('editProfile.readImageError'));
       return;
     }
     setAvatarUploading(true);
@@ -78,7 +80,7 @@ export default function EditProfileScreen() {
       await refreshUser();
     } catch (e: any) {
       setAvatarPreview(null);
-      Alert.alert('Upload failed', e.message ?? 'Could not upload your profile photo. Please try again.');
+      Alert.alert(t('editProfile.uploadFailed'), e.message ?? t('editProfile.uploadFailedMessage'));
     } finally {
       setAvatarUploading(false);
     }
@@ -86,12 +88,12 @@ export default function EditProfileScreen() {
 
   function showImagePicker() {
     Alert.alert(
-      'Change Profile Photo',
-      'Choose a source',
+      t('editProfile.changePhoto'),
+      t('editProfile.chooseSource'),
       [
-        { text: 'Take Photo', onPress: takePhoto },
-        { text: 'Choose from Library', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('editProfile.takePhoto'), onPress: takePhoto },
+        { text: t('editProfile.chooseFromLibrary'), onPress: pickImage },
+        { text: t('common.cancel'), style: 'cancel' },
       ]
     );
   }
@@ -99,12 +101,12 @@ export default function EditProfileScreen() {
   function validate() {
     const newErrors: { name?: string; bio?: string } = {};
     if (!name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = t('editProfile.nameRequired');
     } else if (name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
+      newErrors.name = t('editProfile.nameMinChars');
     }
     if (bio.length > 500) {
-      newErrors.bio = 'Bio must be 500 characters or less';
+      newErrors.bio = t('editProfile.bioMaxChars');
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -116,11 +118,11 @@ export default function EditProfileScreen() {
     try {
       await updateProfile({ name: name.trim(), bio: bio.trim() });
       await refreshUser();
-      Alert.alert('Success', 'Profile updated successfully.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('common.success'), t('editProfile.profileUpdated'), [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Failed to update profile. Please try again.');
+      Alert.alert(t('common.error'), e.message ?? t('editProfile.updateFailed'));
     } finally {
       setLoading(false);
     }
@@ -135,7 +137,7 @@ export default function EditProfileScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <Text style={styles.headerTitle}>{t('editProfile.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -169,15 +171,15 @@ export default function EditProfileScreen() {
                 </Pressable>
               </View>
               <Text style={styles.avatarHint}>
-                {avatarUploading ? 'Uploading…' : 'Tap to change photo'}
+                {avatarUploading ? t('common.uploading') : t('editProfile.tapToChange')}
               </Text>
             </Pressable>
 
             {/* Name */}
             <View style={styles.section}>
               <Input
-                label="Full Name"
-                placeholder="Enter your name"
+                label={t('editProfile.fullName')}
+                placeholder={t('editProfile.enterName')}
                 value={name}
                 onChangeText={setName}
                 error={errors.name}
@@ -192,8 +194,8 @@ export default function EditProfileScreen() {
             {/* Bio */}
             <View style={styles.section}>
               <Input
-                label="Bio"
-                placeholder="Tell providers/seekers a bit about yourself..."
+                label={t('editProfile.bio')}
+                placeholder={t('editProfile.bioPlaceholder')}
                 value={bio}
                 onChangeText={setBio}
                 error={errors.bio}
@@ -203,19 +205,19 @@ export default function EditProfileScreen() {
               />
               <Text style={styles.bioCharCount}>{bio.length}/500</Text>
               <Text style={styles.bioHint}>
-                A good bio helps build trust. Mention your experience, skills, or what you're looking for.
+                {t('editProfile.bioHint')}
               </Text>
             </View>
 
             {/* Phone (read-only) */}
             <View style={styles.section}>
-              <Text style={styles.readOnlyLabel}>Phone Number</Text>
+              <Text style={styles.readOnlyLabel}>{t('editProfile.phoneNumber')}</Text>
               <View style={[styles.readOnlyField, Shadows.sm]}>
                 <MaterialCommunityIcons name="phone" size={20} color={KaaryaColors.muted} />
                 <Text style={styles.readOnlyText}>{user?.phone ?? '—'}</Text>
                 <View style={styles.lockedBadge}>
                   <MaterialCommunityIcons name="lock" size={12} color={KaaryaColors.muted} />
-                  <Text style={styles.lockedText}>Cannot change</Text>
+                  <Text style={styles.lockedText}>{t('editProfile.cannotChange')}</Text>
                 </View>
               </View>
             </View>
@@ -224,7 +226,7 @@ export default function EditProfileScreen() {
           {/* CTA */}
           <View style={styles.cta}>
             <Button
-              title="Save Changes"
+              title={t('editProfile.saveChanges')}
               onPress={handleSave}
               loading={loading}
               disabled={loading}

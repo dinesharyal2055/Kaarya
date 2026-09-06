@@ -6,6 +6,7 @@ import { Alert, FlatList, Pressable, StyleSheet, Text, View, RefreshControl } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
 import { offersApi, chatApi } from '@/lib/api';
@@ -16,6 +17,7 @@ import type { Offer } from '@/types';
 const BASE_URL = 'http://192.168.1.79:5000';
 
 export default function OffersScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
   const isProvider = user?.role === 'provider';
@@ -35,12 +37,12 @@ export default function OffersScreen() {
         : await offersApi.listReceived();
       setOffers(result.offers);
     } catch (e: any) {
-      setError(e.message ?? 'Failed to load offers');
+      setError(e.message ?? t('offers.loadFailed'));
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [isProvider]);
+  }, [isProvider, t]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const loadFn = useCallback(async (isRefresh = false) => { await loadOffers(isRefresh); }, [loadOffers]);
@@ -51,35 +53,34 @@ export default function OffersScreen() {
   const getCatColor = (categoryId: string) => getCatData(categoryId)?.color ?? KaaryaColors.brand[500];
   const getCatIcon = (categoryId: string) => getCatData(categoryId)?.icon || 'help-circle';
 
-  const formatDate = (dateStr: string) => {
+  const formatDate = (dateStr: string, tFn: (key: string) => string) => {
     const d = new Date(dateStr);
     const now = new Date();
     const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 604800) return `${Math.floor(diff / 864800)}d ago`;
+    if (diff < 60) return tFn('common.justNow');
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ${tFn('common.ago')}`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ${tFn('common.ago')}`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ${tFn('common.ago')}`;
     return d.toLocaleDateString('en-NP', { day: 'numeric', month: 'short' });
   };
 
-  const statusConfig: Record<string, { color: string; label: string; bg: string }> = {
-    pending: { color: KaaryaColors.warning, bg: KaaryaColors.warning + '20', label: 'Pending' },
-    accepted: { color: KaaryaColors.success, bg: KaaryaColors.success + '20', label: 'Accepted' },
-    rejected: { color: KaaryaColors.danger, bg: KaaryaColors.danger + '20', label: 'Rejected' },
-    withdrawn: { color: KaaryaColors.muted, bg: KaaryaColors.muted + '20', label: 'Withdrawn' },
-    countered: { color: KaaryaColors.brand[500], bg: KaaryaColors.brand[100] + '20', label: 'Countered' },
+  const statusConfig: Record<string, { color: string; labelKey: string; bg: string }> = {
+    pending:   { color: KaaryaColors.warning,           bg: KaaryaColors.warning + '20',   labelKey: 'offers.status.pending' },
+    accepted:  { color: KaaryaColors.success,           bg: KaaryaColors.success + '20',   labelKey: 'offers.status.accepted' },
+    rejected:  { color: KaaryaColors.danger,           bg: KaaryaColors.danger + '20',   labelKey: 'offers.status.rejected' },
+    withdrawn: { color: KaaryaColors.muted,            bg: KaaryaColors.muted + '20',    labelKey: 'offers.status.withdrawn' },
+    countered: { color: KaaryaColors.brand[500],       bg: KaaryaColors.brand[100] + '20', labelKey: 'offers.status.countered' },
   };
 
   async function handleAccept(offer: Offer) {
-    Alert.alert('Accept Offer', `Accept Rs. ${offer.price.toLocaleString()} from ${offer.providerName}?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('offers.acceptTitle'), t('offers.acceptMessage', { price: offer.price.toLocaleString(), name: offer.providerName }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Accept',
+        text: t('common.accept'),
         onPress: async () => {
           try {
-            const result = await acceptOffer(offer.id);
+            await acceptOffer(offer.id);
             loadOffers();
-            // Navigate to chat
             if (offer.job?.id) {
               try {
                 const convResult = await chatApi.getByJob(offer.job.id);
@@ -89,9 +90,9 @@ export default function OffersScreen() {
                 }
               } catch { /* fall through */ }
             }
-            Alert.alert('Offer accepted!', 'You can now chat with the provider from the Messages tab.');
+            Alert.alert(t('offers.offerAcceptedTitle'), t('offers.offerAcceptedMessage'));
           } catch (e: any) {
-            Alert.alert('Error', e.message);
+            Alert.alert(t('common.error'), e.message);
           }
         },
       },
@@ -99,17 +100,17 @@ export default function OffersScreen() {
   }
 
   async function handleReject(offer: Offer) {
-    Alert.alert('Reject Offer', `Reject the offer from ${offer.providerName}?`, [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('offers.rejectTitle'), t('offers.rejectMessage', { name: offer.providerName }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Reject',
+        text: t('common.reject'),
         style: 'destructive',
         onPress: async () => {
           try {
             await rejectOffer(offer.id);
             loadOffers();
           } catch (e: any) {
-            Alert.alert('Error', e.message);
+            Alert.alert(t('common.error'), e.message);
           }
         },
       },
@@ -122,10 +123,10 @@ export default function OffersScreen() {
       if (convResult.data && convResult.data !== null) {
         router.push(`/chat/${convResult.data.id}`);
       } else {
-        Alert.alert('No conversation', 'Accept an offer first to start chatting.');
+        Alert.alert(t('offers.noConversationTitle'), t('offers.noConversationMessage'));
       }
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      Alert.alert(t('common.error'), e.message);
     }
   }
 
@@ -133,27 +134,26 @@ export default function OffersScreen() {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.container}>
-        {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
           </Pressable>
           <Text style={styles.headerTitle}>
-            {isProvider ? 'My Bids' : 'Received Offers'}
+            {isProvider ? t('offers.myBids') : t('offers.receivedOffers')}
           </Text>
           <View style={{ width: 40 }} />
         </View>
 
         {loading && offers.length === 0 ? (
           <View style={styles.centerState}>
-            <Text style={styles.loadingText}>Loading...</Text>
+            <Text style={styles.loadingText}>{t('offers.loading')}</Text>
           </View>
         ) : error ? (
           <View style={styles.centerState}>
             <MaterialCommunityIcons name="alert-circle" size={48} color={KaaryaColors.danger} />
             <Text style={styles.errorText}>{error}</Text>
             <Pressable style={styles.retryBtn} onPress={() => loadOffers()}>
-              <Text style={styles.retryText}>Retry</Text>
+              <Text style={styles.retryText}>{t('common.retry')}</Text>
             </Pressable>
           </View>
         ) : offers.length === 0 ? (
@@ -164,19 +164,17 @@ export default function OffersScreen() {
               color={KaaryaColors.muted}
             />
             <Text style={styles.emptyTitle}>
-              {isProvider ? 'No bids yet' : 'No offers received'}
+              {isProvider ? t('offers.noBidsYet') : t('offers.noOffersReceived')}
             </Text>
             <Text style={styles.emptySubtext}>
-              {isProvider
-                ? 'Browse open jobs and submit your first bid'
-                : 'Post a task to start receiving offers'}
+              {isProvider ? t('offers.browseOpenJobs') : t('offers.postTaskToReceive')}
             </Text>
             <Pressable
               style={styles.emptyAction}
               onPress={() => router.push(isProvider ? '/(tabs)/browse' : '/post-job')}
             >
               <Text style={styles.emptyActionText}>
-                {isProvider ? 'Browse Jobs' : 'Post a Task'}
+                {isProvider ? t('offers.browseJobs') : t('offers.postTask')}
               </Text>
             </Pressable>
           </View>
@@ -205,6 +203,7 @@ export default function OffersScreen() {
                 statusConfig={statusConfig}
                 BASE_URL={BASE_URL}
                 onChat={handleChat}
+                t={t}
               />
             )}
           />
@@ -225,6 +224,7 @@ function OfferCard({
   statusConfig,
   BASE_URL,
   onChat,
+  t,
 }: {
   offer: Offer;
   isProvider: boolean;
@@ -232,17 +232,17 @@ function OfferCard({
   onReject: (o: Offer) => void;
   getCatColor: (id: string) => string;
   getCatIcon: (id: string) => any;
-  formatDate: (d: string) => string;
-  statusConfig: Record<string, { color: string; label: string; bg: string }>;
+  formatDate: (d: string, tFn: (key: string, opts?: object) => string) => string;
+  statusConfig: Record<string, { color: string; labelKey: string; bg: string }>;
   BASE_URL: string;
   onChat?: (jobId: string) => void;
+  t: (key: string) => string;
 }) {
   const catColor = getCatColor(offer.job?.category ?? '');
-  const status = statusConfig[offer.status] ?? { color: KaaryaColors.muted, bg: KaaryaColors.muted + '20', label: offer.status };
+  const status = statusConfig[offer.status] ?? { color: KaaryaColors.muted, bg: KaaryaColors.muted + '20', labelKey: 'offers.status.' + offer.status };
 
   return (
     <View style={[styles.card, Shadows.sm]}>
-      {/* Job info */}
       {offer.job && (
         <View style={styles.jobRow}>
           <View style={[styles.catDot, { backgroundColor: catColor }]} />
@@ -254,10 +254,8 @@ function OfferCard({
       )}
       <Text style={styles.jobTitle}>{offer.job?.title ?? `Job #${offer.jobId}`}</Text>
 
-      {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Provider info (seeker view) or seeker info (provider view) */}
       <View style={styles.partyRow}>
         {isProvider ? (
           <>
@@ -276,7 +274,7 @@ function OfferCard({
                     <Text style={styles.ratingCount}>({offer.providerReviewCount ?? 0})</Text>
                   </>
                 ) : (
-                  <Text style={styles.noRating}>No rating yet</Text>
+                  <Text style={styles.noRating}>{t('offers.noRatingYet')}</Text>
                 )}
                 {offer.providerVerified && (
                   <MaterialCommunityIcons name="check-decagram" size={12} color={KaaryaColors.success} style={{ marginLeft: 4 }} />
@@ -307,29 +305,25 @@ function OfferCard({
           </>
         )}
 
-        {/* Price */}
         <View style={styles.priceBlock}>
           <Text style={styles.priceLabel}>
-            {isProvider ? 'Your Bid' : 'Offer'}
+            {isProvider ? t('offers.yourBid') : t('offers.offer')}
           </Text>
           <Text style={styles.price}>Rs. {offer.price.toLocaleString()}</Text>
         </View>
       </View>
 
-      {/* Message */}
       {offer.message && (
         <Text style={styles.message} numberOfLines={2}>{offer.message}</Text>
       )}
 
-      {/* Status */}
       <View style={[styles.statusRow]}>
         <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-          <Text style={[styles.statusText, { color: status.color }]}>{status.label}</Text>
+          <Text style={[styles.statusText, { color: status.color }]}>{t(status.labelKey)}</Text>
         </View>
-        <Text style={styles.dateText}>{formatDate(offer.createdAt)}</Text>
+        <Text style={styles.dateText}>{formatDate(offer.createdAt, t)}</Text>
       </View>
 
-      {/* Actions */}
       {!isProvider && offer.status === 'pending' && (
         <View style={styles.actions}>
           <Pressable
@@ -337,26 +331,31 @@ function OfferCard({
             onPress={() => onReject(offer)}
           >
             <MaterialCommunityIcons name="close" size={16} color={KaaryaColors.danger} />
-            <Text style={styles.rejectText}>Reject</Text>
+            <Text style={styles.rejectText}>{t('common.reject')}</Text>
           </Pressable>
           <Pressable
             style={[styles.actionBtn, styles.acceptBtn]}
             onPress={() => onAccept(offer)}
           >
             <MaterialCommunityIcons name="check" size={16} color="#fff" />
-            <Text style={styles.acceptText}>Accept</Text>
+            <Text style={styles.acceptText}>{t('common.accept')}</Text>
           </Pressable>
         </View>
       )}
 
-      {/* Chat button for accepted offers */}
       {offer.status === 'accepted' && offer.job?.id && (
         <Pressable
           style={[styles.chatBtn]}
           onPress={() => onChat?.(String(offer.job!.id))}
         >
           <MaterialCommunityIcons name="chat" size={16} color={KaaryaColors.brand[500]} />
-          <Text style={styles.chatBtnText}>Chat with {isProvider ? 'seeker' : 'provider'}</Text>
+          <Text style={styles.chatBtnText}>
+            {(() => {
+              const role = isProvider ? t('offers.seeker') : t('offers.provider');
+              const chatLabel = t('offers.chatWith');
+              return chatLabel.replace('{{role}}', role);
+            })()}
+          </Text>
           <MaterialCommunityIcons name="chevron-right" size={16} color={KaaryaColors.brand[500]} />
         </Pressable>
       )}

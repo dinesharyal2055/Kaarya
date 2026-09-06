@@ -6,13 +6,13 @@ import { FlatList, Pressable, StyleSheet, Text, View, RefreshControl } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { chatApi } from '@/lib/api';
 import type { Conversation } from '@/types';
 
-// ─── Main screen ────────────────────────────────────────────────────
-
 export default function MessagesScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,23 +40,19 @@ export default function MessagesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Messages</Text>
+        <Text style={styles.title}>{t('messages.title')}</Text>
       </View>
 
-      {/* Content */}
       {loading ? (
         <View style={styles.centerState}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{t('messages.loading')}</Text>
         </View>
       ) : conversations.length === 0 ? (
         <View style={styles.centerState}>
           <MaterialCommunityIcons name="chat-outline" size={64} color={KaaryaColors.muted} />
-          <Text style={styles.emptyTitle}>No messages yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Once you accept an offer, your conversation with the provider will appear here.
-          </Text>
+          <Text style={styles.emptyTitle}>{t('messages.noMessagesYet')}</Text>
+          <Text style={styles.emptySubtitle}>{t('messages.noMessagesSubtitle')}</Text>
         </View>
       ) : (
         <FlatList
@@ -86,7 +82,7 @@ export default function MessagesScreen() {
                 <Text style={styles.convoJob} numberOfLines={1}>{item.jobTitle}</Text>
                 {item.lastMessage && (
                   <Text style={styles.convoMsg} numberOfLines={1}>
-                    {item.lastMessage.senderId === item.participants[0]?.id ? '' : 'You: '}
+                    {String(item.lastMessage.senderId) === String(item.participants[0]?.id) ? '' : 'You: '}
                     {item.lastMessage.text}
                   </Text>
                 )}

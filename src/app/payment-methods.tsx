@@ -5,10 +5,12 @@ import { useRouter, Stack } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius, Shadows } from '@/constants/theme';
 import { Button } from '@/components/ui';
 
 export default function PaymentMethodsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   return (
@@ -20,7 +22,7 @@ export default function PaymentMethodsScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Payment Methods</Text>
+          <Text style={styles.headerTitle}>{t('paymentMethods.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -29,12 +31,12 @@ export default function PaymentMethodsScreen() {
             <View style={styles.emptyIcon}>
               <MaterialCommunityIcons name="credit-card-off-outline" size={40} color={KaaryaColors.muted} />
             </View>
-            <Text style={styles.emptyTitle}>No Payment Methods</Text>
+            <Text style={styles.emptyTitle}>{t('paymentMethods.noPaymentMethods')}</Text>
             <Text style={styles.emptyText}>
-              Add a payment method to receive payments or pay for tasks on Kaarya.
+              {t('paymentMethods.addPaymentMethodHint')}
             </Text>
             <Button
-              title="Add Payment Method"
+              title={t('paymentMethods.addPaymentMethod')}
               onPress={() => {}}
               style={{ marginTop: Spacing.lg }}
             />
@@ -43,7 +45,7 @@ export default function PaymentMethodsScreen() {
           <View style={[styles.infoCard, Shadows.sm]}>
             <MaterialCommunityIcons name="shield-check" size={20} color={KaaryaColors.success[500]} />
             <Text style={styles.infoText}>
-              Your payment information is encrypted and securely stored. We never share your card details.
+              {t('paymentMethods.encryptionNote')}
             </Text>
           </View>
         </ScrollView>

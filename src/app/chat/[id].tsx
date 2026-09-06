@@ -16,6 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { chatApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
@@ -28,24 +29,24 @@ function formatTime(dateStr: string): string {
   return d.toLocaleTimeString('en-NP', { hour: '2-digit', minute: '2-digit' });
 }
 
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, t: (key: string) => string): string {
   const d = new Date(dateStr);
   const now = new Date();
   const isToday = d.toDateString() === now.toDateString();
-  if (isToday) return 'Today';
+  if (isToday) return t('common.today');
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
-  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  if (d.toDateString() === yesterday.toDateString()) return t('common.yesterday');
   return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric' });
 }
 
 // ─── Date separator ────────────────────────────────────────────────
 
-function DateSeparator({ date }: { date: string }) {
+function DateSeparator({ date, t }: { date: string; t: (key: string) => string }) {
   return (
     <View style={styles.dateSep}>
       <View style={styles.dateSepLine} />
-      <Text style={styles.dateSepText}>{formatDate(date)}</Text>
+      <Text style={styles.dateSepText}>{formatDate(date, t)}</Text>
       <View style={styles.dateSepLine} />
     </View>
   );
@@ -69,7 +70,7 @@ function MessageBubble({ item, showAvatar, senderName }: {
   senderName?: string;
 }) {
   if (item.type === 'date') {
-    return <DateSeparator date={item.date!} />;
+    return <DateSeparator date={item.date!} t={(key: string) => key} />;
   }
 
   const msg = item.message!;
@@ -111,6 +112,7 @@ function MessageBubble({ item, showAvatar, senderName }: {
 // ─── Main screen ──────────────────────────────────────────────────
 
 export default function ChatScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
@@ -129,37 +131,32 @@ export default function ChatScreen() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     setError('');
+
     try {
-      const [convResult, msgsResult] = await Promise.allSettled([
-        chatApi.get(id),
-        chatApi.messages(id),
-      ]);
-
-      if (convResult.status === 'fulfilled') {
-        setConversation(convResult.value.data as unknown as Conversation);
-      }
-      if (msgsResult.status === 'fulfilled') {
-        setRawMessages(msgsResult.value.data as unknown as Message[]);
-      }
+      const convData = await chatApi.get(id).catch(() => null);
+      if (convData) setConversation(convData.data as unknown as Conversation);
     } catch (e: any) {
-      setError(e.message ?? 'Failed to load chat');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      setError(e.message ?? t('chat.loadFailed'));
     }
-  }, [id]);
 
-  // Load on mount and when screen comes into focus
+    try {
+      const msgsData = await chatApi.messages(id).catch(() => null);
+      if (msgsData) setRawMessages(msgsData.data as unknown as Message[]);
+    } catch {
+      // messages are non-critical
+    }
+
+    setLoading(false);
+    setRefreshing(false);
+  }, [id, t]);
+
   useFocusEffect(
     useCallback(() => {
       load();
-      // Poll for new messages every 4 seconds
       pollingRef.current = setInterval(() => {
-        if (!loading) {
-          chatApi.messages(id).then(result => {
-            setRawMessages(result.data as unknown as Message[]);
-          }).catch(() => {});
-        }
+        chatApi.messages(id).then(result => {
+          setRawMessages(result.data as unknown as Message[]);
+        }).catch(() => {});
       }, 4000);
       return () => {
         if (pollingRef.current) {
@@ -167,10 +164,9 @@ export default function ChatScreen() {
           pollingRef.current = null;
         }
       };
-    }, [load, id, loading])
+    }, [load, id])
   );
 
-  // Auto-scroll to bottom when messages change
   const prevLengthRef = useRef(rawMessages.length);
   useEffect(() => {
     if (rawMessages.length > prevLengthRef.current) {
@@ -181,7 +177,6 @@ export default function ChatScreen() {
     prevLengthRef.current = rawMessages.length;
   }, [rawMessages]);
 
-  // Build enriched items with date separators and isMe flag
   const enrichedItems: BubbleItem[] = [];
   let lastDate2 = '';
   let prevSenderId = '';
@@ -194,8 +189,7 @@ export default function ChatScreen() {
       prevSenderId = '';
     }
 
-    // isMe: sender is the current user
-    const isMe = user ? msg.senderId === user.id : false;
+    const isMe = user ? String(msg.senderId) === String(user.id) : false;
     const showAvatar = isMe ? false : (msg.senderId !== prevSenderId);
     if (msg.senderId !== prevSenderId) prevSenderId = msg.senderId;
 
@@ -220,23 +214,21 @@ export default function ChatScreen() {
       setRawMessages(prev => [...prev, newMsg]);
       setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
     } catch (e: any) {
-      setInputText(text); // restore on failure
+      setInputText(text);
     } finally {
       setSending(false);
     }
   };
 
-  // Derive "other" participant info (the person we're chatting with)
   const otherParticipant = conversation?.participants?.find(p => !user || String(p.id) !== user.id)
     ?? conversation?.participants?.[0];
-  const otherName = otherParticipant?.name ?? 'Chat';
-  const otherRole = otherParticipant?.role === 'seeker' ? 'Task Poster' : 'Service Provider';
+  const otherName = otherParticipant?.name ?? t('chat.chat');
+  const otherRole = otherParticipant?.role === 'seeker' ? t('chat.taskPoster') : t('chat.serviceProvider');
 
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <SafeAreaView style={styles.container} edges={['top']}>
-        {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
@@ -253,24 +245,23 @@ export default function ChatScreen() {
           <View style={{ width: 40 }} />
         </View>
 
-        {/* Messages */}
         {loading ? (
           <View style={styles.centerState}>
-            <Text style={styles.loadingText}>Loading chat...</Text>
+            <Text style={styles.loadingText}>{t('chat.loadingChat')}</Text>
           </View>
         ) : error ? (
           <View style={styles.centerState}>
             <MaterialCommunityIcons name="alert-circle" size={48} color={KaaryaColors.danger} />
             <Text style={styles.errorText}>{error}</Text>
             <Pressable style={styles.retryBtn} onPress={() => load()}>
-              <Text style={styles.retryText}>Retry</Text>
+              <Text style={styles.retryText}>{t('common.retry')}</Text>
             </Pressable>
           </View>
         ) : rawMessages.length === 0 ? (
           <View style={styles.centerState}>
             <MaterialCommunityIcons name="chat-outline" size={48} color={KaaryaColors.muted} />
-            <Text style={styles.emptyTitle}>No messages yet</Text>
-            <Text style={styles.emptySubtext}>Start the conversation by sending a message below</Text>
+            <Text style={styles.emptyTitle}>{t('chat.noMessagesYet')}</Text>
+            <Text style={styles.emptySubtext}>{t('chat.startConversation')}</Text>
           </View>
         ) : (
           <FlatList
@@ -292,7 +283,6 @@ export default function ChatScreen() {
           />
         )}
 
-        {/* Input */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={0}
@@ -300,7 +290,7 @@ export default function ChatScreen() {
           <View style={styles.inputRow}>
             <TextInput
               style={styles.input}
-              placeholder="Type a message..."
+              placeholder={t('chat.typeMessage')}
               placeholderTextColor={KaaryaColors.muted}
               value={inputText}
               onChangeText={setInputText}

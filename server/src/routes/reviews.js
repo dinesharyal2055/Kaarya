@@ -2,8 +2,14 @@ const express = require('express');
 const { getDb, save } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
+const { sendToUser } = require('../fcm');
 
 const router = express.Router();
+
+// Fire-and-forget push helper
+function pushNotify(userId, payload) {
+  sendToUser(userId, payload).catch(() => {});
+}
 
 /**
  * Map a review row to API shape.
@@ -113,10 +119,15 @@ router.post('/', requireAuth, async (req, res) => {
     const jobTitleResult = db.exec('SELECT title FROM jobs WHERE id = ?', [jobId]);
     createNotification(
       db, revieweeId, 'review_received',
-      'New review received',
+      'New review received ⭐',
       `${reviewerResult[0]?.values[0]?.[0] ?? 'Someone'} left you a ${ratingNum}-star review for "${jobTitleResult[0]?.values[0]?.[0] ?? 'a job'}"`,
       { jobId, reviewId: String(newId) }
     );
+    pushNotify(revieweeId, {
+      title: 'New review received ⭐',
+      body: `${reviewerResult[0]?.values[0]?.[0] ?? 'Someone'} left you a ${ratingNum}-star review`,
+      data: { type: 'review_received', jobId, reviewId: String(newId) },
+    });
     save();
 
     const newReview = db.exec('SELECT * FROM reviews WHERE id = ?', [newId]);

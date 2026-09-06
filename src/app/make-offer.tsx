@@ -6,13 +6,14 @@ import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleShee
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
 import { Button, Input } from '@/components/ui';
 import { submitOffer } from '@/services/offers';
-import type { Job } from '@/types';
 
 export default function MakeOfferScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { jobId, jobTitle, jobCategory, budgetMin, budgetMax } = useLocalSearchParams<{
     jobId: string;
@@ -31,7 +32,7 @@ export default function MakeOfferScreen() {
 
   async function handleSubmit() {
     if (!price || parseFloat(price) <= 0) {
-      Alert.alert('Invalid price', 'Please enter a valid offer amount');
+      Alert.alert(t('makeOffer.invalidPrice'), t('makeOffer.enterValidAmount'));
       return;
     }
 
@@ -42,11 +43,11 @@ export default function MakeOfferScreen() {
         price: parseFloat(price),
         message: message.trim() || undefined,
       });
-      Alert.alert('Success!', 'Your offer has been submitted.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('makeOffer.successTitle'), t('makeOffer.successMessage'), [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Failed to submit offer');
+      Alert.alert(t('common.error'), e.message ?? t('makeOffer.submitFailed'));
     } finally {
       setLoading(false);
     }
@@ -61,7 +62,7 @@ export default function MakeOfferScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="close" size={24} color={KaaryaColors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Submit Offer</Text>
+          <Text style={styles.headerTitle}>{t('makeOffer.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -80,13 +81,13 @@ export default function MakeOfferScreen() {
             <Text style={styles.jobTitle}>{jobTitle}</Text>
             {(budgetMin || budgetMax) && (
               <Text style={styles.budgetHint}>
-                Seeker budget: Rs. {budgetMin ?? '?'} – {budgetMax ?? '?'}
+                {t('makeOffer.seekerBudget')}: Rs. {budgetMin ?? '?'} – {budgetMax ?? '?'}
               </Text>
             )}
 
             {/* Price input */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Your Offer</Text>
+              <Text style={styles.sectionTitle}>{t('makeOffer.yourOffer')}</Text>
               <View style={styles.priceRow}>
                 <Text style={styles.currency}>Rs.</Text>
                 <Input
@@ -98,15 +99,15 @@ export default function MakeOfferScreen() {
                 />
               </View>
               <Text style={styles.hint}>
-                Enter your total charge for completing this task
+                {t('makeOffer.priceHint')}
               </Text>
             </View>
 
             {/* Message */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Message to Seeker (optional)</Text>
+              <Text style={styles.sectionTitle}>{t('makeOffer.messageOptional')}</Text>
               <Input
-                placeholder="Introduce yourself, explain your approach, or mention relevant experience..."
+                placeholder={t('makeOffer.messagePlaceholder')}
                 value={message}
                 onChangeText={setMessage}
                 multiline
@@ -119,7 +120,7 @@ export default function MakeOfferScreen() {
             <View style={styles.tipCard}>
               <MaterialCommunityIcons name="lightbulb-outline" size={20} color={KaaryaColors.brand[500]} />
               <Text style={styles.tipText}>
-                A clear message and competitive price increases your chances of getting accepted.
+                {t('makeOffer.tipText')}
               </Text>
             </View>
           </ScrollView>
@@ -127,7 +128,7 @@ export default function MakeOfferScreen() {
           {/* CTA */}
           <View style={styles.cta}>
             <Button
-              title="Submit Offer"
+              title={t('makeOffer.submitOffer')}
               onPress={handleSubmit}
               loading={loading}
               disabled={loading || !price}

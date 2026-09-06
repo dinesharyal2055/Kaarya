@@ -180,11 +180,21 @@ export const jobsApi = {
     category?: string;
     area?: string;
     status?: string;
+    budgetMin?: number;
+    budgetMax?: number;
+    sortBy?: string;
     page?: number;
   }) => {
-    const qs = new URLSearchParams(
-      Object.entries(params ?? {}).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])
-    ).toString();
+    // Map camelCase → server snake_case
+    const serverParams: Record<string, string> = {};
+    if (params?.category)   serverParams.category    = params.category;
+    if (params?.area)       serverParams.location   = params.area;
+    if (params?.status)     serverParams.status     = params.status;
+    if (params?.budgetMin)  serverParams.budget_min  = String(params.budgetMin);
+    if (params?.budgetMax)  serverParams.budget_max  = String(params.budgetMax);
+    if (params?.sortBy)     serverParams.sort_by      = params.sortBy;
+    if (params?.page)       serverParams.page         = String(params.page);
+    const qs = new URLSearchParams(serverParams).toString();
     return get<{ jobs: import('@/types').Job[]; total: number }>(
       `/jobs${qs ? `?${qs}` : ''}`
     );
@@ -206,6 +216,17 @@ export const jobsApi = {
 
   /** Seeker marks job as completed */
   complete: (id: string) => post<{ message: string; status: string }>(`/jobs/${id}/complete`),
+
+  /** Save or unsave a job (toggles) */
+  toggleSave: (jobId: string) =>
+    post<{ saved: boolean; message: string }>(`/jobs/${jobId}/save`),
+
+  /** List saved jobs for current provider */
+  savedList: () => get<{ jobs: import('@/types').Job[] }>('/jobs/saved/list'),
+
+  /** Check if a job is saved */
+  isSaved: (jobId: string) =>
+    get<{ saved: boolean }>(`/jobs/${jobId}/saved`),
 };
 
 /* ─── Reviews ──────────────────────────────────────────────────────── */
@@ -284,6 +305,22 @@ export const notifApi = {
     put<import('@/types').Notification>(`/notifications/${id}`, { read: true }),
 
   markAllRead: () => put('/notifications/read-all'),
+};
+
+/* ─── Push / FCM ────────────────────────────────────────────────────── */
+
+export const pushApi = {
+  /** Register the device FCM token with the backend */
+  register: (token: string) =>
+    post<{ message: string; fcmEnabled: boolean }>('/push/register', { token }),
+
+  /** Unregister FCM token on logout */
+  unregister: (token?: string) =>
+    del<{ message: string }>('/push/unregister'),
+
+  /** Check if FCM is configured on the server */
+  status: () =>
+    get<{ fcmEnabled: boolean }>('/push/status'),
 };
 
 /* ─── Verification ─────────────────────────────────────────────────── */

@@ -3,12 +3,14 @@ import { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { KaaryaColors, Spacing, FontSizes } from '@/constants/theme';
 import { Button, Input } from '@/components/ui';
 import type { ApiError } from '@/lib/api';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { login, isAuthenticated } = useAuth();
   const [phone, setPhone] = useState('');
@@ -25,20 +27,26 @@ export default function LoginScreen() {
   }, [isAuthenticated]);
 
   async function handleLogin() {
-    if (!phone.trim() || !password.trim()) { setError('Please fill in all fields'); return; }
-    setError(''); setLoading(true);
-    try { await login(phone.trim(), password); }
-    catch (e: any) {
+    if (!phone.trim() || !password.trim()) {
+      setError(t('auth.login.errors.fillAllFields'));
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      await login(phone.trim(), password);
+    } catch (e: any) {
       const apiErr = e as ApiError;
       if (apiErr.code === 'UNVERIFIED') {
-        setError('Please verify your account first. Check your phone for the OTP.');
+        setError(t('auth.login.errors.verifyAccountFirst'));
       } else if (apiErr.status === 401) {
-        setError('Incorrect phone number or password.');
+        setError(t('auth.login.errors.incorrectCredentials'));
       } else {
-        setError(e.message ?? 'Login failed. Please try again.');
+        setError(e.message ?? t('auth.login.errors.loginFailed'));
       }
+    } finally {
+      setLoading(false);
     }
-    finally { setLoading(false); }
   }
 
   return (
@@ -51,24 +59,52 @@ export default function LoginScreen() {
               <View style={styles.logoCircle}>
                 <MaterialCommunityIcons name="wrench" size={48} color={KaaryaColors.brand[500]} />
               </View>
-              <Text style={styles.appName}>Kaarya</Text>
-              <Text style={styles.tagline}>Find help. Get it done.</Text>
+              <Text style={styles.appName}>{t('app.name')}</Text>
+              <Text style={styles.tagline}>{t('app.tagline')}</Text>
             </View>
             <View style={styles.form}>
-              <Text style={styles.welcome}>Welcome back</Text>
-              <Text style={styles.subtitle}>Sign in to continue</Text>
+              <Text style={styles.welcome}>{t('auth.login.welcomeBack')}</Text>
+              <Text style={styles.subtitle}>{t('auth.login.signInContinue')}</Text>
               <View style={{ marginTop: Spacing.xl }}>
-                <Input label="Phone Number" placeholder="98XXXXXXXX" value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoCapitalize="none" autoCorrect={false} leftIcon={<MaterialCommunityIcons name="phone" size={20} color={KaaryaColors.muted} />} />
-                <Input label="Password" placeholder="Enter your password" value={password} onChangeText={setPassword} secureTextEntry={!showPassword} autoCapitalize="none" autoCorrect={false} leftIcon={<MaterialCommunityIcons name="lock" size={20} color={KaaryaColors.muted} />} rightIcon={<MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={20} color={KaaryaColors.muted} onPress={() => setShowPassword((v) => !v)} />} />
+                <Input
+                  label={t('auth.login.phoneNumber')}
+                  placeholder={t('auth.login.phonePlaceholder')}
+                  value={phone}
+                  onChangeText={setPhone}
+                  keyboardType="phone-pad"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  leftIcon={<MaterialCommunityIcons name="phone" size={20} color={KaaryaColors.muted} />}
+                />
+                <Input
+                  label={t('auth.login.password')}
+                  placeholder={t('auth.login.passwordPlaceholder')}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  leftIcon={<MaterialCommunityIcons name="lock" size={20} color={KaaryaColors.muted} />}
+                  rightIcon={<MaterialCommunityIcons name={showPassword ? 'eye-off' : 'eye'} size={20} color={KaaryaColors.muted} onPress={() => setShowPassword((v) => !v)} />}
+                />
                 {error ? <Text style={styles.error}>{error}</Text> : null}
-                <View style={{ marginTop: Spacing.md }}><Button title="Sign In" onPress={handleLogin} loading={loading} fullWidth /></View>
-              <View style={{ alignItems: 'flex-end', marginTop: Spacing.sm }}>
-                <Text style={styles.forgotLink} onPress={() => router.push('/(auth)/forgot-password')}>Forgot Password?</Text>
-              </View>
+                <View style={{ marginTop: Spacing.md }}>
+                  <Button title={t('auth.login.signIn')} onPress={handleLogin} loading={loading} fullWidth />
+                </View>
+                <View style={{ alignItems: 'flex-end', marginTop: Spacing.sm }}>
+                  <Text style={styles.forgotLink} onPress={() => router.push('/(auth)/forgot-password')}>
+                    {t('auth.login.forgotPassword')}
+                  </Text>
+                </View>
               </View>
             </View>
             <View style={styles.footer}>
-              <Text style={styles.footerText}>Don&apos;t have an account? <Text style={styles.footerLink} onPress={() => router.push('/(auth)/register')}>Sign Up</Text></Text>
+              <Text style={styles.footerText}>
+                {t('auth.login.noAccount')}{' '}
+                <Text style={styles.footerLink} onPress={() => router.push('/(auth)/register')}>
+                  {t('auth.login.signUp')}
+                </Text>
+              </Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>

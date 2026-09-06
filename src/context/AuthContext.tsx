@@ -15,6 +15,13 @@ import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User, UserRole } from '@/types';
 import { authApi, profileApi } from '@/lib/api';
+import {
+  setupNotifications,
+  unregisterPushToken,
+  setupNotificationHandlers,
+  _setRouter,
+} from '@/services/notifications';
+import { useRouter } from 'expo-router';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -44,6 +51,8 @@ interface AuthContextValue extends AuthState {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+
   const [state, setState] = useState<AuthState>({
     user: null,
     token: null,
@@ -63,6 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         const user = await authApi.me();
         setState({ user, token, isLoading: false, isAuthenticated: true });
+        // Set up notification handlers and register token
+        setupNotificationHandlers();
+        _setRouter(router);
+        setupNotifications().catch(() => {});
       } catch {
         // token invalid — clear it
         await AsyncStorage.removeItem('kaarya_token');
@@ -72,12 +85,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     }
     restore();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = useCallback(async (phone: string, password: string) => {
     const { token, user } = await authApi.login({ phone, password });
     await AsyncStorage.setItem('kaarya_token', token);
     setState({ user, token, isLoading: false, isAuthenticated: true });
+    // Register FCM push token after successful login
+    setupNotifications().catch(() => {});
   }, []);
 
   const register = useCallback(
@@ -94,6 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore network errors on logout
     }
+    // Unregister FCM push token so device stops receiving notifications
+    await unregisterPushToken();
     await AsyncStorage.removeItem('kaarya_token');
     setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
   }, []);

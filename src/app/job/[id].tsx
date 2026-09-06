@@ -30,6 +30,8 @@ export default function JobDetailScreen() {
   const [receivedOffers, setReceivedOffers] = useState<any[]>([]); // seeker's received offers
   const [hasReviewed, setHasReviewed] = useState(false);          // current user already reviewed this job
   const [actionLoading, setActionLoading] = useState(false);       // CTA loading state
+  const [isSaved, setIsSaved] = useState(false);                 // save state
+  const [saveLoading, setSaveLoading] = useState(false);          // save button loading
 
   const loadJob = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -45,6 +47,16 @@ export default function JobDetailScreen() {
       setRefreshing(false);
     }
   }, [id]);
+
+  const loadSaveStatus = useCallback(async () => {
+    if (!job || user?.role !== 'provider') return;
+    try {
+      const result = await jobsApi.isSaved(job.id);
+      setIsSaved(result.saved);
+    } catch {
+      setIsSaved(false);
+    }
+  }, [job, user]);
 
   const loadOfferStatus = useCallback(async () => {
     if (!job) return;
@@ -83,28 +95,13 @@ export default function JobDetailScreen() {
   // Load job on mount
   useEffect(() => { loadJob(); }, [loadJob]);
 
-  // Load offer status after job is loaded and whenever screen refocuses
-  useEffect(() => { if (job) loadOfferStatus(); }, [job, loadOfferStatus]);
+  // Load offer status + save status after job is loaded and whenever screen refocuses
+  useEffect(() => { if (job) { loadOfferStatus(); loadSaveStatus(); } }, [job, loadOfferStatus, loadSaveStatus]);
 
   useFocusEffect(
     useCallback(() => {
-      if (job) loadOfferStatus();
-    }, [job, loadOfferStatus])
-  );
-
-  useEffect(() => { loadJob(); }, [loadJob]);
-
-  // Refresh job and offer status whenever the screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      loadJob();
-    }, [loadJob])
-  );
-
-  useFocusEffect(
-    useCallback(() => {
-      if (!loading) loadOfferStatus();
-    }, [loadOfferStatus, loading])
+      if (job) { loadOfferStatus(); loadSaveStatus(); }
+    }, [job, loadOfferStatus, loadSaveStatus])
   );
 
   if (loading) {
@@ -172,7 +169,32 @@ export default function JobDetailScreen() {
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
           </Pressable>
           <Text style={styles.headerTitle}>Task Details</Text>
-          <View style={{ width: 40 }} />
+          {user?.role === 'provider' && job.status === 'open' ? (
+            <Pressable
+              onPress={async () => {
+                if (!user) return;
+                setSaveLoading(true);
+                try {
+                  const result = await jobsApi.toggleSave(job.id);
+                  setIsSaved(result.saved);
+                } catch (e: any) {
+                  Alert.alert('Error', e.message ?? 'Failed to save job');
+                } finally {
+                  setSaveLoading(false);
+                }
+              }}
+              style={styles.saveBtn}
+              disabled={saveLoading}
+            >
+              <MaterialCommunityIcons
+                name={isSaved ? 'bookmark' : 'bookmark-outline'}
+                size={22}
+                color={isSaved ? KaaryaColors.brand[500] : KaaryaColors.muted}
+              />
+            </Pressable>
+          ) : (
+            <View style={{ width: 40 }} />
+          )}
         </View>
 
         <ScrollView
@@ -264,17 +286,34 @@ export default function JobDetailScreen() {
             </View>
           )}
 
-          {/* Offers summary — only show if NOT the job owner */}
-          {!(user?.role === 'seeker' && job.seekerId === user?.id) && (
-            <View style={[styles.section, Shadows.sm]}>
-              <Text style={styles.sectionTitle}>Offers</Text>
+          {/* Offers summary */}
+          <View style={[styles.section, Shadows.sm]}>
+            <Text style={styles.sectionTitle}>Offers</Text>
+            {user?.role === 'seeker' && job.seekerId === user?.id ? (
+              receivedOffers.length > 0 ? (
+                <Pressable
+                  style={styles.offersAction}
+                  onPress={() => router.push('/offers')}
+                >
+                  <View style={styles.offersInfo}>
+                    <Text style={styles.offersCount}>
+                      {receivedOffers.length} offer{receivedOffers.length !== 1 ? 's' : ''} received
+                    </Text>
+                    <Text style={styles.offersSubtext}>Tap to accept or decline</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={20} color={KaaryaColors.brand[500]} />
+                </Pressable>
+              ) : (
+                <Text style={styles.emptyText}>No offers yet. Check back soon!</Text>
+              )
+            ) : (
               <Text style={styles.emptyText}>
                 {job.offerCount && job.offerCount > 0
                   ? `${job.offerCount} provider${job.offerCount !== 1 ? 's' : ''} have placed bids.`
                   : 'No offers yet. Providers will bid once this job is posted.'}
               </Text>
-            </View>
-          )}
+            )}
+          </View>
 
           <View style={{ height: 100 }} />
         </ScrollView>
@@ -319,18 +358,10 @@ export default function JobDetailScreen() {
                 )
               )}
               {user?.role === 'seeker' && job.seekerId === user?.id && (
-                receivedOffers.length > 0 ? (
-                  <Button
-                    title={`View ${receivedOffers.length} Offer${receivedOffers.length !== 1 ? 's' : ''}`}
-                    onPress={() => router.push('/offers')}
-                    fullWidth
-                  />
-                ) : (
-                  <View style={styles.noOffersBar}>
-                    <MaterialCommunityIcons name="inbox-outline" size={18} color={KaaryaColors.muted} />
-                    <Text style={styles.noOffersText}>No offers yet. Check back soon!</Text>
-                  </View>
-                )
+                <View style={styles.noOffersBar}>
+                  <MaterialCommunityIcons name="inbox-outline" size={18} color={KaaryaColors.muted} />
+                  <Text style={styles.noOffersText}>Check the Offers section to manage bids</Text>
+                </View>
               )}
               {user?.role === 'seeker' && job.seekerId !== user?.id && (
                 <Button
@@ -463,6 +494,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: KaaryaColors.border },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: FontSizes.lg, fontWeight: '700', color: KaaryaColors.text },
+  saveBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   content: { flex: 1, paddingHorizontal: Spacing.lg },
   catBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginTop: Spacing.lg, gap: 6 },
   catBadgeText: { fontSize: FontSizes.xs, fontWeight: '700' },
@@ -490,6 +522,10 @@ const styles = StyleSheet.create({
   seekerName: { fontSize: FontSizes.base, fontWeight: '600', color: KaaryaColors.text },
   seekerPhone: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 2 },
   emptyText: { fontSize: FontSizes.sm, color: KaaryaColors.muted, textAlign: 'center', paddingVertical: Spacing.md },
+  offersAction: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  offersInfo: { flex: 1 },
+  offersCount: { fontSize: FontSizes.base, fontWeight: '600', color: KaaryaColors.text },
+  offersSubtext: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 2 },
   cta: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderTopWidth: 1, borderTopColor: KaaryaColors.border },
   submittedOfferBar: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: KaaryaColors.success + '15', borderRadius: BorderRadius.md, padding: Spacing.md },
   submittedOfferText: { flex: 1, fontSize: FontSizes.sm, fontWeight: '600', color: KaaryaColors.success },

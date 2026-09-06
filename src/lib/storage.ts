@@ -9,6 +9,7 @@ const KEYS = {
   AUTH_TOKEN: 'kaarya_token',
   USER: 'kaarya_user',
   ONBOARDING_COMPLETE: 'kaarya_onboarding',
+  LANGUAGE: 'kaarya_language',
 } as const;
 
 /* ─── Auth ─────────────────────────────────────────────────────────── */
@@ -54,6 +55,16 @@ export async function setOnboardingComplete(): Promise<void> {
 export async function isOnboardingComplete(): Promise<boolean> {
   const val = await AsyncStorage.getItem(KEYS.ONBOARDING_COMPLETE);
   return val === 'true';
+}
+
+/* ─── Language ──────────────────────────────────────────────────────── */
+
+export async function saveLanguage(lang: string): Promise<void> {
+  await AsyncStorage.setItem(KEYS.LANGUAGE, lang);
+}
+
+export async function getLanguage(): Promise<string> {
+  return (await AsyncStorage.getItem(KEYS.LANGUAGE)) ?? 'en';
 }
 
 /* ─── Clear all ────────────────────────────────────────────────────── */

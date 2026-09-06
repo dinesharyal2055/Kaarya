@@ -2,11 +2,13 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { Button } from '@/components/ui';
 
 export default function PostScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
   const isProvider = user?.role === 'provider';
@@ -15,17 +17,17 @@ export default function PostScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <Text style={styles.screenTitle}>Find Work</Text>
+          <Text style={styles.screenTitle}>{t('post.findWork')}</Text>
         </View>
         <View style={styles.content}>
           <MaterialCommunityIcons name="briefcase-outline" size={64} color={KaaryaColors.muted} />
-          <Text style={styles.title}>Browse & Bid</Text>
-          <Text style={styles.subtitle}>Browse available tasks and submit your best offer</Text>
+          <Text style={styles.title}>{t('post.browseBid')}</Text>
+          <Text style={styles.subtitle}>{t('post.browseBidSub')}</Text>
 
           <View style={{ marginTop: Spacing.xl, width: '100%', gap: Spacing.sm }}>
-            <Button title="Browse Available Tasks" onPress={() => router.push('/(tabs)/browse')} fullWidth />
+            <Button title={t('post.browseTasks')} onPress={() => router.push('/(tabs)/browse')} fullWidth />
             <Button
-              title="My Bids"
+              title={t('post.myBids')}
               variant="secondary"
               onPress={() => router.push('/offers')}
               fullWidth
@@ -39,22 +41,22 @@ export default function PostScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={styles.screenTitle}>Manage Tasks</Text>
+        <Text style={styles.screenTitle}>{t('post.manageTasks')}</Text>
       </View>
       <View style={styles.content}>
         <MaterialCommunityIcons name="clipboard-plus-outline" size={80} color={KaaryaColors.brand[200]} />
-        <Text style={styles.title}>What do you need help with?</Text>
-        <Text style={styles.subtitle}>Post a task and receive offers from verified providers in your area</Text>
+        <Text style={styles.title}>{t('post.whatDoYouNeed')}</Text>
+        <Text style={styles.subtitle}>{t('post.postTaskSub')}</Text>
 
         <View style={{ marginTop: Spacing.xl, width: '100%', gap: Spacing.sm }}>
-          <Button title="Post a Task" onPress={() => router.push('/post-job')} fullWidth />
+          <Button title={t('post.postTask')} onPress={() => router.push('/post-job')} fullWidth />
           <Button
-            title="Received Offers"
+            title={t('post.receivedOffers')}
             variant="secondary"
             onPress={() => router.push('/offers')}
             fullWidth
           />
-          <Button title="Browse Services" variant="ghost" onPress={() => router.push('/(tabs)/browse')} fullWidth />
+          <Button title={t('post.browseServices')} variant="ghost" onPress={() => router.push('/(tabs)/browse')} fullWidth />
         </View>
       </View>
     </SafeAreaView>

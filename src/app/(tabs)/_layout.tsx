@@ -6,10 +6,12 @@
 import { Tabs } from 'expo-router';
 import { Redirect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { KaaryaColors } from '@/constants/theme';
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
   const { isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) return null;
@@ -35,42 +37,42 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('nav.home'),
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="home" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="browse"
         options={{
-          title: 'Browse',
+          title: t('nav.browse'),
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="magnify" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="jobs"
         options={{
-          title: 'Jobs',
+          title: t('nav.jobs'),
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="clipboard-list" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="post"
         options={{
-          title: 'Post',
+          title: t('nav.post'),
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="plus-circle" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="messages"
         options={{
-          title: 'Messages',
+          title: t('nav.messages'),
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="email-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
+          title: t('nav.profile'),
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons name="account" size={size} color={color} />,
         }}
       />

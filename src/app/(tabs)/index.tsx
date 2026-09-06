@@ -3,41 +3,42 @@
  * Shows greeting, quick actions, and recent open jobs
  */
 
-import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
 import { fetchJobs } from '@/services/jobs';
-import { notifApi } from '@/lib/api';
+import { offersApi, notifApi } from '@/lib/api';
 import type { Job } from '@/types';
 
 export default function HomeScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
-  const greeting = getGreeting();
 
   const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+  const [pendingOffersCount, setPendingOffersCount] = useState(0);
 
   const loadRecentJobs = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoadingJobs(true);
     try {
-      const [jobsResult, notifResult] = await Promise.allSettled([
-        fetchJobs({ status: 'open' }),
-        notifApi.list(),
-      ]);
-      if (jobsResult.status === 'fulfilled') {
-        setRecentJobs(jobsResult.value.jobs.slice(0, 5));
-      }
-      if (notifResult.status === 'fulfilled') {
-        setUnreadNotifCount(notifResult.value.unreadCount ?? 0);
+      const jobsData = await fetchJobs({ status: 'open' });
+      setRecentJobs(jobsData.jobs.slice(0, 5));
+      const notifData = await notifApi.list();
+      setUnreadNotifCount(notifData.unreadCount ?? 0);
+      if (user?.role === 'seeker') {
+        const offersData = await offersApi.listReceived();
+        const pending = offersData.offers.filter((o: any) => o.status === 'pending').length;
+        setPendingOffersCount(pending);
       }
     } catch {
       // Silently fail — home should still load
@@ -45,9 +46,9 @@ export default function HomeScreen() {
       setLoadingJobs(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [user?.role]);
 
-  useEffect(() => { loadRecentJobs(); }, [loadRecentJobs]);
+  useFocusEffect(useCallback(() => { loadRecentJobs(); }, [loadRecentJobs]));
 
   const getCategoryColor = (categoryId: string) => {
     const cat = CATEGORIES.find(c => c.id === categoryId);
@@ -70,18 +71,25 @@ export default function HomeScreen() {
     }
     if (job.budgetMax) return `Up to Rs. ${job.budgetMax.toLocaleString()}`;
     if (job.budgetMin) return `Rs. ${job.budgetMin.toLocaleString()}+`;
-    return 'Budget TBD';
+    return t('jobDetail.budgetTbd');
   };
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     const now = new Date();
     const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    if (diff < 60) return t('common.justNow');
+    if (diff < 3600) return t('common.minutesAgo', { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t('common.hoursAgo', { count: Math.floor(diff / 3600) });
+    if (diff < 604800) return t('common.daysAgo', { count: Math.floor(diff / 86400) });
     return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric' });
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return t('home.greeting.morning');
+    if (hour < 17) return t('home.greeting.afternoon');
+    return t('home.greeting.evening');
   };
 
   return (
@@ -96,7 +104,7 @@ export default function HomeScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.userName}>{user?.name ?? 'there'}!</Text>
           </View>
           <View style={styles.headerRight}>
@@ -125,7 +133,7 @@ export default function HomeScreen() {
             <View style={[styles.quickActionIcon, { backgroundColor: KaaryaColors.brand[500] + '20' }]}>
               <MaterialCommunityIcons name="plus-circle" size={28} color={KaaryaColors.brand[500]} />
             </View>
-            <Text style={styles.quickActionLabel}>Post a Task</Text>
+            <Text style={styles.quickActionLabel}>{t('home.postTask')}</Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color={KaaryaColors.muted} />
           </Pressable>
           <Pressable
@@ -135,14 +143,33 @@ export default function HomeScreen() {
             <View style={[styles.quickActionIcon, { backgroundColor: KaaryaColors.success + '20' }]}>
               <MaterialCommunityIcons name="magnify" size={28} color={KaaryaColors.success} />
             </View>
-            <Text style={styles.quickActionLabel}>Find Work</Text>
+            <Text style={styles.quickActionLabel}>{t('home.findWork')}</Text>
             <MaterialCommunityIcons name="chevron-right" size={20} color={KaaryaColors.muted} />
           </Pressable>
         </View>
 
+        {/* Received Offers — seekers only */}
+        {user?.role === 'seeker' && pendingOffersCount > 0 && (
+          <Pressable
+            style={[styles.offersBanner, Shadows.md]}
+            onPress={() => router.push('/offers')}
+          >
+            <View style={[styles.offersIcon, { backgroundColor: KaaryaColors.success + '20' }]}>
+              <MaterialCommunityIcons name="bell-ring" size={24} color={KaaryaColors.success} />
+            </View>
+            <View style={styles.offersText}>
+              <Text style={styles.offersTitle}>
+                {t('home.pendingOffers', { count: pendingOffersCount })}
+              </Text>
+              <Text style={styles.offersSub}>{t('home.tapToView')}</Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={20} color={KaaryaColors.success} />
+          </Pressable>
+        )}
+
         {/* Categories */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Services</Text>
+          <Text style={styles.sectionTitle}>{t('home.services')}</Text>
           <View style={styles.categoryGrid}>
             {CATEGORIES.slice(0, 8).map((cat) => (
               <CategoryCard key={cat.id} category={cat} onPress={() => router.push(`/browse?category=${cat.id}`)} />
@@ -153,19 +180,19 @@ export default function HomeScreen() {
         {/* Recent Jobs Preview */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Tasks</Text>
-            <Text style={styles.seeAll} onPress={() => router.push('/(tabs)/browse')}>See all</Text>
+            <Text style={styles.sectionTitle}>{t('home.recentTasks')}</Text>
+            <Text style={styles.seeAll} onPress={() => router.push('/(tabs)/browse')}>{t('common.seeAll')}</Text>
           </View>
 
           {loadingJobs ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptySubtext}>Loading recent tasks...</Text>
+              <Text style={styles.emptySubtext}>{t('home.loadingTasks')}</Text>
             </View>
           ) : recentJobs.length === 0 ? (
             <View style={styles.emptyCard}>
               <MaterialCommunityIcons name="clipboard-list-outline" size={40} color={KaaryaColors.muted} />
-              <Text style={styles.emptyText}>No open tasks yet</Text>
-              <Text style={styles.emptySubtext}>Be the first to post one!</Text>
+              <Text style={styles.emptyText}>{t('home.noTasksYet')}</Text>
+              <Text style={styles.emptySubtext}>{t('home.beFirst')}</Text>
             </View>
           ) : (
             recentJobs.map((job) => (
@@ -198,13 +225,6 @@ export default function HomeScreen() {
   );
 }
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
 function CategoryCard({ category, onPress }: { category: typeof CATEGORIES[0]; onPress: () => void }) {
   return (
     <Pressable style={[styles.categoryCard, Shadows.sm]} onPress={onPress}>
@@ -232,7 +252,12 @@ const styles = StyleSheet.create({
   greeting: { fontSize: FontSizes.sm, color: KaaryaColors.textSecondary },
   userName: { fontSize: FontSizes['2xl'], fontWeight: '800', color: KaaryaColors.text },
   avatarCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: KaaryaColors.brand[500], alignItems: 'center', justifyContent: 'center' },
-  quickActions: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.xl },
+  quickActions: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
+  offersBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: KaaryaColors.success + '10', borderRadius: BorderRadius.lg, padding: Spacing.md, marginBottom: Spacing.lg, gap: Spacing.md, borderWidth: 1, borderColor: KaaryaColors.success + '30' },
+  offersIcon: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  offersText: { flex: 1 },
+  offersTitle: { fontSize: FontSizes.base, fontWeight: '700', color: KaaryaColors.success },
+  offersSub: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 2 },
   quickActionCard: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: KaaryaColors.card, borderRadius: BorderRadius.lg, padding: Spacing.md, gap: Spacing.sm },
   quickActionIcon: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   quickActionLabel: { flex: 1, fontSize: FontSizes.sm, fontWeight: '700', color: KaaryaColors.text },

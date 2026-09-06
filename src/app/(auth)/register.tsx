@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 import { Button, Input } from '@/components/ui';
 import { authApi } from '@/lib/api';
@@ -19,6 +20,7 @@ import type { UserRole } from '@/types';
 type Step = 'form' | 'otp';
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   // Form fields
@@ -41,18 +43,18 @@ export default function RegisterScreen() {
   // ─── Step 1: initiate registration ───────────────────────────────
   async function handleInitiate() {
     setError('');
-    if (!name.trim()) { setError('Please enter your name'); return; }
-    if (!email.trim() || !email.includes('@')) { setError('Please enter a valid email address'); return; }
-    if (!phone.trim() || phone.length < 8) { setError('Please enter a valid phone number'); return; }
-    if (password.length < 6) { setError('Password must be at least 6 characters'); return; }
-    if (password !== confirmPassword) { setError('Passwords do not match'); return; }
+    if (!name.trim()) { setError(t('auth.register.errors.fillAllFields')); return; }
+    if (!email.trim() || !email.includes('@')) { setError(t('auth.register.errors.invalidEmail')); return; }
+    if (!phone.trim() || phone.length < 8) { setError(t('auth.register.errors.fillAllFields')); return; }
+    if (password.length < 6) { setError(t('auth.register.errors.passwordTooShort')); return; }
+    if (password !== confirmPassword) { setError(t('auth.register.errors.passwordsDoNotMatch')); return; }
 
     setLoading(true);
     try {
       await authApi.registerInitiate({ phone: phone.trim(), password, name: name.trim(), email: email.trim(), role });
       setStep('otp');
     } catch (e: any) {
-      setError(e.message ?? 'Failed to send OTP. Please try again.');
+      setError(e.message ?? t('auth.register.errors.verificationFailed'));
     } finally {
       setLoading(false);
     }
@@ -60,7 +62,7 @@ export default function RegisterScreen() {
 
   // ─── Step 2: verify OTP and create account ──────────────────────
   async function handleVerify() {
-    if (otp.length !== 6) { setError('Please enter the 6-digit code'); return; }
+    if (otp.length !== 6) { setError(t('auth.register.errors.invalidOtp')); return; }
     setLoading(true);
     try {
       await authApi.registerVerify({
@@ -75,9 +77,9 @@ export default function RegisterScreen() {
       router.replace('/(auth)/login');
     } catch (e: any) {
       if (e.status === 401) {
-        setError('Invalid or expired OTP. Please check the code and try again.');
+        setError(t('auth.register.errors.invalidOtp'));
       } else {
-        setError(e.message ?? 'Verification failed. Please try again.');
+        setError(e.message ?? t('auth.register.errors.verificationFailed'));
       }
     } finally {
       setLoading(false);
@@ -91,11 +93,10 @@ export default function RegisterScreen() {
     setError('');
     try {
       await authApi.registerResend({ email: email.trim() });
-      // Show success briefly then clear
-      setError('New OTP sent! Check your email.');
+      setError(t('common.success') + ' — ' + t('auth.register.didntReceive'));
       setTimeout(() => setError(''), 4000);
-    } catch (e: any) {
-      setError(e.message ?? 'Failed to resend OTP');
+    } catch {
+      setError(t('common.error'));
     } finally {
       setLoading(false);
     }
@@ -109,8 +110,8 @@ export default function RegisterScreen() {
   }
 
   const roles: { value: UserRole; label: string; icon: string; desc: string }[] = [
-    { value: 'seeker', label: 'I need help', icon: 'account-search', desc: 'Post tasks and hire providers' },
-    { value: 'provider', label: 'I provide services', icon: 'account-wrench', desc: 'Bid on tasks and earn money' },
+    { value: 'seeker', label: t('auth.register.iNeedHelp'), icon: 'account-search', desc: t('auth.register.iNeedHelpSub') },
+    { value: 'provider', label: t('auth.register.iProvideServices'), icon: 'account-wrench', desc: t('auth.register.iProvideServicesSub') },
   ];
 
   return (
@@ -118,10 +119,10 @@ export default function RegisterScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: step === 'otp' ? 'Verify Phone' : 'Create Account',
+          title: step === 'otp' ? t('auth.register.verifyAccount') : t('auth.register.createAccount'),
           headerStyle: { backgroundColor: '#FF6B35' },
           headerTintColor: '#fff',
-          headerBackTitle: step === 'otp' ? 'Back' : undefined,
+          headerBackTitle: step === 'otp' ? t('common.back') : undefined,
           headerBackVisible: step === 'otp',
         }}
       />
@@ -136,13 +137,13 @@ export default function RegisterScreen() {
             {/* ── Step 1: Registration form ─────────────────────────── */}
             {step === 'form' && (
               <>
-                <Text style={styles.title}>Create Account</Text>
-                <Text style={styles.subtitle}>Join Kaarya today</Text>
+                <Text style={styles.title}>{t('auth.register.createAccount')}</Text>
+                <Text style={styles.subtitle}>{t('auth.register.joinKaarya')}</Text>
 
                 <View style={styles.form}>
                   <Input
-                    label="Full Name"
-                    placeholder="e.g. Ram Prasad"
+                    label={t('auth.register.fullName')}
+                    placeholder={t('auth.register.namePlaceholder')}
                     value={name}
                     onChangeText={setName}
                     autoCapitalize="words"
@@ -150,8 +151,8 @@ export default function RegisterScreen() {
                     leftIcon={<MaterialCommunityIcons name="account" size={20} color={KaaryaColors.muted} />}
                   />
                   <Input
-                    label="Email Address"
-                    placeholder="e.g. ram@gmail.com"
+                    label={t('auth.register.emailAddress')}
+                    placeholder={t('auth.register.emailPlaceholder')}
                     value={email}
                     onChangeText={setEmail}
                     keyboardType="email-address"
@@ -160,8 +161,8 @@ export default function RegisterScreen() {
                     leftIcon={<MaterialCommunityIcons name="email" size={20} color={KaaryaColors.muted} />}
                   />
                   <Input
-                    label="Phone Number"
-                    placeholder="98XXXXXXXX"
+                    label={t('auth.register.phoneNumber')}
+                    placeholder={t('auth.register.phonePlaceholder')}
                     value={phone}
                     onChangeText={setPhone}
                     keyboardType="phone-pad"
@@ -170,8 +171,8 @@ export default function RegisterScreen() {
                     leftIcon={<MaterialCommunityIcons name="phone" size={20} color={KaaryaColors.muted} />}
                   />
                   <Input
-                    label="Password"
-                    placeholder="At least 6 characters"
+                    label={t('auth.register.password')}
+                    placeholder={t('auth.register.passwordPlaceholder')}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry={!showPassword}
@@ -188,8 +189,8 @@ export default function RegisterScreen() {
                     }
                   />
                   <Input
-                    label="Confirm Password"
-                    placeholder="Re-enter password"
+                    label={t('auth.register.confirmPassword')}
+                    placeholder={t('auth.register.confirmPasswordPlaceholder')}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showPassword}
@@ -198,7 +199,7 @@ export default function RegisterScreen() {
                     leftIcon={<MaterialCommunityIcons name="lock-check" size={20} color={KaaryaColors.muted} />}
                   />
 
-                  <Text style={styles.sectionLabel}>I am a...</Text>
+                  <Text style={styles.sectionLabel}>{t('profile.activeMode')}</Text>
                   <View style={styles.roleRow}>
                     {roles.map((r) => (
                       <Pressable
@@ -221,15 +222,15 @@ export default function RegisterScreen() {
 
                   {error ? <Text style={styles.error}>{error}</Text> : null}
                   <View style={{ marginTop: Spacing.lg }}>
-                    <Button title="Continue" onPress={handleInitiate} loading={loading} fullWidth />
+                    <Button title={t('common.continue')} onPress={handleInitiate} loading={loading} fullWidth />
                   </View>
                 </View>
 
                 <View style={styles.footer}>
                   <Text style={styles.footerText}>
-                    Already have an account?{' '}
+                    {t('auth.register.alreadyHaveAccount')}{' '}
                     <Text style={styles.footerLink} onPress={() => router.back()}>
-                      Sign In
+                      {t('auth.register.signIn')}
                     </Text>
                   </Text>
                 </View>
@@ -243,17 +244,17 @@ export default function RegisterScreen() {
                   <View style={styles.otpIconCircle}>
                     <MaterialCommunityIcons name="shield-check" size={48} color={KaaryaColors.brand[500]} />
                   </View>
-                  <Text style={styles.title}>Verify Your Email</Text>
+                  <Text style={styles.title}>{t('auth.register.verifyAccount')}</Text>
                   <Text style={styles.subtitle}>
-                    We've sent a 6-digit code to{'\n'}
+                    {t('auth.register.otpSentTo')}{'\n'}
                     <Text style={styles.phoneHighlight}>{email}</Text>
                   </Text>
                 </View>
 
                 <View style={styles.form}>
                   <Input
-                    label="Enter 6-digit code"
-                    placeholder="● ● ● ● ● ●"
+                    label={t('auth.register.enterOtp')}
+                    placeholder={t('auth.register.otpPlaceholder')}
                     value={otp}
                     onChangeText={(t) => setOtp(t.replace(/\D/g, '').slice(0, 6))}
                     keyboardType="number-pad"
@@ -266,7 +267,7 @@ export default function RegisterScreen() {
 
                   <View style={{ marginTop: Spacing.lg }}>
                     <Button
-                      title="Verify & Create Account"
+                      title={t('auth.register.verifyAndCreate')}
                       onPress={handleVerify}
                       loading={loading}
                       disabled={otp.length !== 6}
@@ -275,15 +276,15 @@ export default function RegisterScreen() {
                   </View>
 
                   <View style={styles.resendRow}>
-                    <Text style={styles.resendText}>Didn't receive it? </Text>
+                    <Text style={styles.resendText}>{t('auth.register.didntReceive')} </Text>
                     <Text style={styles.resendLink} onPress={handleResend}>
-                      Resend
+                      {t('auth.register.resend')}
                     </Text>
                   </View>
 
                   <Pressable style={styles.backRow} onPress={handleBack}>
                     <MaterialCommunityIcons name="arrow-left" size={16} color={KaaryaColors.muted} />
-                    <Text style={styles.backText}> Edit details</Text>
+                    <Text style={styles.backText}>{t('auth.register.editDetails')}</Text>
                   </Pressable>
                 </View>
               </>
@@ -294,11 +295,6 @@ export default function RegisterScreen() {
       </SafeAreaView>
     </>
   );
-}
-
-function maskPhone(phone: string) {
-  if (!phone || phone.length < 4) return phone;
-  return phone.slice(0, 3) + '****' + phone.slice(-3);
 }
 
 const styles = StyleSheet.create({

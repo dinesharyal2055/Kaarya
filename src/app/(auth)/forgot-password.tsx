@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Stack } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 import { Button, Input } from '@/components/ui';
 import { authApi } from '@/lib/api';
@@ -18,6 +19,7 @@ import { authApi } from '@/lib/api';
 type Step = 'phone' | 'otp' | 'password' | 'done';
 
 export default function ForgotPasswordScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [step, setStep] = useState<Step>('phone');
   const [phone, setPhone] = useState('');
@@ -31,7 +33,7 @@ export default function ForgotPasswordScreen() {
   // ─── Step 1: send OTP ────────────────────────────────────────────
   async function handleSendOtp() {
     if (!phone.trim() || phone.length < 8) {
-      setError('Please enter a valid phone number');
+      setError(t('forgotPassword.invalidPhone'));
       return;
     }
     setError('');
@@ -40,7 +42,7 @@ export default function ForgotPasswordScreen() {
       await authApi.forgotPasswordSend({ phone: phone.trim() });
       setStep('otp');
     } catch (e: any) {
-      setError(e.message ?? 'Failed to send OTP. Please try again.');
+      setError(e.message ?? t('forgotPassword.sendOtpFailed'));
     } finally {
       setLoading(false);
     }
@@ -49,7 +51,7 @@ export default function ForgotPasswordScreen() {
   // ─── Step 2: verify OTP ─────────────────────────────────────────
   async function handleVerifyOtp() {
     if (otp.length !== 6) {
-      setError('Please enter the 6-digit code');
+      setError(t('forgotPassword.enter6Digit'));
       return;
     }
     setError('');
@@ -58,7 +60,7 @@ export default function ForgotPasswordScreen() {
       await authApi.forgotPasswordVerify({ phone: phone.trim(), code: otp.trim() });
       setStep('password');
     } catch (e: any) {
-      setError('Invalid or expired OTP. Please check the code and try again.');
+      setError(t('forgotPassword.invalidOtp'));
     } finally {
       setLoading(false);
     }
@@ -67,11 +69,11 @@ export default function ForgotPasswordScreen() {
   // ─── Step 3: set new password ────────────────────────────────────
   async function handleResetPassword() {
     if (newPassword.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(t('forgotPassword.passwordMinChars'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(t('forgotPassword.passwordsMismatch'));
       return;
     }
     setError('');
@@ -80,7 +82,7 @@ export default function ForgotPasswordScreen() {
       await authApi.forgotPasswordReset({ phone: phone.trim(), code: otp.trim(), newPassword });
       setStep('done');
     } catch (e: any) {
-      setError(e.message ?? 'Failed to reset password');
+      setError(e.message ?? t('forgotPassword.resetFailed'));
     } finally {
       setLoading(false);
     }
@@ -96,10 +98,10 @@ export default function ForgotPasswordScreen() {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: 'Forgot Password',
+          title: t('forgotPassword.title'),
           headerStyle: { backgroundColor: '#FF6B35' },
           headerTintColor: '#fff',
-          headerBackTitle: 'Back',
+          headerBackTitle: t('common.back'),
         }}
       />
       <SafeAreaView style={styles.container}>
@@ -118,14 +120,14 @@ export default function ForgotPasswordScreen() {
                     <MaterialCommunityIcons name="lock-reset" size={40} color={KaaryaColors.brand[500]} />
                   </View>
                 </View>
-                <Text style={styles.title}>Reset Your Password</Text>
+                <Text style={styles.title}>{t('forgotPassword.resetTitle')}</Text>
                 <Text style={styles.subtitle}>
-                  Enter your registered phone number and we'll send you an OTP.
+                  {t('forgotPassword.resetSubtitle')}
                 </Text>
 
                 <View style={{ marginTop: Spacing.xl }}>
                   <Input
-                    label="Phone Number"
+                    label={t('forgotPassword.phoneNumber')}
                     placeholder="98XXXXXXXX"
                     value={phone}
                     onChangeText={setPhone}
@@ -139,7 +141,7 @@ export default function ForgotPasswordScreen() {
 
                 <View style={{ marginTop: Spacing.xl }}>
                   <Button
-                    title="Send OTP"
+                    title={t('forgotPassword.sendOtp')}
                     onPress={handleSendOtp}
                     loading={loading}
                     disabled={!phone.trim()}
@@ -157,15 +159,15 @@ export default function ForgotPasswordScreen() {
                     <MaterialCommunityIcons name="shield-check" size={40} color={KaaryaColors.brand[500]} />
                   </View>
                 </View>
-                <Text style={styles.title}>Enter OTP</Text>
+                <Text style={styles.title}>{t('forgotPassword.enterOtp')}</Text>
                 <Text style={styles.subtitle}>
-                  6-digit code sent to{'\n'}
+                  {t('forgotPassword.otpSentTo')}{'\n'}
                   <Text style={styles.phoneHighlight}>{maskPhoneNum(phone)}</Text>
                 </Text>
 
                 <View style={{ marginTop: Spacing.xl }}>
                   <Input
-                    label="6-digit code"
+                    label={t('forgotPassword.otpCode')}
                     placeholder="● ● ● ● ● ●"
                     value={otp}
                     onChangeText={(t) => setOtp(t.replace(/\D/g, '').slice(0, 6))}
@@ -179,7 +181,7 @@ export default function ForgotPasswordScreen() {
 
                 <View style={{ marginTop: Spacing.xl }}>
                   <Button
-                    title="Verify OTP"
+                    title={t('forgotPassword.verifyOtp')}
                     onPress={handleVerifyOtp}
                     loading={loading}
                     disabled={otp.length !== 6}
@@ -188,8 +190,8 @@ export default function ForgotPasswordScreen() {
                 </View>
 
                 <View style={styles.resendRow}>
-                  <Text style={styles.resendText}>Didn't receive it? </Text>
-                  <Text style={styles.resendLink} onPress={handleSendOtp}>Resend</Text>
+                  <Text style={styles.resendText}>{t('forgotPassword.noReceive')} </Text>
+                  <Text style={styles.resendLink} onPress={handleSendOtp}>{t('forgotPassword.resend')}</Text>
                 </View>
               </>
             )}
@@ -202,13 +204,13 @@ export default function ForgotPasswordScreen() {
                     <MaterialCommunityIcons name="check-circle" size={40} color={KaaryaColors.success} />
                   </View>
                 </View>
-                <Text style={styles.title}>Set New Password</Text>
-                <Text style={styles.subtitle}>OTP verified! Now set your new password.</Text>
+                <Text style={styles.title}>{t('forgotPassword.setNewPassword')}</Text>
+                <Text style={styles.subtitle}>{t('forgotPassword.otpVerified')}</Text>
 
                 <View style={{ marginTop: Spacing.xl }}>
                   <Input
-                    label="New Password"
-                    placeholder="At least 6 characters"
+                    label={t('forgotPassword.newPassword')}
+                    placeholder={t('forgotPassword.passwordMinChars')}
                     value={newPassword}
                     onChangeText={setNewPassword}
                     secureTextEntry={!showPassword}
@@ -225,8 +227,8 @@ export default function ForgotPasswordScreen() {
                     }
                   />
                   <Input
-                    label="Confirm New Password"
-                    placeholder="Re-enter new password"
+                    label={t('forgotPassword.confirmPassword')}
+                    placeholder={t('forgotPassword.reEnterPassword')}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry={!showPassword}
@@ -239,7 +241,7 @@ export default function ForgotPasswordScreen() {
 
                 <View style={{ marginTop: Spacing.xl }}>
                   <Button
-                    title="Reset Password"
+                    title={t('forgotPassword.resetPassword')}
                     onPress={handleResetPassword}
                     loading={loading}
                     disabled={!newPassword || !confirmPassword}
@@ -257,15 +259,15 @@ export default function ForgotPasswordScreen() {
                     <MaterialCommunityIcons name="check-circle" size={40} color={KaaryaColors.success} />
                   </View>
                 </View>
-                <Text style={styles.title}>Password Reset!</Text>
+                <Text style={styles.title}>{t('forgotPassword.passwordReset')}</Text>
                 <Text style={styles.subtitle}>
-                  Your password has been changed successfully.{'\n\n'}
-                  Sign in with your new password.
+                  {t('forgotPassword.passwordChanged')}{'\n\n'}
+                  {t('forgotPassword.signInWithNew')}
                 </Text>
 
                 <View style={{ marginTop: Spacing.xl }}>
                   <Button
-                    title="Go to Sign In"
+                    title={t('forgotPassword.goToSignIn')}
                     onPress={() => router.replace('/(auth)/login')}
                     fullWidth
                   />

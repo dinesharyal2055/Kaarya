@@ -6,6 +6,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View, Switch } from 'react-nat
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius, Shadows } from '@/constants/theme';
 
 interface ToggleRowProps {
@@ -37,6 +38,7 @@ function ToggleRow({ icon, title, description, value, onToggle }: ToggleRowProps
 }
 
 export default function NotificationSettingsScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
 
   const [pushEnabled, setPushEnabled] = useState(true);
@@ -56,78 +58,78 @@ export default function NotificationSettingsScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Notifications</Text>
+          <Text style={styles.headerTitle}>{t('notificationSettings.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
-          <Text style={styles.sectionLabel}>ALERTS</Text>
+          <Text style={styles.sectionLabel}>{t('notificationSettings.alerts')}</Text>
           <View style={[styles.section, Shadows.sm]}>
             <ToggleRow
               icon="bell"
-              title="Push Notifications"
-              description="Receive push notifications on your device"
+              title={t('notificationSettings.pushNotifications')}
+              description={t('notificationSettings.pushDescription')}
               value={pushEnabled}
               onToggle={setPushEnabled}
             />
             <View style={styles.divider} />
             <ToggleRow
               icon="offer"
-              title="New Offers"
-              description="When someone sends you an offer on your job"
+              title={t('notificationSettings.newOffers')}
+              description={t('notificationSettings.newOffersDescription')}
               value={offerAlerts}
               onToggle={setOfferAlerts}
             />
             <View style={styles.divider} />
             <ToggleRow
               icon="message-text"
-              title="Messages"
-              description="When you receive a new chat message"
+              title={t('notificationSettings.messages')}
+              description={t('notificationSettings.messagesDescription')}
               value={messageAlerts}
               onToggle={setMessageAlerts}
             />
             <View style={styles.divider} />
             <ToggleRow
               icon="briefcase-outline"
-              title="Job Updates"
-              description="Status changes on your posted or accepted jobs"
+              title={t('notificationSettings.jobUpdates')}
+              description={t('notificationSettings.jobUpdatesDescription')}
               value={jobUpdates}
               onToggle={setJobUpdates}
             />
           </View>
 
-          <Text style={styles.sectionLabel}>PREFERENCES</Text>
+          <Text style={styles.sectionLabel}>{t('notificationSettings.preferences')}</Text>
           <View style={[styles.section, Shadows.sm]}>
             <ToggleRow
               icon="volume-high"
-              title="Sound"
-              description="Play sound for notifications"
+              title={t('notificationSettings.sound')}
+              description={t('notificationSettings.soundDescription')}
               value={sound}
               onToggle={setSound}
             />
             <View style={styles.divider} />
             <ToggleRow
               icon="vibrate"
-              title="Vibration"
-              description="Vibrate on new notifications"
+              title={t('notificationSettings.vibration')}
+              description={t('notificationSettings.vibrationDescription')}
               value={vibrate}
               onToggle={setVibrate}
             />
           </View>
 
-          <Text style={styles.sectionLabel}>OTHER</Text>
+          <Text style={styles.sectionLabel}>{t('notificationSettings.other')}</Text>
           <View style={[styles.section, Shadows.sm]}>
             <ToggleRow
               icon="tag-outline"
-              title="Promotions & Tips"
-              description="Deals, offers, and tips to get the most from Kaarya"
+              title={t('notificationSettings.promotionsTips')}
+              description={t('notificationSettings.promotionsTipsDescription')}
               value={marketing}
               onToggle={setMarketing}
             />
           </View>
 
           <Text style={styles.footerText}>
-            You can update your notification preferences at any time. Changes apply immediately.
+            {t('notificationSettings.footerNote')}
           </Text>
         </ScrollView>
       </SafeAreaView>

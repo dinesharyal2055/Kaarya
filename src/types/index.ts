@@ -50,6 +50,9 @@ export interface Job {
   userRole?: 'seeker' | 'provider';
   offerId?: string;
   agreedAmount?: number;
+  // Saved job fields
+  isSaved?: boolean;
+  savedAt?: string;
   acceptedOffer?: {
     id: string;
     price: number;

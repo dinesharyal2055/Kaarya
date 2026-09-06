@@ -7,13 +7,15 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius } from '@/constants/theme';
 import { reviewsApi } from '@/lib/api';
 import { Button } from '@/components/ui';
 
-const STAR_LABELS = ['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'];
+const STAR_LABELS_KEYS = ['', 'review.poor', 'review.fair', 'review.good', 'review.great', 'review.excellent'];
 
 export default function ReviewScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { jobId, revieweeId, revieweeName } = useLocalSearchParams<{
     jobId: string;
@@ -30,7 +32,7 @@ export default function ReviewScreen() {
 
   const submit = async () => {
     if (rating === 0) {
-      Alert.alert('Rating required', 'Please select a star rating before submitting.');
+      Alert.alert(t('review.ratingRequired'), t('review.selectRatingFirst'));
       return;
     }
 
@@ -42,11 +44,11 @@ export default function ReviewScreen() {
         rating,
         comment: comment.trim() || undefined,
       });
-      Alert.alert('Review submitted!', 'Thank you for your feedback.', [
-        { text: 'OK', onPress: () => router.back() },
+      Alert.alert(t('review.reviewSubmitted'), t('review.thankYou'), [
+        { text: t('common.ok'), onPress: () => router.back() },
       ]);
     } catch (e: any) {
-      Alert.alert('Error', e.message ?? 'Failed to submit review.');
+      Alert.alert(t('common.error'), e.message ?? t('review.submitFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -60,14 +62,14 @@ export default function ReviewScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Leave a Review</Text>
+          <Text style={styles.headerTitle}>{t('review.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         <ScrollView contentContainerStyle={styles.content}>
           <View style={styles.card}>
-            <Text style={styles.label}>How was your experience with</Text>
-            <Text style={styles.revieweeName}>{revieweeName ?? 'the provider'}?</Text>
+            <Text style={styles.label}>{t('review.howWasExperience')}</Text>
+            <Text style={styles.revieweeName}>{revieweeName ?? t('review.theProvider')}</Text>
 
             {/* Stars */}
             <View style={styles.stars}>
@@ -90,16 +92,16 @@ export default function ReviewScreen() {
             </View>
 
             {displayRating > 0 && (
-              <Text style={styles.starLabel}>{STAR_LABELS[displayRating]}</Text>
+              <Text style={styles.starLabel}>{t(STAR_LABELS_KEYS[displayRating])}</Text>
             )}
           </View>
 
           {/* Comment */}
           <View style={styles.commentCard}>
-            <Text style={styles.commentLabel}>Add a comment (optional)</Text>
+            <Text style={styles.commentLabel}>{t('review.addCommentOptional')}</Text>
             <TextInput
               style={styles.commentInput}
-              placeholder="Share details about your experience..."
+              placeholder={t('review.shareExperience')}
               placeholderTextColor={KaaryaColors.muted}
               value={comment}
               onChangeText={setComment}
@@ -114,7 +116,7 @@ export default function ReviewScreen() {
 
         <View style={styles.footer}>
           <Button
-            title={submitting ? 'Submitting...' : 'Submit Review'}
+            title={submitting ? t('common.submitting') : t('review.submitReview')}
             onPress={submit}
             loading={submitting}
             disabled={rating === 0}

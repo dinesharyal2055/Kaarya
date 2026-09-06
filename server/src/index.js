@@ -19,7 +19,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Route placeholders — filled in by later tasks
-let authRoutes, jobsRoutes, offersRoutes, conversationsRoutes, verificationRoutes, adminRoutes, notificationsRoutes, reviewsRoutes;
+let authRoutes, jobsRoutes, offersRoutes, conversationsRoutes, verificationRoutes, adminRoutes, notificationsRoutes, reviewsRoutes, pushRoutes;
 
 try { authRoutes = require('./routes/auth'); } catch (e) { authRoutes = express.Router(); }
 try { jobsRoutes = require('./routes/jobs'); } catch (e) { jobsRoutes = express.Router(); }
@@ -29,6 +29,7 @@ try { verificationRoutes = require('./routes/verification'); } catch (e) { verif
 try { adminRoutes = require('./routes/admin'); } catch (e) { adminRoutes = express.Router(); }
 try { notificationsRoutes = require('./routes/notifications'); } catch (e) { notificationsRoutes = express.Router(); }
 try { reviewsRoutes = require('./routes/reviews'); } catch (e) { reviewsRoutes = express.Router(); }
+try { pushRoutes = require('./routes/push'); } catch (e) { pushRoutes = express.Router(); }
 
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobsRoutes);
@@ -38,6 +39,7 @@ app.use('/api/verification', verificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reviews', reviewsRoutes);
+app.use('/api/push', pushRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {

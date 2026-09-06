@@ -8,6 +8,7 @@ import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, St
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
 import { Button, Input } from '@/components/ui';
@@ -24,6 +25,7 @@ type UploadedImage = {
 };
 
 export default function PostJobScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [step, setStep] = useState<Step>('category');
   const [category, setCategory] = useState('');
@@ -41,9 +43,9 @@ export default function PostJobScreen() {
   const stepIndex = steps.indexOf(step);
 
   function next() {
-    if (step === 'category' && !category) { Alert.alert('Select a category', 'Please choose a service category'); return; }
-    if (step === 'details' && (!title.trim() || !description.trim())) { Alert.alert('Missing details', 'Please fill in title and description'); return; }
-    if (step === 'details' && !area) { Alert.alert('Select location', 'Please choose your area'); return; }
+    if (step === 'category' && !category) { Alert.alert(t('postJob.selectCategory'), t('postJob.chooseCategory')); return; }
+    if (step === 'details' && (!title.trim() || !description.trim())) { Alert.alert(t('postJob.missingDetails'), t('postJob.fillDetails')); return; }
+    if (step === 'details' && !area) { Alert.alert(t('postJob.selectLocation'), t('postJob.chooseArea')); return; }
     const idx = steps.indexOf(step);
     if (idx < steps.length - 1) setStep(steps[idx + 1]);
   }
@@ -59,12 +61,12 @@ export default function PostJobScreen() {
   // ─── Image handling ───────────────────────────────────────────────
   async function pickImage() {
     if (photos.length >= 5) {
-      Alert.alert('Limit reached', 'You can upload up to 5 photos');
+      Alert.alert(t('postJob.limitReached'), t('postJob.photoLimit'));
       return;
     }
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission needed', 'Please grant photo library access to upload photos.');
+      Alert.alert(t('postJob.permissionTitle'), t('postJob.photoLibraryMessage'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -87,12 +89,12 @@ export default function PostJobScreen() {
 
   async function takePhoto() {
     if (photos.length >= 5) {
-      Alert.alert('Limit reached', 'You can upload up to 5 photos');
+      Alert.alert(t('postJob.limitReached'), t('postJob.photoLimit'));
       return;
     }
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission needed', 'Please grant camera access.');
+      Alert.alert(t('postJob.permissionTitle'), t('postJob.cameraMessage'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({
@@ -118,12 +120,12 @@ export default function PostJobScreen() {
 
   function showImagePicker() {
     Alert.alert(
-      'Add Photo',
-      'Choose a source',
+      t('postJob.addPhoto'),
+      t('postJob.chooseSource'),
       [
-        { text: 'Take Photo', onPress: takePhoto },
-        { text: 'Choose from Library', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('postJob.takePhoto'), onPress: takePhoto },
+        { text: t('postJob.chooseFromLibrary'), onPress: pickImage },
+        { text: t('common.cancel'), style: 'cancel' },
       ]
     );
   }
@@ -163,12 +165,12 @@ export default function PostJobScreen() {
         photoUrls: uploadedUrls,
       });
 
-      Alert.alert('Success!', 'Your task has been posted. Providers will start bidding soon.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') },
+      Alert.alert(t('postJob.successTitle'), t('postJob.successMessage'), [
+        { text: t('common.ok'), onPress: () => router.replace('/(tabs)') },
       ]);
     } catch (e: any) {
       setUploadingPhotos(false);
-      Alert.alert('Error', e.message ?? 'Failed to post task. Please try again.');
+      Alert.alert(t('common.error'), e.message ?? t('postJob.postFailed'));
     } finally {
       setLoading(false);
     }
@@ -183,7 +185,7 @@ export default function PostJobScreen() {
           <Pressable onPress={back} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Post a Task</Text>
+          <Text style={styles.headerTitle}>{t('postJob.title')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -197,8 +199,8 @@ export default function PostJobScreen() {
         {/* Step: Category */}
         {step === 'category' && (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.stepTitle}>What do you need help with?</Text>
-            <Text style={styles.stepSubtitle}>Select a category that best describes your task</Text>
+            <Text style={styles.stepTitle}>{t('postJob.stepCategoryTitle')}</Text>
+            <Text style={styles.stepSubtitle}>{t('postJob.stepCategorySubtitle')}</Text>
             <View style={styles.catGrid}>
               {CATEGORIES.map((cat) => (
                 <Pressable key={cat.id} style={[styles.catItem, category === cat.id && styles.catItemSelected]} onPress={() => setCategory(cat.id)}>
@@ -215,13 +217,13 @@ export default function PostJobScreen() {
         {/* Step: Details */}
         {step === 'details' && (
           <ScrollView style={styles.stepContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <Text style={styles.stepTitle}>Describe your task</Text>
-            <Text style={styles.stepSubtitle}>Be specific so providers can give accurate quotes</Text>
+            <Text style={styles.stepTitle}>{t('postJob.stepDetailsTitle')}</Text>
+            <Text style={styles.stepSubtitle}>{t('postJob.stepDetailsSubtitle')}</Text>
             <View style={{ marginTop: Spacing.lg, gap: Spacing.md }}>
-              <Input label="Task Title" placeholder="e.g. Fix leaking tap in bathroom" value={title} onChangeText={setTitle} />
-              <Input label="Description" placeholder="Describe the problem in detail..." value={description} onChangeText={setDescription} multiline numberOfLines={4} containerStyle={{ marginBottom: 0 }} />
+              <Input label={t('postJob.taskTitle')} placeholder={t('postJob.taskTitlePlaceholder')} value={title} onChangeText={setTitle} />
+              <Input label={t('postJob.description')} placeholder={t('postJob.descriptionPlaceholder')} value={description} onChangeText={setDescription} multiline numberOfLines={4} containerStyle={{ marginBottom: 0 }} />
               <View>
-                <Text style={styles.fieldLabel}>Area / Location</Text>
+                <Text style={styles.fieldLabel}>{t('postJob.areaLocation')}</Text>
                 <View style={styles.areaGrid}>
                   {KATHMANDU_AREAS.map((a) => (
                     <Pressable key={a} style={[styles.areaPill, area === a && styles.areaPillSelected]} onPress={() => setArea(a)}>
@@ -237,9 +239,9 @@ export default function PostJobScreen() {
         {/* Step: Photos */}
         {step === 'photos' && (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.stepTitle}>Add Photos</Text>
+            <Text style={styles.stepTitle}>{t('postJob.stepPhotosTitle')}</Text>
             <Text style={styles.stepSubtitle}>
-              Optional — add photos of the problem or work area to help providers give better quotes.{' '}
+              {t('postJob.stepPhotosSubtitle')}{' '}
               <Text style={{ fontWeight: '700' }}>{photos.length}/5</Text>
             </Text>
 
@@ -256,7 +258,7 @@ export default function PostJobScreen() {
               {photos.length < 5 && (
                 <Pressable style={styles.photoAdd} onPress={showImagePicker}>
                   <MaterialCommunityIcons name="camera-plus" size={32} color={KaaryaColors.muted} />
-                  <Text style={styles.photoAddText}>Add Photo</Text>
+                  <Text style={styles.photoAddText}>{t('postJob.addPhoto')}</Text>
                 </Pressable>
               )}
             </View>
@@ -265,7 +267,7 @@ export default function PostJobScreen() {
               <View style={styles.photosHint}>
                 <MaterialCommunityIcons name="image-multiple-outline" size={32} color={KaaryaColors.brand[300]} />
                 <Text style={styles.photosHintText}>
-                  Photos help providers understand the problem better and often lead to faster, more accurate quotes.
+                  {t('postJob.photosHint')}
                 </Text>
               </View>
             )}
@@ -275,22 +277,22 @@ export default function PostJobScreen() {
         {/* Step: Budget */}
         {step === 'budget' && (
           <ScrollView style={styles.stepContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-            <Text style={styles.stepTitle}>Set your budget</Text>
-            <Text style={styles.stepSubtitle}>Set a price range or choose a negotiation style</Text>
+            <Text style={styles.stepTitle}>{t('postJob.stepBudgetTitle')}</Text>
+            <Text style={styles.stepSubtitle}>{t('postJob.stepBudgetSubtitle')}</Text>
             <View style={{ marginTop: Spacing.lg, gap: Spacing.md }}>
               <View style={styles.budgetRow}>
                 <View style={{ flex: 1 }}>
-                  <Input label="Min (Rs.)" placeholder="500" value={budgetMin} onChangeText={setBudgetMin} keyboardType="numeric" />
+                  <Input label={t('postJob.minBudget')} placeholder="500" value={budgetMin} onChangeText={setBudgetMin} keyboardType="numeric" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Input label="Max (Rs.)" placeholder="3000" value={budgetMax} onChangeText={setBudgetMax} keyboardType="numeric" />
+                  <Input label={t('postJob.maxBudget')} placeholder="3000" value={budgetMax} onChangeText={setBudgetMax} keyboardType="numeric" />
                 </View>
               </View>
-              <Text style={styles.fieldLabel}>Negotiation Style</Text>
+              <Text style={styles.fieldLabel}>{t('postJob.negotiationStyle')}</Text>
               {([
-                { value: 'negotiable', label: 'Negotiable', icon: 'swap-horizontal', desc: 'Counter-offers allowed (InDrive style)' },
-                { value: 'open_offers', label: 'Open Offers', icon: 'format-list-bulleted', desc: 'Receive multiple bids, pick the best' },
-                { value: 'fixed', label: 'Fixed Price', icon: 'lock', desc: 'No negotiation, pay exact amount' },
+                { value: 'negotiable', label: t('postJob.negotiable'), icon: 'swap-horizontal', desc: t('postJob.negotiableDesc') },
+                { value: 'open_offers', label: t('postJob.openOffers'), icon: 'format-list-bulleted', desc: t('postJob.openOffersDesc') },
+                { value: 'fixed', label: t('postJob.fixedPrice'), icon: 'lock', desc: t('postJob.fixedPriceDesc') },
               ] as { value: NegotiationMode; label: string; icon: string; desc: string }[]).map((opt) => (
                 <Pressable key={opt.value} style={[styles.negCard, Shadows.sm, negotiation === opt.value && styles.negCardSelected]} onPress={() => setNegotiation(opt.value)}>
                   <MaterialCommunityIcons name={opt.icon as any} size={24} color={negotiation === opt.value ? KaaryaColors.brand[500] : KaaryaColors.muted} />
@@ -308,17 +310,17 @@ export default function PostJobScreen() {
         {/* Step: Confirm */}
         {step === 'confirm' && (
           <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.stepTitle}>Review & Post</Text>
-            <Text style={styles.stepSubtitle}>Make sure everything looks good</Text>
+            <Text style={styles.stepTitle}>{t('postJob.stepConfirmTitle')}</Text>
+            <Text style={styles.stepSubtitle}>{t('postJob.stepConfirmSubtitle')}</Text>
             <View style={[styles.summaryCard, Shadows.sm]}>
-              {catData && <SummaryRow icon={catData.icon as any} iconColor={catData.color} label="Category" value={catData.name} />}
-              <SummaryRow icon="text" iconColor={KaaryaColors.brand[500]} label="Title" value={title} />
-              <SummaryRow icon="map-marker" iconColor={KaaryaColors.brand[500]} label="Area" value={area} />
-              {photos.length > 0 && <SummaryRow icon="camera" iconColor={KaaryaColors.brand[500]} label="Photos" value={`${photos.length} photo${photos.length !== 1 ? 's' : ''} attached`} />}
-              {budgetMin && budgetMax && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label="Budget" value={`Rs. ${budgetMin} – ${budgetMax}`} />}
-              <SummaryRow icon="swap-horizontal" iconColor={KaaryaColors.brand[500]} label="Negotiation" value={negotiation.charAt(0).toUpperCase() + negotiation.slice(1)} />
+              {catData && <SummaryRow icon={catData.icon as any} iconColor={catData.color} label={t('postJob.category')} value={catData.name} />}
+              <SummaryRow icon="text" iconColor={KaaryaColors.brand[500]} label={t('postJob.title')} value={title} />
+              <SummaryRow icon="map-marker" iconColor={KaaryaColors.brand[500]} label={t('postJob.area')} value={area} />
+              {photos.length > 0 && <SummaryRow icon="camera" iconColor={KaaryaColors.brand[500]} label={t('postJob.photos')} value={`${photos.length} ${t('postJob.photosAttached')}`} />}
+              {budgetMin && budgetMax && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label={t('postJob.budget')} value={`Rs. ${budgetMin} – ${budgetMax}`} />}
+              <SummaryRow icon="swap-horizontal" iconColor={KaaryaColors.brand[500]} label={t('postJob.negotiation')} value={negotiation.charAt(0).toUpperCase() + negotiation.slice(1)} />
             </View>
-            <Text style={styles.note}>Your exact address will only be shared with the provider you accept.</Text>
+            <Text style={styles.note}>{t('postJob.addressNote')}</Text>
           </ScrollView>
         )}
 
@@ -326,14 +328,14 @@ export default function PostJobScreen() {
         <View style={styles.cta}>
           {step === 'confirm' ? (
             <Button
-              title={uploadingPhotos ? 'Uploading Photos...' : 'Post Task'}
+              title={uploadingPhotos ? t('postJob.uploadingPhotos') : t('postJob.postTask')}
               onPress={handlePostTask}
               loading={loading || uploadingPhotos}
               disabled={loading || uploadingPhotos}
               fullWidth
             />
           ) : (
-            <Button title="Continue" onPress={next} fullWidth />
+            <Button title={t('common.continue')} onPress={next} fullWidth />
           )}
         </View>
       </SafeAreaView>

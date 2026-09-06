@@ -2,8 +2,14 @@ const express = require('express');
 const { getDb, save } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
+const { sendToUser } = require('../fcm');
 
 const router = express.Router();
+
+// Fire-and-forget push notification helper (never blocks the response)
+function pushNotify(userId, payload) {
+  sendToUser(userId, payload).catch(() => {});
+}
 
 // Re-export so other routes can use it
 module.exports.notifyUser = createNotification;
@@ -157,6 +163,11 @@ router.post('/', requireAuth, async (req, res) => {
         `${offer.providerName} submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`,
         { jobId, offerId: String(newId) }
       );
+      pushNotify(seekerId, {
+        title: 'New offer on your job',
+        body: `${offer.providerName} submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`,
+        data: { type: 'new_offer', jobId, offerId: String(newId) },
+      });
       save();
     }
 
@@ -346,10 +357,15 @@ router.post('/:id/accept', requireAuth, async (req, res) => {
 
     // Notify accepted provider
     createNotification(db, providerId, 'offer_accepted',
-      'Offer accepted!',
+      'Offer accepted! 🎉',
       `Your Rs. ${offerAmount.toLocaleString()} offer for "${jobTitle}" was accepted`,
       { jobId, offerId }
     );
+    pushNotify(providerId, {
+      title: 'Offer accepted! 🎉',
+      body: `Your Rs. ${offerAmount.toLocaleString()} offer for "${jobTitle}" was accepted`,
+      data: { type: 'offer_accepted', jobId, offerId },
+    });
 
     // Reject all other pending offers and notify their providers
     const otherPending = db.exec(
@@ -364,6 +380,11 @@ router.post('/:id/accept', requireAuth, async (req, res) => {
           `Your offer for "${jobTitle}" was not selected`,
           { jobId }
         );
+        pushNotify(otherProviderId, {
+          title: 'Offer not selected',
+          body: `Your offer for "${jobTitle}" was not selected`,
+          data: { type: 'offer_rejected', jobId },
+        });
       }
     }
 
@@ -442,6 +463,11 @@ router.post('/:id/reject', requireAuth, async (req, res) => {
         `Your offer for "${jobTitle}" was not selected`,
         { jobId }
       );
+      pushNotify(providerId, {
+        title: 'Offer not selected',
+        body: `Your offer for "${jobTitle}" was not selected`,
+        data: { type: 'offer_rejected', jobId },
+      });
     }
 
     save();

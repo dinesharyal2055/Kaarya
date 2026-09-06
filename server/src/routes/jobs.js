@@ -3,9 +3,15 @@ const fs = require('fs');
 const path = require('path');
 const { getDb } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { sendToUser } = require('../fcm');
 
 const router = express.Router();
 const PAGE_SIZE = 20;
+
+// Fire-and-forget push helper (never blocks the response)
+function pushNotify(userId, payload) {
+  sendToUser(userId, payload).catch(() => {});
+}
 
 const VALID_STATUSES = ['open', 'assigned', 'in_progress', 'completed', 'cancelled'];
 
@@ -95,7 +101,7 @@ router.post('/upload', requireAuth, async (req, res) => {
 // GET /api/jobs — list with optional filters
 router.get('/', async (req, res) => {
   try {
-    const { category, location, status, page = 1 } = req.query;
+    const { category, location, status, budget_min, budget_max, sort_by = 'newest', page = 1 } = req.query;
     const offset = (Math.max(1, parseInt(page, 10)) - 1) * PAGE_SIZE;
 
     const db = await getDb();
@@ -116,8 +122,26 @@ router.get('/', async (req, res) => {
       conditions.push('j.status = ?');
       params.push(status);
     }
+    // Price range: job overlaps with filter range
+    if (budget_min) {
+      conditions.push('j.budget_max >= ?');
+      params.push(parseFloat(budget_min));
+    }
+    if (budget_max) {
+      conditions.push('j.budget_min <= ?');
+      params.push(parseFloat(budget_max));
+    }
 
     const whereClause = conditions.length > 0 ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    // Sort order
+    const sortMap = {
+      newest: 'j.created_at DESC',
+      oldest: 'j.created_at ASC',
+      price_low: 'j.budget_min ASC',
+      price_high: 'j.budget_max DESC',
+    };
+    const orderClause = sortMap[sort_by] || sortMap.newest;
 
     // Count total
     const countResult = db.exec(
@@ -136,7 +160,7 @@ router.get('/', async (req, res) => {
        FROM jobs j
        LEFT JOIN users u ON j.seeker_id = u.id
        ${whereClause}
-       ORDER BY j.created_at DESC
+       ORDER BY ${orderClause}
        LIMIT ${safeLimit} OFFSET ${safeOffset}`,
       params
     );
@@ -397,10 +421,15 @@ router.post('/:id/start', requireAuth, async (req, res) => {
     // Notify seeker
     const { createNotification } = require('./notifications');
     createNotification(db, jobSeekerId, 'job_started',
-      'Job has started',
-      `Your job "${id}" has been started by the provider.`,
+      'Job has started 🛠️',
+      `Your job has been started by the provider.`,
       { jobId: id }
     );
+    pushNotify(jobSeekerId, {
+      title: 'Job has started 🛠️',
+      body: `Your job has been started by the provider.`,
+      data: { type: 'job_started', jobId: id },
+    });
 
     require('../db').save();
 
@@ -446,10 +475,15 @@ router.post('/:id/complete', requireAuth, async (req, res) => {
       const providerId = offerResult[0].values[0][0];
       const { createNotification } = require('./notifications');
       createNotification(db, providerId, 'job_completed',
-        'Job marked as complete',
-        `Your work on "${jobTitle}" has been marked as complete by the seeker. You can now leave a review.`,
+        'Job marked as complete ✅',
+        `Your work on "${jobTitle}" has been marked as complete. You can now leave a review.`,
         { jobId: id }
       );
+      pushNotify(providerId, {
+        title: 'Job marked as complete ✅',
+        body: `Your work on "${jobTitle}" has been marked as complete. You can now leave a review.`,
+        data: { type: 'job_completed', jobId: id },
+      });
     }
 
     require('../db').save();
@@ -494,6 +528,106 @@ router.put('/:id/status', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('[jobs/updateStatus]', err);
     res.status(500).json({ error: 'Failed to update job status' });
+  }
+});
+
+// POST /api/jobs/:id/save — save/unsave a job (auth required, provider only)
+router.post('/:id/save', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+
+    // Check user role
+    const userResult = db.exec('SELECT role FROM users WHERE id = ?', [req.userId]);
+    if (userResult.length === 0 || userResult[0].values.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const role = userResult[0].values[0][0];
+
+    // Check job exists and is open
+    const jobResult = db.exec('SELECT status FROM jobs WHERE id = ?', [id]);
+    if (jobResult.length === 0 || jobResult[0].values.length === 0) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    // Check if already saved
+    const existing = db.exec(
+      'SELECT id FROM saved_jobs WHERE user_id = ? AND job_id = ?',
+      [req.userId, id]
+    );
+
+    if (existing.length > 0 && existing[0].values.length > 0) {
+      // Unsave
+      db.run('DELETE FROM saved_jobs WHERE user_id = ? AND job_id = ?', [req.userId, id]);
+      require('../db').save();
+      return res.json({ saved: false, message: 'Job removed from saved list' });
+    } else {
+      // Save
+      db.run(
+        'INSERT INTO saved_jobs (user_id, job_id) VALUES (?, ?)',
+        [req.userId, id]
+      );
+      require('../db').save();
+      return res.json({ saved: true, message: 'Job saved' });
+    }
+  } catch (err) {
+    console.error('[jobs/save]', err);
+    res.status(500).json({ error: 'Failed to save job' });
+  }
+});
+
+// GET /api/jobs/saved/list — list saved jobs for current user
+router.get('/saved/list', requireAuth, async (req, res) => {
+  try {
+    const db = await getDb();
+
+    const result = db.exec(
+      `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
+              j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
+              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url,
+              sj.created_at as saved_at
+       FROM saved_jobs sj
+       JOIN jobs j ON sj.job_id = j.id
+       LEFT JOIN users u ON j.seeker_id = u.id
+       WHERE sj.user_id = ?
+       ORDER BY sj.created_at DESC`,
+      [req.userId]
+    );
+
+    const jobs = [];
+    if (result.length > 0) {
+      for (const row of result[0].values) {
+        const job = jobFromRow(row, row[14], row[15]);
+        job.savedAt = row[16];
+        job.isSaved = true;
+        const offerCount = await getOfferCount(job.id);
+        job.offerCount = offerCount;
+        jobs.push(job);
+      }
+    }
+
+    res.json({ jobs });
+  } catch (err) {
+    console.error('[jobs/saved]', err);
+    res.status(500).json({ error: 'Failed to fetch saved jobs' });
+  }
+});
+
+// GET /api/jobs/:id/saved — check if job is saved by current user
+router.get('/:id/saved', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+
+    const result = db.exec(
+      'SELECT id FROM saved_jobs WHERE user_id = ? AND job_id = ?',
+      [req.userId, id]
+    );
+
+    res.json({ saved: result.length > 0 && result[0].values.length > 0 });
+  } catch (err) {
+    console.error('[jobs/saved/check]', err);
+    res.status(500).json({ error: 'Failed to check saved status' });
   }
 });
 

@@ -17,6 +17,7 @@ import { useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius, Shadows } from '@/constants/theme';
 import { Button, Badge } from '@/components/ui';
 import { verificationApi } from '@/lib/api';
@@ -25,43 +26,43 @@ import type { VerificationRequest } from '@/types';
 
 type Tier = {
   id: number;
-  label: string;
-  subtitle: string;
-  description: string;
+  labelKey: string;
+  subtitleKey: string;
+  descriptionKey: string;
   icon: string;
-  badge: string;
+  badgeKey: string;
   active: boolean;
   color: string;
 };
 
-const TIERS: Tier[] = [
+const TIERS = (t: (k: string) => string): Tier[] => [
   {
     id: 1,
-    label: 'Nagarik App',
-    subtitle: 'Government ID (Instant)',
-    description: 'Verify instantly using Nepal\'s Nagarik App OAuth. Highest trust level.',
+    labelKey: 'verification.nagarikApp',
+    subtitleKey: 'verification.nagarikSubtitle',
+    descriptionKey: 'verification.nagarikDescription',
     icon: 'card-account-details',
-    badge: 'Coming Soon',
+    badgeKey: 'verification.comingSoon',
     active: false,
     color: KaaryaColors.brand[500],
   },
   {
     id: 2,
-    label: 'eSewa / Khalti',
-    subtitle: 'Payment KYC (Instant)',
-    description: 'Verify using your eSewa or Khalti KYC. Fast and trusted.',
+    labelKey: 'verification.esewaKhalti',
+    subtitleKey: 'verification.esewaSubtitle',
+    descriptionKey: 'verification.esewaDescription',
     icon: 'wallet',
-    badge: 'Coming Soon',
+    badgeKey: 'verification.comingSoon',
     active: false,
     color: KaaryaColors.brand[500],
   },
   {
     id: 3,
-    label: 'Manual Review',
-    subtitle: 'Citizenship Documents',
-    description: 'Upload your citizenship card photos and a selfie. Reviewed within 12 hours.',
+    labelKey: 'verification.manualReview',
+    subtitleKey: 'verification.manualSubtitle',
+    descriptionKey: 'verification.manualDescription',
     icon: 'shield-account',
-    badge: 'Available Now',
+    badgeKey: 'verification.availableNow',
     active: true,
     color: KaaryaColors.success,
   },
@@ -75,18 +76,19 @@ type UploadedImage = {
 };
 
 export default function VerificationScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const navigation = useNavigation();
   const { refreshUser } = useAuth();
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 4 = success
 
-  // Dynamic header: step 1 back button shows "Profile", steps 2-3 show "Back"
   useLayoutEffect(() => {
     navigation.setOptions({
-      headerBackTitle: step === 1 ? 'Profile' : 'Back',
+      headerBackTitle: step === 1 ? t('verification.backToProfile') : t('common.back'),
     });
-  }, [step, navigation]);
+  }, [step, navigation, t]);
+
   const [selectedTier, setSelectedTier] = useState<Tier | null>(null);
   const [existingRequest, setExistingRequest] = useState<VerificationRequest | null>(null);
   const [loading, setLoading] = useState(false);
@@ -96,6 +98,8 @@ export default function VerificationScreen() {
   const [selfie, setSelfie] = useState<UploadedImage | null>(null);
   const [citizenshipFront, setCitizenshipFront] = useState<UploadedImage | null>(null);
   const [citizenshipBack, setCitizenshipBack] = useState<UploadedImage | null>(null);
+
+  const tiers = TIERS(t);
 
   useEffect(() => {
     loadStatus();
@@ -108,11 +112,10 @@ export default function VerificationScreen() {
       if (result.request) {
         setExistingRequest(result.request);
         if (result.request.status === 'pending') {
-          setStep(4); // show success/pending screen
+          setStep(4);
         } else if (result.request.status === 'approved') {
           setStep(4);
         } else {
-          // rejected or more_info_needed — let them re-submit
           setStep(1);
         }
       }
@@ -126,7 +129,7 @@ export default function VerificationScreen() {
   async function pickImage(type: 'selfie' | 'front' | 'back') {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission needed', 'Please grant photo library access to upload documents.');
+      Alert.alert(t('verification.permissionTitle'), t('verification.photoLibraryMessage'));
       return;
     }
 
@@ -154,7 +157,7 @@ export default function VerificationScreen() {
   async function takePhoto(type: 'selfie' | 'front' | 'back') {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Permission needed', 'Please grant camera access to take photos.');
+      Alert.alert(t('verification.permissionTitle'), t('verification.cameraMessage'));
       return;
     }
 
@@ -180,12 +183,12 @@ export default function VerificationScreen() {
 
   function showImagePicker(type: 'selfie' | 'front' | 'back') {
     Alert.alert(
-      'Add Photo',
-      'Choose a source',
+      t('verification.addPhoto'),
+      t('verification.chooseSource'),
       [
-        { text: 'Take Photo', onPress: () => takePhoto(type) },
-        { text: 'Choose from Library', onPress: () => pickImage(type) },
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('verification.takePhoto'), onPress: () => takePhoto(type) },
+        { text: t('verification.chooseFromLibrary'), onPress: () => pickImage(type) },
+        { text: t('common.cancel'), style: 'cancel' },
       ]
     );
   }
@@ -223,14 +226,13 @@ export default function VerificationScreen() {
         notes: `Selfie: ${uploadedUrls[0] ?? 'N/A'}`,
       });
 
-      // Update local user state
       await refreshUser?.();
 
       setExistingRequest(request);
       setStep(4);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Submission failed. Please try again.';
-      Alert.alert('Verification Error', message);
+      const message = err instanceof Error ? err.message : t('verification.submissionFailed');
+      Alert.alert(t('verification.verificationError'), message);
     } finally {
       setSubmitting(false);
     }
@@ -240,7 +242,7 @@ export default function VerificationScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{t('common.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -262,7 +264,7 @@ export default function VerificationScreen() {
                 )}
               </View>
               <Text style={[styles.stepLabel, step === s && styles.stepLabelActive]}>
-                {s === 1 ? 'Tier' : s === 2 ? 'Documents' : 'Review'}
+                {s === 1 ? t('verification.stepTier') : s === 2 ? t('verification.stepDocuments') : t('verification.stepReview')}
               </Text>
             </View>
           ))}
@@ -271,12 +273,12 @@ export default function VerificationScreen() {
         {/* Step 1: Tier Selection */}
         {step === 1 && (
           <View>
-            <Text style={styles.stepTitle}>Choose Verification Method</Text>
+            <Text style={styles.stepTitle}>{t('verification.chooseMethod')}</Text>
             <Text style={styles.stepSubtitle}>
-              Select a verification level. Higher tiers offer more trust badges.
+              {t('verification.chooseMethodSubtitle')}
             </Text>
 
-            {TIERS.map((tier) => (
+            {tiers.map((tier) => (
               <Pressable
                 key={tier.id}
                 style={[
@@ -296,14 +298,14 @@ export default function VerificationScreen() {
                 </View>
                 <View style={styles.tierContent}>
                   <View style={styles.tierHeader}>
-                    <Text style={[styles.tierLabel, !tier.active && styles.textMuted]}>{tier.label}</Text>
+                    <Text style={[styles.tierLabel, !tier.active && styles.textMuted]}>{t(tier.labelKey)}</Text>
                     <Badge
-                      label={tier.badge}
+                      label={t(tier.badgeKey)}
                       variant={tier.active ? 'success' : 'muted'}
                     />
                   </View>
-                  <Text style={[styles.tierSubtitle, !tier.active && styles.textMuted]}>{tier.subtitle}</Text>
-                  <Text style={styles.tierDescription}>{tier.description}</Text>
+                  <Text style={[styles.tierSubtitle, !tier.active && styles.textMuted]}>{t(tier.subtitleKey)}</Text>
+                  <Text style={styles.tierDescription}>{t(tier.descriptionKey)}</Text>
                 </View>
                 {selectedTier?.id === tier.id && tier.active && (
                   <MaterialCommunityIcons name="check-circle" size={22} color={KaaryaColors.success} />
@@ -312,7 +314,7 @@ export default function VerificationScreen() {
             ))}
 
             <Button
-              title="Continue"
+              title={t('common.continue')}
               onPress={() => setStep(2)}
               disabled={!selectedTier || !selectedTier.active}
               fullWidth
@@ -324,47 +326,50 @@ export default function VerificationScreen() {
         {/* Step 2: Document Upload */}
         {step === 2 && (
           <View>
-            <Text style={styles.stepTitle}>Upload Documents</Text>
+            <Text style={styles.stepTitle}>{t('verification.uploadDocuments')}</Text>
             <Text style={styles.stepSubtitle}>
-              We'll use these to verify your identity. All documents are encrypted and stored securely.
+              {t('verification.uploadDocumentsSubtitle')}
             </Text>
 
-            <Text style={styles.sectionLabel}>Required Documents</Text>
+            <Text style={styles.sectionLabel}>{t('verification.requiredDocuments')}</Text>
 
             {/* Selfie */}
             <DocumentUploadCard
-              title="Selfie Photo"
-              description="A clear photo of yourself"
+              title={t('verification.selfiePhoto')}
+              description={t('verification.selfieDescription')}
               image={selfie}
               onPress={() => showImagePicker('selfie')}
               onRemove={() => removeImage('selfie')}
               required
+              t={t}
             />
 
             {/* Citizenship Front */}
             <DocumentUploadCard
-              title="Citizenship Card (Front)"
-              description="Front side of your Nepali citizenship card"
+              title={t('verification.citizenshipFront')}
+              description={t('verification.citizenshipFrontDescription')}
               image={citizenshipFront}
               onPress={() => showImagePicker('front')}
               onRemove={() => removeImage('front')}
               required
+              t={t}
             />
 
             {/* Citizenship Back */}
             <DocumentUploadCard
-              title="Citizenship Card (Back)"
-              description="Back side of your Nepali citizenship card"
+              title={t('verification.citizenshipBack')}
+              description={t('verification.citizenshipBackDescription')}
               image={citizenshipBack}
               onPress={() => showImagePicker('back')}
               onRemove={() => removeImage('back')}
               required
+              t={t}
             />
 
             <View style={styles.buttonRow}>
-              <Button title="Back" variant="ghost" onPress={() => setStep(1)} style={{ flex: 1, marginRight: Spacing.sm }} />
+              <Button title={t('common.back')} variant="ghost" onPress={() => setStep(1)} style={{ flex: 1, marginRight: Spacing.sm }} />
               <Button
-                title="Review"
+                title={t('verification.review')}
                 onPress={() => setStep(3)}
                 disabled={!selfie || !citizenshipFront || !citizenshipBack}
                 style={{ flex: 1, marginLeft: Spacing.sm }}
@@ -376,30 +381,29 @@ export default function VerificationScreen() {
         {/* Step 3: Review */}
         {step === 3 && (
           <View>
-            <Text style={styles.stepTitle}>Review & Submit</Text>
+            <Text style={styles.stepTitle}>{t('verification.reviewSubmit')}</Text>
             <Text style={styles.stepSubtitle}>
-              Please confirm the details below before submitting for review.
+              {t('verification.reviewSubmitSubtitle')}
             </Text>
 
             <View style={[styles.reviewCard, Shadows.sm]}>
-              <ReviewRow label="Verification Tier" value={selectedTier?.label ?? ''} />
-              <ReviewRow label="Selfie" value={selfie ? 'Uploaded ✓' : 'Missing ✗'} valueColor={selfie ? KaaryaColors.success : KaaryaColors.danger} />
-              <ReviewRow label="Citizenship (Front)" value={citizenshipFront ? 'Uploaded ✓' : 'Missing ✗'} valueColor={citizenshipFront ? KaaryaColors.success : KaaryaColors.danger} />
-              <ReviewRow label="Citizenship (Back)" value={citizenshipBack ? 'Uploaded ✓' : 'Missing ✗'} valueColor={citizenshipBack ? KaaryaColors.success : KaaryaColors.danger} />
+              <ReviewRow label={t('verification.verificationTier')} value={selectedTier ? t(selectedTier.labelKey) : ''} />
+              <ReviewRow label={t('verification.selfiePhoto')} value={selfie ? t('verification.uploaded') : t('verification.missing')} valueColor={selfie ? KaaryaColors.success : KaaryaColors.danger} />
+              <ReviewRow label={t('verification.citizenshipFront')} value={citizenshipFront ? t('verification.uploaded') : t('verification.missing')} valueColor={citizenshipFront ? KaaryaColors.success : KaaryaColors.danger} />
+              <ReviewRow label={t('verification.citizenshipBack')} value={citizenshipBack ? t('verification.uploaded') : t('verification.missing')} valueColor={citizenshipBack ? KaaryaColors.success : KaaryaColors.danger} />
             </View>
 
             <View style={styles.disclaimer}>
               <MaterialCommunityIcons name="shield-check" size={18} color={KaaryaColors.muted} />
               <Text style={styles.disclaimerText}>
-                By submitting, you confirm that all documents belong to you and are authentic.
-                Kaarya will review your submission within 12 hours.
+                {t('verification.disclaimer')}
               </Text>
             </View>
 
             <View style={styles.buttonRow}>
-              <Button title="Back" variant="ghost" onPress={() => setStep(2)} style={{ flex: 1, marginRight: Spacing.sm }} />
+              <Button title={t('common.back')} variant="ghost" onPress={() => setStep(2)} style={{ flex: 1, marginRight: Spacing.sm }} />
               <Button
-                title="Submit for Review"
+                title={t('verification.submitForReview')}
                 onPress={handleSubmit}
                 loading={submitting}
                 disabled={submitting}
@@ -420,39 +424,39 @@ export default function VerificationScreen() {
               />
             </View>
             <Text style={styles.successTitle}>
-              {existingRequest?.status === 'approved' ? 'Verification Approved!' : 'Submission Received'}
+              {existingRequest?.status === 'approved' ? t('verification.approvedTitle') : t('verification.submittedTitle')}
             </Text>
             <Text style={styles.successSubtitle}>
               {existingRequest?.status === 'approved'
-                ? 'Your account is now verified. Enjoy full access to Kaarya!'
-                : 'We\'ve received your documents. Our team will review them within 12 hours. You\'ll be notified once the review is complete.'}
+                ? t('verification.approvedMessage')
+                : t('verification.submittedMessage')}
             </Text>
 
             {existingRequest && (
               <View style={[styles.statusCard, Shadows.sm]}>
                 <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Status</Text>
+                  <Text style={styles.statusLabel}>{t('verification.status')}</Text>
                   <Badge
-                    label={existingRequest.status === 'pending' ? 'Under Review' : existingRequest.status === 'approved' ? 'Approved' : existingRequest.status === 'rejected' ? 'Rejected' : 'More Info Needed'}
+                    label={existingRequest.status === 'pending' ? t('verification.underReview') : existingRequest.status === 'approved' ? t('verification.approved') : existingRequest.status === 'rejected' ? t('verification.rejected') : t('verification.moreInfoNeeded')}
                     variant={existingRequest.status === 'pending' ? 'warning' : existingRequest.status === 'approved' ? 'success' : 'danger'}
                   />
                 </View>
                 <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Submitted</Text>
+                  <Text style={styles.statusLabel}>{t('verification.submitted')}</Text>
                   <Text style={styles.statusValue}>
                     {new Date(existingRequest.createdAt).toLocaleDateString('en-NP', { year: 'numeric', month: 'long', day: 'numeric' })}
                   </Text>
                 </View>
                 <View style={styles.statusRow}>
-                  <Text style={styles.statusLabel}>Tier</Text>
+                  <Text style={styles.statusLabel}>{t('verification.tier')}</Text>
                   <Text style={styles.statusValue}>
-                    {TIERS.find(t => t.id === existingRequest.level)?.label ?? `Tier ${existingRequest.level}`}
+                    {tiers.find(tier => tier.id === existingRequest.level)?.labelKey ? t(tiers.find(tier => tier.id === existingRequest.level)!.labelKey) : `${t('verification.tier')} ${existingRequest.level}`}
                   </Text>
                 </View>
               </View>
             )}
 
-            <Button title="Back to Profile" onPress={async () => { await refreshUser(); router.back(); }} fullWidth style={{ marginTop: Spacing.lg }} />
+            <Button title={t('verification.backToProfile')} onPress={async () => { await refreshUser(); router.back(); }} fullWidth style={{ marginTop: Spacing.lg }} />
           </View>
         )}
 
@@ -470,6 +474,7 @@ function DocumentUploadCard({
   onPress,
   onRemove,
   required,
+  t,
 }: {
   title: string;
   description: string;
@@ -477,6 +482,7 @@ function DocumentUploadCard({
   onPress: () => void;
   onRemove: () => void;
   required: boolean;
+  t: (key: string) => string;
 }) {
   return (
     <View style={[styles.uploadCard, Shadows.sm]}>
@@ -505,7 +511,7 @@ function DocumentUploadCard({
       ) : (
         <Pressable style={styles.uploadPlaceholder} onPress={onPress}>
           <MaterialCommunityIcons name="camera-plus" size={32} color={KaaryaColors.muted} />
-          <Text style={styles.uploadPlaceholderText}>Tap to add photo</Text>
+          <Text style={styles.uploadPlaceholderText}>{t('verification.tapToAddPhoto')}</Text>
         </Pressable>
       )}
     </View>

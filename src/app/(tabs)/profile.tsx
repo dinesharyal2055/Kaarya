@@ -3,15 +3,20 @@ import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'rea
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { Avatar, Badge, Button } from '@/components/ui';
 import type { UserRole } from '@/types';
 
 export default function ProfileScreen() {
+  const { t } = useTranslation();
   const router = useRouter();
   const { user, logout, refreshUser, switchRole } = useAuth();
+  const { language, setLanguage, languages } = useLanguage();
   const [switching, setSwitching] = useState(false);
+  const [showLangSheet, setShowLangSheet] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -21,22 +26,28 @@ export default function ProfileScreen() {
 
   const isSeeker = user?.role === 'seeker';
   const isVerified = user?.verificationStatus === 'verified';
+  const currentLang = languages.find(l => l.code === language);
 
   async function handleRoleSwitch(newRole: UserRole) {
+    const title = t('alerts.switchRole');
+    const msg = newRole === 'provider'
+      ? t('alerts.switchToProvider')
+      : t('alerts.switchToSeeker');
+
     Alert.alert(
-      'Switch Role?',
-      `Switch to ${newRole === 'provider' ? 'Service Provider' : 'Task Poster'} mode?`,
+      title,
+      msg,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Switch',
+          text: t('alerts.switch'),
           onPress: async () => {
             setSwitching(true);
             try {
               await switchRole(newRole);
               await refreshUser();
             } catch (e: any) {
-              Alert.alert('Error', e.message ?? 'Failed to switch role');
+              Alert.alert(t('common.error'), e.message ?? t('alerts.failedToSwitch'));
             } finally {
               setSwitching(false);
             }
@@ -44,6 +55,11 @@ export default function ProfileScreen() {
         },
       ]
     );
+  }
+
+  async function handleLanguageSwitch(code: string) {
+    setShowLangSheet(false);
+    await setLanguage(code);
   }
 
   return (
@@ -58,24 +74,24 @@ export default function ProfileScreen() {
             <Avatar name={user?.name ?? 'User'} size={84} />
           </View>
           <Text style={styles.name} numberOfLines={1}>
-            {user?.name ?? 'Guest User'}
+            {user?.name ?? t('profile.guestUser')}
           </Text>
           <Text style={styles.phone} numberOfLines={1}>
-            {user?.phone ?? 'No phone number'}
+            {user?.phone ?? t('profile.noPhone')}
           </Text>
           <View style={styles.badgeRow}>
-            <Badge label={isSeeker ? 'Task Poster' : 'Service Provider'} variant="brand" />
+            <Badge label={isSeeker ? t('profile.taskPoster') : t('profile.serviceProvider')} variant="brand" />
             {isVerified ? (
-              <Badge label="Verified" variant="success" />
+              <Badge label={t('profile.verified')} variant="success" />
             ) : (
-              <Badge label="Unverified" variant="warning" />
+              <Badge label={t('profile.unverified')} variant="warning" />
             )}
           </View>
         </View>
 
         {/* Role switcher */}
         <View style={[styles.roleSwitchCard, Shadows.sm]}>
-          <Text style={styles.roleSwitchLabel}>Active Mode</Text>
+          <Text style={styles.roleSwitchLabel}>{t('profile.activeMode')}</Text>
           <View style={styles.roleSwitchRow}>
             <TouchableOpacity
               style={[styles.roleBtn, isSeeker && styles.roleBtnActive]}
@@ -89,7 +105,7 @@ export default function ProfileScreen() {
                 color={isSeeker ? '#fff' : KaaryaColors.muted}
               />
               <Text style={[styles.roleBtnText, isSeeker && styles.roleBtnTextActive]}>
-                Task Poster
+                {t('profile.taskPoster')}
               </Text>
             </TouchableOpacity>
 
@@ -105,89 +121,120 @@ export default function ProfileScreen() {
                 color={!isSeeker ? '#fff' : KaaryaColors.muted}
               />
               <Text style={[styles.roleBtnText, !isSeeker && styles.roleBtnTextActive]}>
-                Service Provider
+                {t('profile.serviceProvider')}
               </Text>
             </TouchableOpacity>
           </View>
           <Text style={styles.roleSwitchHint}>
-            Switch mode to {isSeeker ? 'find work and bid on tasks' : 'post tasks and hire providers'}
+            {t('profile.switchModeHint', {
+              mode: isSeeker
+                ? t('profile.findWorkBidTasks')
+                : t('profile.postTasksHireProviders'),
+            })}
           </Text>
         </View>
 
         {/* Stats (Providers only) */}
         {user?.role === 'provider' && (
           <View style={[styles.statsCard, Shadows.sm]}>
-            <Stat label="Rating" value={user.rating ? user.rating.toFixed(1) : 'New'} icon="star" />
+            <Stat label={t('review.starLabels.3')} value={user.rating ? user.rating.toFixed(1) : 'New'} icon="star" />
             <View style={styles.statDivider} />
-            <Stat label="Reviews" value={String(user.reviewCount ?? 0)} icon="message-text" />
+            <Stat label={t('offers.myBids')} value={String(user.reviewCount ?? 0)} icon="message-text" />
             <View style={styles.statDivider} />
-            <Stat label="Complete" value={`${user.completionRate ?? 0}%`} icon="check-circle" />
+            <Stat label={t('jobs.status.completed')} value={`${user.completionRate ?? 0}%`} icon="check-circle" />
           </View>
         )}
 
         {/* Bio */}
         {user?.bio ? (
           <View style={[styles.bioCard, Shadows.sm]}>
-            <Text style={styles.bioLabel}>About Me</Text>
+            <Text style={styles.bioLabel}>{t('profile.aboutMe')}</Text>
             <Text style={styles.bioText}>{user.bio}</Text>
           </View>
         ) : null}
 
         {/* Menu Section 1: Account */}
-        <Text style={styles.sectionHeader}>ACCOUNT & SECURITY</Text>
+        <Text style={styles.sectionHeader}>{t('profile.accountSecurity')}</Text>
         <View style={[styles.menuCard, Shadows.sm]}>
           <MenuItem
             icon="account-edit-outline"
-            title="Edit Profile"
-            subtitle="Name, bio, and profile photo"
+            title={t('profile.editProfile')}
+            subtitle={t('profile.editProfileSub')}
             onPress={() => router.push('/edit-profile')}
           />
           <View style={styles.menuDivider} />
           <MenuItem
             icon="shield-check-outline"
-            title="Verification"
-            subtitle={isVerified ? 'Identity verified' : 'Complete verification for trust badge'}
+            title={t('profile.verificationTitle')}
+            subtitle={isVerified ? t('profile.identityVerified') : t('profile.completeVerification')}
             onPress={() => router.push('/verification')}
-            statusBadge={isVerified ? 'Verified' : 'Pending'}
+            statusBadge={isVerified ? t('profile.verified') : t('profile.unverified')}
             statusVariant={isVerified ? 'success' : 'warning'}
           />
           <View style={styles.menuDivider} />
           <MenuItem
             icon="credit-card-outline"
-            title="Payment Methods"
-            subtitle="eSewa, Khalti, or Bank transfer"
+            title={t('profile.paymentMethods')}
+            subtitle={t('profile.paymentMethodsSub')}
             onPress={() => router.push('/payment-methods')}
           />
           <View style={styles.menuDivider} />
           <MenuItem
             icon="bell-outline"
-            title="Notifications"
-            subtitle="Alerts, sounds, and messages"
+            title={t('profile.notificationsSettings')}
+            subtitle={t('profile.notificationsSub')}
             onPress={() => router.push('/notification-settings')}
           />
         </View>
 
         {/* Menu Section 2: Support & Info */}
-        <Text style={styles.sectionHeader}>SUPPORT & ABOUT</Text>
+        <Text style={styles.sectionHeader}>{t('profile.supportAbout')}</Text>
         <View style={[styles.menuCard, Shadows.sm]}>
           <MenuItem
+            icon="translate"
+            title={t('language.selectLanguage')}
+            subtitle={currentLang?.nativeName ?? 'English'}
+            onPress={() => setShowLangSheet(!showLangSheet)}
+          />
+          {showLangSheet && (
+            <View style={styles.langSheet}>
+              {languages.map((lang) => (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={styles.langOption}
+                  onPress={() => handleLanguageSwitch(lang.code)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.langOptionText, language === lang.code && styles.langOptionActive]}>
+                    {lang.nativeName}
+                  </Text>
+                  <Text style={styles.langOptionSub}>{lang.name}</Text>
+                  {language === lang.code && (
+                    <MaterialCommunityIcons name="check" size={18} color={KaaryaColors.brand[500]} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          <View style={styles.menuDivider} />
+          <MenuItem
             icon="help-circle-outline"
-            title="Help & Support"
-            subtitle="FAQs, contact support, guides"
+            title={t('profile.helpSupport')}
+            subtitle={t('profile.helpSupportSub')}
             onPress={() => {}}
           />
           <View style={styles.menuDivider} />
           <MenuItem
             icon="information-outline"
-            title="About Kaarya"
-            subtitle="Terms, privacy policy, and licenses"
+            title={t('profile.aboutKaarya')}
+            subtitle={t('profile.aboutKaaryaSub')}
             onPress={() => {}}
           />
         </View>
 
         {/* Log Out Button */}
         <View style={styles.logoutWrap}>
-          <Button title="Log Out" variant="danger" onPress={logout} fullWidth />
+          <Button title={t('profile.logOut')} variant="danger" onPress={logout} fullWidth />
         </View>
 
         <Text style={styles.version}>Kaarya v1.0.0 · Nepal</Text>
@@ -430,7 +477,7 @@ const styles = StyleSheet.create({
   menuDivider: {
     height: 1,
     backgroundColor: KaaryaColors.border,
-    marginLeft: Spacing.md + 40 + 14, // Aligns divider with text start
+    marginLeft: Spacing.md + 40 + 14,
   },
   logoutWrap: {
     marginTop: Spacing.md,
@@ -441,5 +488,33 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xs,
     color: KaaryaColors.muted,
     marginTop: Spacing.md,
+  },
+  langSheet: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.sm,
+    gap: 2,
+  },
+  langOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    gap: 8,
+  },
+  langOptionText: {
+    fontSize: FontSizes.base,
+    color: KaaryaColors.text,
+    fontWeight: '500',
+    flex: 1,
+  },
+  langOptionActive: {
+    color: KaaryaColors.brand[500],
+    fontWeight: '700',
+  },
+  langOptionSub: {
+    fontSize: FontSizes.xs,
+    color: KaaryaColors.muted,
+    marginRight: 8,
   },
 });
