@@ -6,6 +6,7 @@ const { getDb, save } = require('../db');
 const { requireAuth, signToken, hashPassword, verifyPassword } = require('../middleware/auth');
 const { sendRegistrationOtp, sendPasswordReset } = require('../mailer');
 const { loginLimiter, otpLimiter, registerLimiter } = require('../middleware/rateLimit');
+const { checkGuard, recordFailure, recordSuccess } = require('../middleware/loginGuard');
 const { validate, register, verifyOtp, resendOtp, login: loginSchema, forgotPassword, verifyResetOtp, resetPassword, updateProfile, uploadAvatar, updateRole } = require('../middleware/validate');
 const { sanitize } = require('../middleware/sanitize');
 
@@ -297,10 +298,21 @@ router.post('/register/resend-otp', otpLimiter, async (req, res) => {
 
 // ─── Login ────────────────────────────────────────────────────────────
 
+/** Generic error — never reveals cause to prevent enumeration */
+const genericError = (res) => res.status(401).json({ error: 'Invalid credentials' });
+
 // POST /api/auth/login
 router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
   try {
     const { phone, password } = res.locals.parsedBody;
+
+    // 1. Check lockout before any other logic
+    const guard = checkGuard(phone);
+    if (!guard.allowed) {
+      // Deliberate delay to mask lockout vs other failures
+      await new Promise(r => setTimeout(r, 1000));
+      return genericError(res);
+    }
 
     const db = await getDb();
     const result = db.exec(
@@ -309,20 +321,42 @@ router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
     );
 
     if (result.length === 0 || result[0].values.length === 0) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      // User not found — still record failure for brute-force uniformity
+      const fail = recordFailure(phone);
+      if (fail.lockout) {
+        // Cannot send email (no user record) — just delay and return generic error
+        await new Promise(r => setTimeout(r, Math.min(fail.delay, 5000)));
+        return genericError(res);
+      }
+      await new Promise(r => setTimeout(r, Math.min(fail.delay, 5000)));
+      return genericError(res);
     }
 
     const row = result[0].values[0];
     const valid = await verifyPassword(password, row[4]);
 
     if (!valid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      const fail = recordFailure(phone);
+      if (fail.lockout) {
+        // Lockout triggered — send notification email, then delay and return generic error
+        const userEmail = row[2];
+        const userName = row[1];
+        sendPasswordReset(userEmail, userName, 'LOCKED').catch(() => {});
+        await new Promise(r => setTimeout(r, Math.min(fail.delay, 5000)));
+        return genericError(res);
+      }
+      await new Promise(r => setTimeout(r, Math.min(fail.delay, 5000)));
+      return genericError(res);
     }
 
-    // Block inactive (unverified) accounts
+    // Account not verified — record success to reset counter, return specific error
     if (row[10] === 0) {
+      recordSuccess(phone);
       return res.status(403).json({ error: 'Please verify your account before logging in', code: 'UNVERIFIED' });
     }
+
+    // Success — reset counter before issuing token
+    recordSuccess(phone);
 
     const token = signToken(row[0]);
     const user = userFromRow(row);

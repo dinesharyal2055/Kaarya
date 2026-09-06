@@ -12,8 +12,11 @@
 const rateLimit = require('express-rate-limit');
 const { ipKeyGenerator } = require('express-rate-limit');
 
-const WINDOW_MS   = Number(process.env.RATE_LIMIT_WINDOW_MS)   || 15 * 60 * 1000; // 15 minutes
-const MAX_AUTH    = Number(process.env.RATE_LIMIT_MAX_AUTH)    || 10;
+// Login: tighter 1-minute window
+const LOGIN_WINDOW_MS = Number(process.env.RATE_LIMIT_LOGIN_WINDOW_MS) || 60 * 1000; // 1 minute
+// OTP / Register: 15-minute window
+const WINDOW_MS       = Number(process.env.RATE_LIMIT_WINDOW_MS)       || 15 * 60 * 1000; // 15 minutes
+const MAX_AUTH        = Number(process.env.RATE_LIMIT_MAX_AUTH)        || 10;
 const MAX_OTP     = Number(process.env.RATE_LIMIT_MAX_OTP)     || 5;
 const MAX_REGISTER= Number(process.env.RATE_LIMIT_MAX_REGISTER)|| 5;
 
@@ -30,16 +33,16 @@ const skipIfDev = (req) => {
 
 /**
  * Login endpoint — stricter limits to slow credential brute-forcing.
- * 10 attempts per 15-minute window per IP.
+ * 10 attempts per 1-minute window per IP.
  */
 const loginLimiter = rateLimit({
-  windowMs: WINDOW_MS,
+  windowMs: LOGIN_WINDOW_MS,
   max: MAX_AUTH,
   standardHeaders: true,      // Return RateLimit-* headers
   legacyHeaders: false,
   keyGenerator: (req) => ipKeyGenerator(req) + (req.headers['x-forwarded-for'] ? `:${req.headers['x-forwarded-for'].split(',')[0].trim()}` : ''),
   skip: skipIfDev,
-  message: { error: 'Too many login attempts. Please try again after 15 minutes.' },
+  message: { error: 'Too many requests. Please try again later.' },
   statusCode: 429,
 });
 
