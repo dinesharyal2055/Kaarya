@@ -10,6 +10,15 @@ const router = express.Router();
 
 const OTP_EXPIRY_MINUTES = 10;
 const OTP_LENGTH = 6;
+const IS_DEV = process.env.NODE_ENV !== 'production';
+
+/**
+ * Development-only logger — never logs in production.
+ * Uses a no-op in production so there is zero overhead.
+ */
+const devLog = (...args) => {
+  if (IS_DEV) console.log(...args);
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────
 
@@ -137,14 +146,15 @@ router.post('/register', async (req, res) => {
       console.error('[EMAIL ERROR] Failed to send registration OTP:', err.message);
     });
 
-    console.log(`[REGISTER] OTP for ${email} (phone: ${phone}): ${code}`);
+    devLog(`[REGISTER] OTP for ${email} (phone: ${phone}): ${code}`);
 
-    res.json({
+    const response = {
       message: 'Verification code sent to your email',
       email,
       expiresIn: OTP_EXPIRY_MINUTES * 60,
-      testOtpCode: code // development only
-    });
+    };
+    if (IS_DEV) response.testOtpCode = code; // NEVER exposed in production
+    res.json(response);
   } catch (err) {
     console.error('[auth/register]', err);
     res.status(500).json({ error: 'Registration initiation failed' });
@@ -224,7 +234,7 @@ router.post('/register/verify', async (req, res) => {
 
     const user = await userResponse(userId);
 
-    console.log(`[REGISTER] Account created for ${email} (id: ${userId})`);
+    devLog(`[REGISTER] Account created for ${email} (id: ${userId})`);
 
     res.status(201).json({
       message: 'Account created successfully',
@@ -286,13 +296,14 @@ router.post('/register/resend', async (req, res) => {
       console.error('[EMAIL ERROR] Failed to resend registration OTP:', err.message);
     });
 
-    console.log(`[REGISTER] Resend OTP for ${email}: ${code}`);
+    devLog(`[REGISTER] Resend OTP for ${email}: ${code}`);
 
-    res.json({
+    const response = {
       message: 'Verification code sent to your email',
       expiresIn: OTP_EXPIRY_MINUTES * 60,
-      testOtpCode: code
-    });
+    };
+    if (IS_DEV) response.testOtpCode = code; // NEVER exposed in production
+    res.json(response);
   } catch (err) {
     console.error('[auth/register/resend]', err);
     res.status(500).json({ error: 'Failed to resend OTP' });
@@ -406,14 +417,15 @@ router.post('/forgot-password', async (req, res) => {
       });
     }
 
-    console.log(`[FORGOT] OTP for ${identifier}: ${code}`);
+    devLog(`[FORGOT] OTP for ${identifier}: ${code}`);
 
-    res.json({
+    const response = {
       message: 'If an account exists, an OTP has been sent',
       identifier: isEmailFlow ? email : maskPhone(phone),
       expiresIn: OTP_EXPIRY_MINUTES * 60,
-      testOtpCode: code
-    });
+    };
+    if (IS_DEV) response.testOtpCode = code; // NEVER exposed in production
+    res.json(response);
   } catch (err) {
     console.error('[auth/forgot-password]', err);
     res.status(500).json({ error: 'Failed to send OTP' });
