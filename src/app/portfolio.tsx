@@ -20,8 +20,8 @@ function timeAgo(dateStr: string, t: (key: string) => string): string {
   const now = new Date();
   const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
   if (diff < 60) return t('common.justNow');
-  if (diff < 3600) return `${Math.floor(diff / 60)} ${t('common.minutesAgo')}`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} ${t('common.hoursAgo')}`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ${t('common.ago')}`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ${t('common.ago')}`;
   if (diff < 172800) return t('common.yesterday');
   return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric', year: 'numeric' });
 }
