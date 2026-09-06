@@ -33,6 +33,7 @@ export default function PostJobScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [area, setArea] = useState('');
+  const [manualArea, setManualArea] = useState('');
   const [photos, setPhotos] = useState<UploadedImage[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [budgetMin, setBudgetMin] = useState('');
@@ -255,11 +256,22 @@ export default function PostJobScreen() {
                 <Text style={styles.fieldLabel}>{t('postJob.areaLocation')}</Text>
                 <View style={styles.areaGrid}>
                   {KATHMANDU_AREAS.map((a) => (
-                    <Pressable key={a} style={[styles.areaPill, area === a && styles.areaPillSelected]} onPress={() => setArea(a)}>
+                    <Pressable key={a} style={[styles.areaPill, area === a && styles.areaPillSelected]} onPress={() => { setArea(a); setManualArea(''); }}>
                       <Text style={[styles.areaPillText, area === a && styles.areaPillTextSelected]}>{a}</Text>
                     </Pressable>
                   ))}
                 </View>
+                <View style={styles.orDivider}>
+                  <View style={styles.orLine} />
+                  <Text style={styles.orText}>{t('postJob.orTypeArea')}</Text>
+                  <View style={styles.orLine} />
+                </View>
+                <Input
+                  placeholder={t('postJob.areaPlaceholder')}
+                  value={manualArea}
+                  onChangeText={(text) => { setManualArea(text); setArea(text); }}
+                  containerStyle={{ marginBottom: 0 }}
+                />
               </View>
 
               {/* GPS Location */}
@@ -430,6 +442,9 @@ const styles = StyleSheet.create({
   areaPillSelected: { borderColor: KaaryaColors.brand[500], backgroundColor: KaaryaColors.brand[50] },
   areaPillText: { fontSize: FontSizes.xs, fontWeight: '500', color: KaaryaColors.textSecondary },
   areaPillTextSelected: { color: KaaryaColors.brand[600], fontWeight: '600' },
+  orDivider: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: Spacing.md },
+  orLine: { flex: 1, height: 1, backgroundColor: KaaryaColors.border },
+  orText: { fontSize: FontSizes.xs, color: KaaryaColors.muted },
   locationBtn: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     backgroundColor: KaaryaColors.brand[50],
