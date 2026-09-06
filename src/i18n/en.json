@@ -359,6 +359,8 @@
     "locationError": "Could not get location",
     "locationErrorHint": "Please try again or check your device settings.",
     "locationSavedHint": "Your precise location will be shared only with the provider you accept.",
+    "locationRequiredTitle": "Location Required",
+    "locationRequiredMessage": "Please capture your precise location before posting the task. This allows the provider to navigate to you once the job is assigned.",
     "budget": "Budget",
     "photos": "Photos"
   },

@@ -69,6 +69,10 @@ export default function PostJobScreen() {
     if (step === 'category' && !category) { Alert.alert(t('postJob.selectCategory'), t('postJob.chooseCategory')); return; }
     if (step === 'details' && (!title.trim() || !description.trim())) { Alert.alert(t('postJob.missingDetails'), t('postJob.fillDetails')); return; }
     if (step === 'details' && !area) { Alert.alert(t('postJob.selectLocation'), t('postJob.chooseArea')); return; }
+    if (step === 'details' && (latitude === null || longitude === null)) {
+      Alert.alert(t('postJob.locationRequiredTitle'), t('postJob.locationRequiredMessage'));
+      return;
+    }
     const idx = steps.indexOf(step);
     if (idx < steps.length - 1) setStep(steps[idx + 1]);
   }
