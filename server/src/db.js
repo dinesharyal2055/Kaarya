@@ -96,6 +96,18 @@ function initSchema() {
     // Column may already exist — ignore error
   }
 
+  // Migration: add precise location columns to jobs
+  try {
+    db.run('ALTER TABLE jobs ADD COLUMN seeker_lat REAL');
+  } catch (e) {
+    // Column may already exist — ignore error
+  }
+  try {
+    db.run('ALTER TABLE jobs ADD COLUMN seeker_lng REAL');
+  } catch (e) {
+    // Column may already exist — ignore error
+  }
+
   db.run(`
     CREATE TABLE IF NOT EXISTS verification_requests (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

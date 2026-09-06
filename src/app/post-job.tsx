@@ -4,10 +4,11 @@
 
 import { useRouter, Stack } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
@@ -38,6 +39,28 @@ export default function PostJobScreen() {
   const [budgetMax, setBudgetMax] = useState('');
   const [negotiation, setNegotiation] = useState<NegotiationMode>('negotiable');
   const [loading, setLoading] = useState(false);
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  async function captureLocation() {
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('postJob.locationDenied'), t('postJob.locationDeniedHint'));
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setLatitude(pos.coords.latitude);
+      setLongitude(pos.coords.longitude);
+      Alert.alert(t('postJob.locationSaved'), t('postJob.locationSavedHint'));
+    } catch {
+      Alert.alert(t('postJob.locationError'), t('postJob.locationErrorHint'));
+    } finally {
+      setLocating(false);
+    }
+  }
 
   const steps: Step[] = ['category', 'details', 'photos', 'budget', 'confirm'];
   const stepIndex = steps.indexOf(step);
@@ -163,6 +186,8 @@ export default function PostJobScreen() {
         budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
         negotiationMode: negotiation,
         photoUrls: uploadedUrls,
+        latitude: latitude ?? undefined,
+        longitude: longitude ?? undefined,
       });
 
       Alert.alert(t('postJob.successTitle'), t('postJob.successMessage'), [
@@ -231,6 +256,31 @@ export default function PostJobScreen() {
                     </Pressable>
                   ))}
                 </View>
+              </View>
+
+              {/* GPS Location */}
+              <View>
+                <Text style={styles.fieldLabel}>{t('postJob.preciseLocation')}</Text>
+                <Pressable
+                  style={[styles.locationBtn, latitude !== null && styles.locationBtnActive]}
+                  onPress={captureLocation}
+                  disabled={locating}
+                >
+                  <MaterialCommunityIcons
+                    name={latitude !== null ? 'map-marker-check' : 'crosshairs-gps'}
+                    size={20}
+                    color={latitude !== null ? KaaryaColors.success : KaaryaColors.brand[500]}
+                  />
+                  <Text style={[styles.locationBtnText, latitude !== null && styles.locationBtnTextActive]}>
+                    {locating ? t('postJob.gettingLocation') : latitude !== null ? t('postJob.locationConfirmed') : t('postJob.useCurrentLocation')}
+                  </Text>
+                </Pressable>
+                {latitude !== null && longitude !== null && (
+                  <Text style={styles.locationCoords}>
+                    {latitude.toFixed(5)}° N, {longitude.toFixed(5)}° E
+                  </Text>
+                )}
+                <Text style={styles.locationHint}>{t('postJob.locationPrivacyNote')}</Text>
               </View>
             </View>
           </ScrollView>
@@ -376,6 +426,20 @@ const styles = StyleSheet.create({
   areaPillSelected: { borderColor: KaaryaColors.brand[500], backgroundColor: KaaryaColors.brand[50] },
   areaPillText: { fontSize: FontSizes.xs, fontWeight: '500', color: KaaryaColors.textSecondary },
   areaPillTextSelected: { color: KaaryaColors.brand[600], fontWeight: '600' },
+  locationBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: KaaryaColors.brand[50],
+    borderRadius: BorderRadius.md, padding: Spacing.md,
+    borderWidth: 1.5, borderColor: KaaryaColors.brand[200],
+  },
+  locationBtnActive: {
+    backgroundColor: KaaryaColors.success + '15',
+    borderColor: KaaryaColors.success,
+  },
+  locationBtnText: { fontSize: FontSizes.sm, fontWeight: '600', color: KaaryaColors.brand[600] },
+  locationBtnTextActive: { color: KaaryaColors.success },
+  locationCoords: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 4, marginLeft: 30 },
+  locationHint: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 4 },
 
   // Photo styles
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },

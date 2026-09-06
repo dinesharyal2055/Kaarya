@@ -38,6 +38,9 @@ export interface Job {
   categoryName?: string;
   area: string;
   address?: string; // masked until offer accepted
+  // Precise GPS coords — only populated for assigned provider viewing assigned job
+  seekerLat?: number | null;
+  seekerLng?: number | null;
   budgetMin?: number;
   budgetMax?: number;
   negotiationMode: NegotiationMode;

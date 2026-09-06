@@ -4,10 +4,11 @@
 
 import { useRouter, Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View, RefreshControl } from 'react-native';
+import { Alert, Image, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
 import { fetchJob } from '@/services/jobs';
@@ -35,6 +36,18 @@ export default function JobDetailScreen() {
 
   // True when the logged-in user is the seeker who posted this job (compares DB int to JWT string)
   const isSeekerOwner = !!(user && job && String(job.seekerId as any) === user.id);
+
+  // i18n
+  const { t } = useTranslation();
+
+  // Open native Maps with seeker's coordinates
+  const openMaps = (lat: number, lng: number) => {
+    const scheme = Platform.select({
+      ios: `maps://?ll=${lat},${lng}&q=${lat},${lng}`,
+      android: `geo:${lat},${lng}?q=${lat},${lng}`,
+    });
+    if (scheme) Linking.openURL(scheme);
+  };
 
   const loadJob = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -277,7 +290,19 @@ export default function JobDetailScreen() {
               <MaterialCommunityIcons name="map-marker" size={18} color={KaaryaColors.brand[500]} />
               <Text style={styles.locationText}>{job.area}, Kathmandu</Text>
             </View>
-            <Text style={styles.locationNote}>Exact address shared after accepting an offer</Text>
+            {job.seekerLat != null && job.seekerLng != null &&
+              user?.role === 'provider' &&
+              job.acceptedOffer?.providerId === user?.id ? (
+              <Pressable
+                style={styles.viewLocationBtn}
+                onPress={() => openMaps(job.seekerLat!, job.seekerLng!)}
+              >
+                <MaterialCommunityIcons name="navigation" size={16} color="#FFFFFF" />
+                <Text style={styles.viewLocationBtnText}>{t('jobDetail.viewLocation')}</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.locationNote}>{t('jobDetail.locationNotShared')}</Text>
+            )}
           </View>
 
           {/* Seeker */}
@@ -526,6 +551,8 @@ const styles = StyleSheet.create({
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   locationText: { fontSize: FontSizes.base, color: KaaryaColors.text, fontWeight: '600' },
   locationNote: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 6 },
+  viewLocationBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: Spacing.sm, backgroundColor: KaaryaColors.brand[500], paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md, borderRadius: BorderRadius.md },
+  viewLocationBtnText: { fontSize: FontSizes.sm, fontWeight: '700', color: '#FFFFFF' },
   seekerRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: FontSizes.lg, fontWeight: '800', color: '#fff' },

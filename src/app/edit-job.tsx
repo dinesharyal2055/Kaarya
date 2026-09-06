@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
@@ -51,6 +52,9 @@ export default function EditJobScreen() {
   const [budgetMin, setBudgetMin] = useState('');
   const [budgetMax, setBudgetMax] = useState('');
   const [negotiation, setNegotiation] = useState<NegotiationMode>('negotiable');
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [locating, setLocating] = useState(false);
 
   // Load job data on mount
   useEffect(() => {
@@ -65,6 +69,8 @@ export default function EditJobScreen() {
         setBudgetMin(data.budgetMin?.toString() ?? '');
         setBudgetMax(data.budgetMax?.toString() ?? '');
         setNegotiation((data.negotiationMode as NegotiationMode) ?? 'negotiable');
+        setLatitude(data.seekerLat ?? null);
+        setLongitude(data.seekerLng ?? null);
 
         // Load existing photo URLs as local UploadedImage entries
         if (data.photoUrls && data.photoUrls.length > 0) {
@@ -158,6 +164,25 @@ export default function EditJobScreen() {
     );
   }
 
+  async function captureLocation() {
+    setLocating(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('postJob.locationDenied'), t('postJob.locationDeniedHint'));
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
+      setLatitude(pos.coords.latitude);
+      setLongitude(pos.coords.longitude);
+      Alert.alert(t('postJob.locationConfirmed'), t('postJob.locationSavedHint'));
+    } catch {
+      Alert.alert(t('postJob.locationError'), t('postJob.locationErrorHint'));
+    } finally {
+      setLocating(false);
+    }
+  }
+
   // ─── Submit ──────────────────────────────────────────────────────
   async function handleSave() {
     if (!title.trim()) {
@@ -205,6 +230,8 @@ export default function EditJobScreen() {
         budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
         negotiationMode: negotiation,
         photoUrls: uploadedUrls,
+        latitude: latitude ?? undefined,
+        longitude: longitude ?? undefined,
       });
 
       Alert.alert(t('editJob.successTitle'), t('editJob.successMessage'), [
@@ -308,6 +335,46 @@ export default function EditJobScreen() {
                 </Pressable>
               ))}
             </View>
+          </View>
+
+          {/* Precise Location */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('postJob.preciseLocation')}</Text>
+            <Text style={styles.locationHint}>{t('postJob.locationPrivacyNote')}</Text>
+            {latitude != null && longitude != null ? (
+              <>
+                <View style={styles.locationSavedRow}>
+                  <MaterialCommunityIcons name="check-circle" size={18} color={KaaryaColors.success} />
+                  <Text style={styles.locationSavedText}>
+                    {latitude.toFixed(4)}° N, {longitude.toFixed(4)}° E
+                  </Text>
+                </View>
+                <Pressable
+                  style={[styles.locationBtn, styles.locationBtnActive]}
+                  onPress={captureLocation}
+                  disabled={locating}
+                >
+                  <Text style={[styles.locationBtnText, styles.locationBtnTextActive]}>
+                    {locating ? t('postJob.gettingLocation') : t('postJob.useCurrentLocation')}
+                  </Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                style={[styles.locationBtn, locating && styles.locationBtnDisabled]}
+                onPress={captureLocation}
+                disabled={locating}
+              >
+                <MaterialCommunityIcons
+                  name="crosshairs-gps"
+                  size={18}
+                  color="#FFFFFF"
+                />
+                <Text style={[styles.locationBtnText, locating && styles.locationBtnTextDisabled]}>
+                  {locating ? t('postJob.gettingLocation') : t('postJob.useCurrentLocation')}
+                </Text>
+              </Pressable>
+            )}
           </View>
 
           {/* Photos */}
@@ -508,6 +575,15 @@ const styles = StyleSheet.create({
   negLabel: { fontSize: FontSizes.base, fontWeight: '600', color: KaaryaColors.text },
   negLabelSelected: { color: KaaryaColors.brand[600] },
   negDesc: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 2 },
+  locationHint: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginBottom: Spacing.sm },
+  locationSavedRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
+  locationSavedText: { fontSize: FontSizes.sm, color: KaaryaColors.success, fontWeight: '600' },
+  locationBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: KaaryaColors.brand[500], paddingVertical: Spacing.md, borderRadius: BorderRadius.md },
+  locationBtnActive: { backgroundColor: KaaryaColors.brand[600] },
+  locationBtnDisabled: { backgroundColor: KaaryaColors.muted },
+  locationBtnText: { fontSize: FontSizes.sm, fontWeight: '700', color: '#FFFFFF' },
+  locationBtnTextActive: { color: '#FFFFFF' },
+  locationBtnTextDisabled: { color: '#FFFFFF' },
   cta: {
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,

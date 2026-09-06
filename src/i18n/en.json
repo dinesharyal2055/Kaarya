@@ -230,7 +230,9 @@
     "deleteJob": "Delete Job",
     "confirmDelete": "Are you sure you want to delete this job? This action cannot be undone.",
     "offerAccepted": "Offer accepted!",
-    "offerAcceptedHint": "You can now chat with the provider from the Messages tab."
+    "offerAcceptedHint": "You can now chat with the provider from the Messages tab.",
+    "viewLocation": "View Location",
+    "locationNotShared": "Location will be shared once a provider is assigned"
   },
   "offers": {
     "myBids": "My Bids",
@@ -331,7 +333,18 @@
     "addressNote": "Your exact address will only be shared with the provider you accept.",
     "postFailed": "Failed to post task. Please try again.",
     "successTitle": "Success!",
-    "successMessage": "Your task has been posted. Providers will start bidding soon."
+    "successMessage": "Your task has been posted. Providers will start bidding soon.",
+    "useCurrentLocation": "Use Current Location",
+    "preciseLocation": "Precise Location",
+    "locationPrivacyNote": "Only shared with assigned provider",
+    "gettingLocation": "Getting location...",
+    "locationSaved": "Location saved",
+    "locationConfirmed": "Location confirmed",
+    "locationDenied": "Location permission denied",
+    "locationDeniedHint": "Please enable location access in your device settings to share your precise location.",
+    "locationError": "Could not get location",
+    "locationErrorHint": "Please try again or check your device settings.",
+    "locationSavedHint": "Your precise location will be shared only with the provider you accept."
   },
   "editJob": {
     "title": "Edit Job",

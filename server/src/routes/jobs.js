@@ -15,8 +15,8 @@ function pushNotify(userId, payload) {
 
 const VALID_STATUSES = ['open', 'assigned', 'in_progress', 'completed', 'cancelled'];
 
-function jobFromRow(row, seekerName, seekerAvatar) {
-  // row: [id, seeker_id, title, description, category, location, budget_min, budget_max, status, urgency, scheduled_date, photo_urls, created_at, updated_at]
+function jobFromRow(row, seekerName, seekerAvatar, seekerLat, seekerLng) {
+  // row: [id, seeker_id, title, description, category, location, budget_min, budget_max, status, urgency, scheduled_date, photo_urls, created_at, updated_at, seeker_lat, seeker_lng]
   return {
     id: row[0],
     seekerId: row[1],
@@ -32,6 +32,8 @@ function jobFromRow(row, seekerName, seekerAvatar) {
     photoUrls: row[11] ? JSON.parse(row[11]) : [],
     createdAt: row[12],
     updatedAt: row[13],
+    seekerLat: row[14] ?? null,
+    seekerLng: row[15] ?? null,
     seekerName: seekerName ?? null,
     seekerAvatar: seekerAvatar ?? null,
   };
@@ -156,7 +158,8 @@ router.get('/', async (req, res) => {
     const jobsResult = db.exec(
       `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
               j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
-              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url
+              j.photo_urls, j.created_at, j.updated_at, j.seeker_lat, j.seeker_lng,
+              u.name, u.avatar_url
        FROM jobs j
        LEFT JOIN users u ON j.seeker_id = u.id
        ${whereClause}
@@ -168,9 +171,9 @@ router.get('/', async (req, res) => {
     const jobs = [];
     if (jobsResult.length > 0) {
       for (const row of jobsResult[0].values) {
-        // row: id(0), seeker_id(1), title(2), desc(3), cat(4), loc(5), bmin(6), bmax(7), status(8), urgency(9), sched(10), photo_urls(11), created(12), updated(13), u.name(14), u.avatar(15)
-        const seekerName = row[14] ?? null;
-        const seekerAvatar = row[15] ?? null;
+        // row: id(0), seeker_id(1), title(2), desc(3), cat(4), loc(5), bmin(6), bmax(7), status(8), urgency(9), sched(10), photo_urls(11), created(12), updated(13), lat(14), lng(15), u.name(16), u.avatar(17)
+        const seekerName = row[16] ?? null;
+        const seekerAvatar = row[17] ?? null;
         const job = jobFromRow(row, seekerName, seekerAvatar);
         // Attach offer count asynchronously
         const offerCount = await getOfferCount(job.id);
@@ -195,7 +198,8 @@ router.get('/:id', async (req, res) => {
     const result = db.exec(
       `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
               j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
-              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url
+              j.photo_urls, j.created_at, j.updated_at, j.seeker_lat, j.seeker_lng,
+              u.name, u.avatar_url
        FROM jobs j
        LEFT JOIN users u ON j.seeker_id = u.id
        WHERE j.id = ?`,
@@ -207,8 +211,8 @@ router.get('/:id', async (req, res) => {
     }
 
     const row = result[0].values[0];
-    const seekerName = row[14] ?? null;
-    const seekerAvatar = row[15] ?? null;
+    const seekerName = row[16] ?? null;
+    const seekerAvatar = row[17] ?? null;
     const job = jobFromRow(row, seekerName, seekerAvatar);
     job.offerCount = await getOfferCount(id);
 
@@ -234,7 +238,19 @@ router.get('/:id', async (req, res) => {
           providerAvatar: offerRow[5] || null,
           providerId: String(offerRow[6]),
         };
+        // Privacy gate: only reveal exact coords to the assigned provider
+        if (String(offerRow[6]) === String(req.userId)) {
+          job.seekerLat = row[14] ?? null;
+          job.seekerLng = row[15] ?? null;
+        } else {
+          job.seekerLat = null;
+          job.seekerLng = null;
+        }
       }
+    } else {
+      // Open/cancelled — never reveal coords
+      job.seekerLat = null;
+      job.seekerLng = null;
     }
 
     res.json(job);
@@ -247,7 +263,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/jobs — create job (auth required, seeker only)
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { title, description, category, location, address, budgetMin, budgetMax, negotiationMode, photoUrls } = req.body;
+    const { title, description, category, location, address, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = req.body;
 
     // Check role
     const db = await getDb();
@@ -266,9 +282,9 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     db.run(
-      `INSERT INTO jobs (seeker_id, title, description, category, location, budget_min, budget_max, photo_urls, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open')`,
-      [req.userId, title, description, category, location, budgetMin ?? null, budgetMax ?? null, JSON.stringify(photoUrls ?? [])]
+      `INSERT INTO jobs (seeker_id, title, description, category, location, budget_min, budget_max, photo_urls, status, seeker_lat, seeker_lng)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`,
+      [req.userId, title, description, category, location, budgetMin ?? null, budgetMax ?? null, JSON.stringify(photoUrls ?? []), latitude ?? null, longitude ?? null]
     );
 
     const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
@@ -276,7 +292,8 @@ router.post('/', requireAuth, async (req, res) => {
     const result = db.exec(
       `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
               j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
-              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url
+              j.photo_urls, j.created_at, j.updated_at, j.seeker_lat, j.seeker_lng,
+              u.name, u.avatar_url
        FROM jobs j
        LEFT JOIN users u ON j.seeker_id = u.id
        WHERE j.id = ?`,
@@ -284,9 +301,9 @@ router.post('/', requireAuth, async (req, res) => {
     );
 
     const row = result[0].values[0];
-    // row: id(0), seeker_id(1), title(2), desc(3), cat(4), loc(5), bmin(6), bmax(7), status(8), urgency(9), sched(10), photo_urls(11), created(12), updated(13), u.name(14), u.avatar(15)
-    const seekerName = row[14] ?? null;
-    const seekerAvatar = row[15] ?? null;
+    // row: id(0), seeker_id(1), title(2), desc(3), cat(4), loc(5), bmin(6), bmax(7), status(8), urgency(9), sched(10), photo_urls(11), created(12), updated(13), lat(14), lng(15), u.name(16), u.avatar(17)
+    const seekerName = row[16] ?? null;
+    const seekerAvatar = row[17] ?? null;
     const job = jobFromRow(row, seekerName, seekerAvatar);
     job.offerCount = 0;
 
@@ -304,8 +321,8 @@ router.get('/posted/list', requireAuth, async (req, res) => {
     const result = db.exec(
       `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
               j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
-              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url,
-              'seeker' as role
+              j.photo_urls, j.created_at, j.updated_at, j.seeker_lat, j.seeker_lng,
+              u.name, u.avatar_url
        FROM jobs j
        LEFT JOIN users u ON j.seeker_id = u.id
        WHERE j.seeker_id = ?
@@ -316,6 +333,7 @@ router.get('/posted/list', requireAuth, async (req, res) => {
     const jobs = [];
     if (result.length > 0) {
       for (const row of result[0].values) {
+        // row: id(0), seeker_id(1), title(2), desc(3), cat(4), loc(5), bmin(6), bmax(7), status(8), urgency(9), sched(10), photo_urls(11), created(12), updated(13), lat(14), lng(15), u.name(16), u.avatar(17)
         const job = {
           id: row[0],
           seekerId: row[1],
@@ -331,8 +349,10 @@ router.get('/posted/list', requireAuth, async (req, res) => {
           photoUrls: row[11] ? JSON.parse(row[11]) : [],
           createdAt: row[12],
           updatedAt: row[13],
-          seekerName: row[14] ?? null,
-          seekerAvatar: row[15] ?? null,
+          seekerLat: row[14] ?? null,
+          seekerLng: row[15] ?? null,
+          seekerName: row[16] ?? null,
+          seekerAvatar: row[17] ?? null,
           userRole: 'seeker',
         };
         const offerCount = await getOfferCount(job.id);
@@ -358,8 +378,8 @@ router.get('/ongoing/list', requireAuth, async (req, res) => {
     const seekerJobs = db.exec(
       `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
               j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
-              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url,
-              'seeker' as role
+              j.photo_urls, j.created_at, j.updated_at, j.seeker_lat, j.seeker_lng,
+              u.name, u.avatar_url, 'seeker' as role
        FROM jobs j
        LEFT JOIN users u ON j.seeker_id = u.id
        WHERE j.seeker_id = ? AND j.status IN ('assigned', 'in_progress', 'completed')
@@ -371,8 +391,8 @@ router.get('/ongoing/list', requireAuth, async (req, res) => {
     const providerJobs = db.exec(
       `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
               j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
-              j.photo_urls, j.created_at, j.updated_at, seeker.name, seeker.avatar_url,
-              'provider' as role, o.id as offer_id, o.amount as agreed_amount,
+              j.photo_urls, j.created_at, j.updated_at, j.seeker_lat, j.seeker_lng,
+              seeker.name, seeker.avatar_url, 'provider' as role, o.id as offer_id, o.amount as agreed_amount,
               seeker.name as seeker_name, seeker.id as seeker_id
        FROM offers o
        JOIN jobs j ON o.job_id = j.id
@@ -386,7 +406,7 @@ router.get('/ongoing/list', requireAuth, async (req, res) => {
     function mapJobRow(row, role, extra = {}) {
       // row: id(0), seeker_id(1), title(2), desc(3), cat(4), loc(5), bmin(6), bmax(7),
       //      status(8), urgency(9), sched(10), photo_urls(11), created(12), updated(13),
-      //      seekerName(14), seekerAvatar(15), role(16) [, offer_id(17), agreed_amt(18)]
+      //      lat(14), lng(15), seekerName(16), seekerAvatar(17), role(18) [, offer_id(19), agreed_amt(20)]
       return {
         id: row[0],
         seekerId: row[1],
@@ -402,8 +422,10 @@ router.get('/ongoing/list', requireAuth, async (req, res) => {
         photoUrls: row[11] ? JSON.parse(row[11]) : [],
         createdAt: row[12],
         updatedAt: row[13],
-        seekerName: row[14] ?? null,
-        seekerAvatar: row[15] ?? null,
+        seekerLat: row[14] ?? null,
+        seekerLng: row[15] ?? null,
+        seekerName: row[16] ?? null,
+        seekerAvatar: row[17] ?? null,
         userRole: role,
         ...extra,
       };
@@ -421,10 +443,10 @@ router.get('/ongoing/list', requireAuth, async (req, res) => {
       for (const row of providerJobs[0].values) {
         // row: id(0), seeker_id(1), title(2), desc(3), cat(4), loc(5), bmin(6), bmax(7),
         //      status(8), urgency(9), sched(10), photo_urls(11), created(12), updated(13),
-        //      seekerName(14), seekerAvatar(15), role(16), offer_id(17), agreed_amt(18)
+        //      lat(14), lng(15), seekerName(16), seekerAvatar(17), role(18), offer_id(19), agreed_amt(20)
         jobs.push(mapJobRow(
           row, 'provider',
-          { offerId: row[17], agreedAmount: row[18] }
+          { offerId: row[19], agreedAmount: row[20] }
         ));
       }
     }
@@ -586,7 +608,7 @@ router.put('/:id/status', requireAuth, async (req, res) => {
 router.patch('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, location, budgetMin, budgetMax, negotiationMode, photoUrls } = req.body;
+    const { title, description, location, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = req.body;
     const db = await getDb();
 
     // Verify job exists
@@ -635,6 +657,8 @@ router.patch('/:id', requireAuth, async (req, res) => {
     if (budgetMin !== undefined) { updates.push('budget_min = ?'); params.push(budgetMin ?? null); }
     if (budgetMax !== undefined) { updates.push('budget_max = ?'); params.push(budgetMax ?? null); }
     if (photoUrls !== undefined) { updates.push('photo_urls = ?'); params.push(JSON.stringify(photoUrls ?? [])); }
+    if (latitude !== undefined) { updates.push('seeker_lat = ?'); params.push(latitude ?? null); }
+    if (longitude !== undefined) { updates.push('seeker_lng = ?'); params.push(longitude ?? null); }
 
     if (updates.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
@@ -650,7 +674,8 @@ router.patch('/:id', requireAuth, async (req, res) => {
     const updatedResult = db.exec(
       `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
               j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
-              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url
+              j.photo_urls, j.created_at, j.updated_at, j.seeker_lat, j.seeker_lng,
+              u.name, u.avatar_url
        FROM jobs j
        LEFT JOIN users u ON j.seeker_id = u.id
        WHERE j.id = ?`,
@@ -658,8 +683,8 @@ router.patch('/:id', requireAuth, async (req, res) => {
     );
 
     const row = updatedResult[0].values[0];
-    const seekerName = row[14] ?? null;
-    const seekerAvatar = row[15] ?? null;
+    const seekerName = row[16] ?? null;
+    const seekerAvatar = row[17] ?? null;
     const job = jobFromRow(row, seekerName, seekerAvatar);
     job.offerCount = 0;
 
@@ -723,8 +748,8 @@ router.get('/saved/list', requireAuth, async (req, res) => {
     const result = db.exec(
       `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
               j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
-              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url,
-              sj.created_at as saved_at
+              j.photo_urls, j.created_at, j.updated_at, j.seeker_lat, j.seeker_lng,
+              u.name, u.avatar_url, sj.created_at as saved_at
        FROM saved_jobs sj
        JOIN jobs j ON sj.job_id = j.id
        LEFT JOIN users u ON j.seeker_id = u.id
@@ -736,8 +761,9 @@ router.get('/saved/list', requireAuth, async (req, res) => {
     const jobs = [];
     if (result.length > 0) {
       for (const row of result[0].values) {
-        const job = jobFromRow(row, row[14], row[15]);
-        job.savedAt = row[16];
+        // row: id(0), seeker_id(1), title(2), desc(3), cat(4), loc(5), bmin(6), bmax(7), status(8), urgency(9), sched(10), photo_urls(11), created(12), updated(13), lat(14), lng(15), u.name(16), u.avatar(17), saved_at(18)
+        const job = jobFromRow(row, row[16], row[17]);
+        job.savedAt = row[18];
         job.isSaved = true;
         const offerCount = await getOfferCount(job.id);
         job.offerCount = offerCount;

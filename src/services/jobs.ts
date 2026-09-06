@@ -69,6 +69,8 @@ export async function createJob(data: {
   budgetMax?: number;
   negotiationMode?: string;
   photoUrls?: string[];
+  latitude?: number | null;
+  longitude?: number | null;
 }): Promise<Job> {
   return jobsApi.create({
     title: data.title,
@@ -79,6 +81,8 @@ export async function createJob(data: {
     budgetMax: data.budgetMax,
     negotiationMode: data.negotiationMode as any,
     photoUrls: data.photoUrls,
+    latitude: data.latitude,
+    longitude: data.longitude,
   } as any);
 }
 
@@ -90,6 +94,8 @@ export async function updateJob(id: string, data: {
   budgetMax?: number;
   negotiationMode?: string;
   photoUrls?: string[];
+  latitude?: number | null;
+  longitude?: number | null;
 }): Promise<Job> {
   return jobsApi.update(id, {
     title: data.title,
@@ -99,5 +105,7 @@ export async function updateJob(id: string, data: {
     budgetMax: data.budgetMax,
     negotiationMode: data.negotiationMode as any,
     photoUrls: data.photoUrls,
+    latitude: data.latitude,
+    longitude: data.longitude,
   } as any);
 }
