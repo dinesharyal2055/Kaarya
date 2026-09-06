@@ -64,13 +64,14 @@ interface BubbleItem {
   senderName?: string;
 }
 
-function MessageBubble({ item, showAvatar, senderName }: {
+function MessageBubble({ item, showAvatar, senderName, t }: {
   item: BubbleItem;
   showAvatar?: boolean;
   senderName?: string;
+  t: (key: string) => string;
 }) {
   if (item.type === 'date') {
-    return <DateSeparator date={item.date!} t={(key: string) => key} />;
+    return <DateSeparator date={item.date!} t={t} />;
   }
 
   const msg = item.message!;
@@ -278,6 +279,7 @@ export default function ChatScreen() {
                 item={item}
                 showAvatar={item.showAvatar}
                 senderName={item.senderName}
+                t={t}
               />
             )}
           />
