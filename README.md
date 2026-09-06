@@ -1,56 +1,96 @@
-# Welcome to your Expo app 👋
+# Kaarya — On-Demand Service Marketplace for Nepal
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A mobile app connecting service seekers (task posters) with service providers (taskers) in Nepal. Built with Expo + React Native.
 
-## Get started
+## Tech Stack
 
-1. Install dependencies
+- **Frontend**: Expo (SDK 57) + React Native 0.86 + TypeScript
+- **Backend**: Express.js (Node.js) + SQLite (sql.js)
+- **Styling**: NativeWind (Tailwind CSS) + React Native StyleSheet
+- **Auth**: JWT tokens with email OTP verification via Mailtrap
+- **i18n**: i18next with AsyncStorage persistence (English + Nepali)
+- **Push Notifications**: Firebase Cloud Messaging (FCM) — **on hold** (see below)
+- **Payments**: eSewa / Khalti QR-based — **on hold** (see below)
 
-   ```bash
-   npm install
-   ```
+## Development Status
 
-2. Start the app
+### ✅ Completed Stages
 
-   ```bash
-   npx expo start
-   ```
+| Stage | Feature |
+|-------|---------|
+| 1 | App shell — all 13 screens, auth flow, tab navigation |
+| 7 | Real-time chat with polling, avatar upload |
+| 7 | Notification preferences (in-app) |
+| 8 | Ongoing jobs tab, bidirectional reviews, star rating |
+| 9 | Full bilingual (English ↔ Nepali) i18n |
+| — | Firebase Cloud Messaging (FCM) server helper setup |
 
-In the output, you'll find options to open the app in a
+### ⏸️ On Hold
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+**Push Notifications (FCM)**
+Push notifications are set up on the server side, but ExpoGo does not support receiving push notifications in development. Full E2E integration requires a production build (`expo run:android`). Will revisit once the app is built as a standalone APK/AAB.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+**Payment Integration (eSewa / Khalti QR)**
+Nepal uses a QR-based payment system rather than card-based. Payment integration requires deep research into Khalti/eSewa merchant APIs and QR code generation/wallet SDKs. This is a significant piece of work that needs dedicated research before implementation.
 
-## Get a fresh project
+### 🔜 What's Next
 
-When you're ready, run:
+- **Stage 10**: Counter-offer / negotiation flow (InDrive-style bid negotiation)
+- **Stage 11**: Provider portfolio and service showcase pages
+- **Stage 12**: Review display on job cards and profiles
+- **Stage 13**: Advanced search, filtering, and sorting
+- **Stage 14**: Deep linking and shareable job links
+- **Stage 15**: Offline support and data persistence
+- **Stage 16**: Payment integration (eSewa/Khalti QR — TBD research)
+- **Stage 17**: Push notifications E2E (requires production build)
+
+## Running the App
 
 ```bash
-npm run reset-project
+# Start the backend server (terminal 1)
+cd server
+npm start
+
+# Start Expo dev server (terminal 2)
+npx expo start
+
+# Run on Android emulator
+npx expo run:android
+
+# Run on iOS simulator
+npx expo run:ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Key Screens
 
-### Other setup steps
+- **Auth**: Login, Register (with email OTP), Forgot Password
+- **Home**: Greeting, recent tasks, quick actions
+- **Browse**: Job listings with filters and search
+- **Post a Task**: 5-step wizard (category → details → photos → budget → confirm)
+- **Job Detail**: Full job info, offer list, accept/decline
+- **Make Offer**: Submit bid with price and message
+- **My Jobs**: Ongoing and saved jobs
+- **Messages**: Real-time chat with providers/seekers
+- **Profile**: User info, mode switch, verification, settings
+- **Edit Profile**: Name, bio, avatar upload
+- **Verification**: Tiered identity verification (Nagarik App / eSewa-Khalti / Manual)
+- **Notifications**: In-app notification center
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## API
 
-## Learn more
+- **Base URL**: `http://192.168.1.79:5000/api` (local dev)
+- **Auth**: `POST /auth/login`, `POST /auth/register/initiate`, `POST /auth/register/verify`
+- **Jobs**: `GET/POST /jobs`, `GET/PATCH/DELETE /jobs/:id`
+- **Offers**: `GET/POST /jobs/:id/offers`, `PATCH /offers/:id/accept|reject`
+- **Messages**: `GET /conversations`, `GET /conversations/:id/messages`, `POST /conversations/:id/messages`
+- **Reviews**: `POST /jobs/:id/reviews`, `GET /users/:id/reviews`
 
-To learn more about developing your project with Expo, look at the following resources:
+## Environment
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- **Server port**: 5000
+- **Email (dev)**: Mailtrap SMTP — sandbox.smtp.mailtrap.io:2525
+- **Database**: SQLite via sql.js (WASM)
 
-## Join the community
+## Last Updated
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+**Date**: 2026-09-06
