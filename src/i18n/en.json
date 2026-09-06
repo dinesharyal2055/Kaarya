@@ -586,7 +586,15 @@
     "addPaymentMethod": "Add Payment Method",
     "securityNote": "Your payment information is encrypted and securely stored. We never share your card details.",
     "addPaymentMethodHint": "Add a payment method to receive or make payments securely.",
-    "encryptionNote": "Your payment information is encrypted and securely stored."
+    "encryptionNote": "Your payment information is encrypted and securely stored.",
+    "chooseMethodSubtitle": "Choose how you want to add a payment method.",
+    "esewa": "eSewa",
+    "esewaSub": "Digital Wallet (Instant)",
+    "esewaDesc": "Link your eSewa account to send and receive payments instantly.",
+    "khalti": "Khalti",
+    "khaltiSub": "Digital Wallet (Instant)",
+    "khaltiDesc": "Link your Khalti account to send and receive payments instantly.",
+    "comingSoon": "Coming Soon"
   },
   "notificationSettings": {
     "title": "Notifications",
@@ -680,5 +688,34 @@
     "noReviews": "No reviews yet",
     "noReviewsHint": "Complete jobs to receive reviews from clients.",
     "noComment": "No comment left"
+  },
+  "about": {
+    "title": "About Kaarya",
+    "whatIsKaarya": "What is Kaarya?",
+    "whatIsKaaryaDesc": "Kaarya connects people who need tasks done with trusted local service providers. Whether it's home repairs, cleaning, delivery, or any odd job — find the right person for the job, negotiate a fair price, and get it done.",
+    "howItWorks": "How it works",
+    "step1": "Post a task and set your budget",
+    "step2": "Receive offers from nearby providers",
+    "step3": "Agree on terms and get it done",
+    "legal": "Legal",
+    "privacyPolicy": "Privacy Policy",
+    "termsOfService": "Terms of Service"
+  },
+  "help": {
+    "title": "Help & Support",
+    "subtitle": "Frequently asked questions about using Kaarya.",
+    "postTask": "How do I post a task?",
+    "postTaskAnswer": "Go to the Home tab and tap 'Post a Task'. Fill in the details — title, description, budget, and location. Your task will be visible to nearby service providers who can then send you offers.",
+    "acceptOffer": "How do I accept an offer?",
+    "acceptOfferAnswer": "When a provider sends you an offer, you'll see it on your task's detail page. You can review their profile, rating, and message them to discuss before accepting. Tap 'Accept' to assign the task to them.",
+    "getPaid": "How do I receive payments?",
+    "getPaidAnswer": "Payment integration (eSewa, Khalti) is coming soon. Once available, you'll be able to link your eSewa or Khalti account and receive payments directly after completing a task.",
+    "verification": "How does verification work?",
+    "verificationAnswer": "Go to your Profile and tap 'Verification'. Choose the Manual Review option, upload a clear photo of your citizenship card (front and back) along with a selfie. Your documents will be reviewed within 12 hours.",
+    "switchRole": "How do I switch between roles?",
+    "switchRoleAnswer": "On your Profile screen, use the role switcher at the top. You can switch between Task Poster (to post jobs) and Service Provider (to bid on jobs) anytime. Your mode affects what you see on the Home and Browse tabs.",
+    "deleteAccount": "How do I delete my account?",
+    "deleteAccountAnswer": "Account deletion is not yet available in the app. If you need your account deleted, please contact our support team and we will assist you.",
+    "note": "More help topics and live support coming soon."
   }
 }

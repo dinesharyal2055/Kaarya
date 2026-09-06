@@ -237,14 +237,14 @@ export default function ProfileScreen() {
             icon="help-circle-outline"
             title={t('profile.helpSupport')}
             subtitle={t('profile.helpSupportSub')}
-            onPress={() => {}}
+            onPress={() => router.push('/help-support')}
           />
           <View style={styles.menuDivider} />
           <MenuItem
             icon="information-outline"
             title={t('profile.aboutKaarya')}
             subtitle={t('profile.aboutKaaryaSub')}
-            onPress={() => {}}
+            onPress={() => router.push('/about-kaarya')}
           />
         </View>
 
