@@ -190,7 +190,7 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/jobs/:id — single job with offer count
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const db = await getDb();
