@@ -5,6 +5,7 @@ const path = require('path');
 const { getDb, save } = require('../db');
 const { requireAuth, signToken, hashPassword, verifyPassword } = require('../middleware/auth');
 const { sendRegistrationOtp, sendPasswordReset } = require('../mailer');
+const { loginLimiter, otpLimiter, registerLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
@@ -86,7 +87,7 @@ function deleteExpiredOtps(db) {
 //
 
 // POST /api/auth/register  — initiate registration (sends OTP to email)
-router.post('/register', async (req, res) => {
+router.post('/register', registerLimiter, async (req, res) => {
   try {
     const { name, email, phone, password, role } = req.body;
 
@@ -162,14 +163,14 @@ router.post('/register', async (req, res) => {
 });
 
 // POST /api/auth/register/initiate  — email-specific alias for /register
-router.post('/register/initiate', async (req, res) => {
+router.post('/register/initiate', registerLimiter, async (req, res) => {
   // Delegate to /register handler by re-calling the same logic
   req.url = '/register';
   return router(req, res);
 });
 
 // POST /api/auth/register/verify  — verify OTP and create account
-router.post('/register/verify', async (req, res) => {
+router.post('/register/verify', otpLimiter, async (req, res) => {
   try {
     const { email, code } = req.body;
 
@@ -247,7 +248,7 @@ router.post('/register/verify', async (req, res) => {
 });
 
 // POST /api/auth/register/resend  — resend OTP for pending registration
-router.post('/register/resend', async (req, res) => {
+router.post('/register/resend', otpLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: 'Email is required' });
@@ -311,7 +312,7 @@ router.post('/register/resend', async (req, res) => {
 });
 
 // POST /api/auth/register/resend-otp  — alias for /register/resend (email-based)
-router.post('/register/resend-otp', async (req, res) => {
+router.post('/register/resend-otp', otpLimiter, async (req, res) => {
   req.url = '/register/resend';
   return router(req, res);
 });
@@ -319,7 +320,7 @@ router.post('/register/resend-otp', async (req, res) => {
 // ─── Login ────────────────────────────────────────────────────────────
 
 // POST /api/auth/login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { phone, password } = req.body;
 
@@ -365,7 +366,7 @@ router.post('/login', async (req, res) => {
 // Unified handler: accepts phone OR email as identifier
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', otpLimiter, async (req, res) => {
   try {
     const { phone, email } = req.body;
     const identifier = email || phone;
@@ -433,7 +434,7 @@ router.post('/forgot-password', async (req, res) => {
 });
 
 // POST /api/auth/forgot-password/verify
-router.post('/forgot-password/verify', async (req, res) => {
+router.post('/forgot-password/verify', otpLimiter, async (req, res) => {
   try {
     const { phone, email, code } = req.body;
     const identifier = email || phone;
@@ -469,7 +470,7 @@ router.post('/forgot-password/verify', async (req, res) => {
 });
 
 // POST /api/auth/forgot-password/reset
-router.post('/forgot-password/reset', async (req, res) => {
+router.post('/forgot-password/reset', loginLimiter, async (req, res) => {
   try {
     const { phone, email, code, newPassword } = req.body;
     const identifier = email || phone;
@@ -525,19 +526,19 @@ router.post('/forgot-password/reset', async (req, res) => {
 });
 
 // POST /api/auth/verify-reset-otp — alias for /forgot-password/verify (email-based)
-router.post('/verify-reset-otp', async (req, res) => {
+router.post('/verify-reset-otp', otpLimiter, async (req, res) => {
   req.url = '/forgot-password/verify';
   return router(req, res);
 });
 
 // POST /api/auth/resend-reset-otp — resend OTP for password reset
-router.post('/resend-reset-otp', async (req, res) => {
+router.post('/resend-reset-otp', otpLimiter, async (req, res) => {
   req.url = '/forgot-password';
   return router(req, res);
 });
 
 // POST /api/auth/reset-password — alias for /forgot-password/reset (email-based)
-router.post('/reset-password', async (req, res) => {
+router.post('/reset-password', loginLimiter, async (req, res) => {
   req.url = '/forgot-password/reset';
   return router(req, res);
 });
