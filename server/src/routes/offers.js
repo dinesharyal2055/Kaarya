@@ -3,6 +3,7 @@ const { getDb, save } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 const { sendToUser } = require('../fcm');
+const { validate, createOffer, updateOffer } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -117,13 +118,9 @@ async function getOfferWithDetails(offerId) {
 // ─── Routes ────────────────────────────────────────────────────────────────
 
 // POST /api/offers — submit offer (provider only)
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, validate(createOffer), async (req, res) => {
   try {
-    const { jobId, price, message } = req.body;
-
-    if (!jobId || !price) {
-      return res.status(400).json({ error: 'Missing required fields: jobId, price' });
-    }
+    const { jobId, price, message } = res.locals.parsedBody;
 
     const db = await getDb();
 
@@ -514,13 +511,9 @@ router.post('/:id/withdraw', requireAuth, async (req, res) => {
 });
 
 // POST /api/offers/:id/counter — counter-offer (seeker only)
-router.post('/:id/counter', requireAuth, async (req, res) => {
+router.post('/:id/counter', requireAuth, validate(updateOffer), async (req, res) => {
   try {
-    const { price, message } = req.body;
-
-    if (!price) {
-      return res.status(400).json({ error: 'Missing required field: price' });
-    }
+    const { price, message } = res.locals.parsedBody;
 
     const offerId = req.params.id;
     const db = await getDb();

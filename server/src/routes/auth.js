@@ -6,6 +6,7 @@ const { getDb, save } = require('../db');
 const { requireAuth, signToken, hashPassword, verifyPassword } = require('../middleware/auth');
 const { sendRegistrationOtp, sendPasswordReset } = require('../mailer');
 const { loginLimiter, otpLimiter, registerLimiter } = require('../middleware/rateLimit');
+const { validate, register, verifyOtp, resendOtp, login: loginSchema, forgotPassword, verifyResetOtp, resetPassword, updateProfile, uploadAvatar, updateRole } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -87,28 +88,9 @@ function deleteExpiredOtps(db) {
 //
 
 // POST /api/auth/register  — initiate registration (sends OTP to email)
-router.post('/register', registerLimiter, async (req, res) => {
+router.post('/register', registerLimiter, validate(register), async (req, res) => {
   try {
-    const { name, email, phone, password, role } = req.body;
-
-    if (!name || !email || !phone || !password || !role) {
-      return res.status(400).json({ error: 'Missing required fields: name, email, phone, password, role' });
-    }
-
-    if (role !== 'seeker' && role !== 'provider') {
-      return res.status(400).json({ error: 'Invalid role — must be "seeker" or "provider"' });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
-
-    // Email validation
-    if (!email.includes('@') || !email.includes('.')) {
-      return res.status(400).json({ error: 'Please enter a valid email address' });
-    }
-
-    const db = await getDb();
+    const { name, email, phone, password, role } = res.locals.parsedBody;
 
     // Check duplicate phone
     const existingPhone = db.exec('SELECT id FROM users WHERE phone = ?', [phone]);
@@ -170,13 +152,9 @@ router.post('/register/initiate', registerLimiter, async (req, res) => {
 });
 
 // POST /api/auth/register/verify  — verify OTP and create account
-router.post('/register/verify', otpLimiter, async (req, res) => {
+router.post('/register/verify', otpLimiter, validate(verifyOtp), async (req, res) => {
   try {
-    const { email, code } = req.body;
-
-    if (!email || !code) {
-      return res.status(400).json({ error: 'Email and verification code are required' });
-    }
+    const { email, code } = res.locals.parsedBody;
 
     const db = await getDb();
     deleteExpiredOtps(db);
@@ -248,10 +226,9 @@ router.post('/register/verify', otpLimiter, async (req, res) => {
 });
 
 // POST /api/auth/register/resend  — resend OTP for pending registration
-router.post('/register/resend', otpLimiter, async (req, res) => {
+router.post('/register/resend', otpLimiter, validate(resendOtp), async (req, res) => {
   try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
+    const { email } = res.locals.parsedBody;
 
     const db = await getDb();
 
@@ -320,13 +297,9 @@ router.post('/register/resend-otp', otpLimiter, async (req, res) => {
 // ─── Login ────────────────────────────────────────────────────────────
 
 // POST /api/auth/login
-router.post('/login', loginLimiter, async (req, res) => {
+router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
   try {
-    const { phone, password } = req.body;
-
-    if (!phone || !password) {
-      return res.status(400).json({ error: 'Missing phone or password' });
-    }
+    const { phone, password } = res.locals.parsedBody;
 
     const db = await getDb();
     const result = db.exec(
@@ -361,19 +334,13 @@ router.post('/login', loginLimiter, async (req, res) => {
 });
 
 // ─── Forgot Password ─────────────────────────────────────────────────
-
-// ─── Forgot Password ─────────────────────────────────────────────────
 // Unified handler: accepts phone OR email as identifier
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', otpLimiter, async (req, res) => {
+router.post('/forgot-password', otpLimiter, validate(forgotPassword), async (req, res) => {
   try {
-    const { phone, email } = req.body;
+    const { phone, email } = res.locals.parsedBody;
     const identifier = email || phone;
-
-    if (!identifier) {
-      return res.status(400).json({ error: 'Email or phone is required' });
-    }
 
     const db = await getDb();
 
@@ -434,14 +401,10 @@ router.post('/forgot-password', otpLimiter, async (req, res) => {
 });
 
 // POST /api/auth/forgot-password/verify
-router.post('/forgot-password/verify', otpLimiter, async (req, res) => {
+router.post('/forgot-password/verify', otpLimiter, validate(verifyResetOtp), async (req, res) => {
   try {
-    const { phone, email, code } = req.body;
+    const { phone, email, code } = res.locals.parsedBody;
     const identifier = email || phone;
-
-    if (!identifier || !code) {
-      return res.status(400).json({ error: 'Identifier (phone/email) and code are required' });
-    }
 
     const db = await getDb();
     deleteExpiredOtps(db);
@@ -470,18 +433,10 @@ router.post('/forgot-password/verify', otpLimiter, async (req, res) => {
 });
 
 // POST /api/auth/forgot-password/reset
-router.post('/forgot-password/reset', loginLimiter, async (req, res) => {
+router.post('/forgot-password/reset', loginLimiter, validate(resetPassword), async (req, res) => {
   try {
-    const { phone, email, code, newPassword } = req.body;
+    const { phone, email, code, newPassword } = res.locals.parsedBody;
     const identifier = email || phone;
-
-    if (!identifier || !code || !newPassword) {
-      return res.status(400).json({ error: 'Identifier, code, and new password are required' });
-    }
-
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
-    }
 
     const db = await getDb();
     deleteExpiredOtps(db);
@@ -546,32 +501,22 @@ router.post('/reset-password', loginLimiter, async (req, res) => {
 // ─── Profile update ─────────────────────────────────────────────────
 
 // PUT /api/auth/profile
-router.put('/profile', requireAuth, async (req, res) => {
+router.put('/profile', requireAuth, validate(updateProfile), async (req, res) => {
   try {
-    const { name, bio } = req.body;
+    const { name, bio } = res.locals.parsedBody;
     const db = await getDb();
 
     const updates = [];
     const values = [];
 
     if (name !== undefined) {
-      if (typeof name !== 'string' || name.trim().length < 2) {
-        return res.status(400).json({ error: 'Name must be at least 2 characters' });
-      }
       updates.push('name = ?');
       values.push(name.trim());
     }
 
     if (bio !== undefined) {
-      if (bio && bio.length > 500) {
-        return res.status(400).json({ error: 'Bio must be 500 characters or less' });
-      }
       updates.push('bio = ?');
       values.push(bio?.trim() || null);
-    }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
     }
 
     updates.push('updated_at = datetime("now")');
@@ -589,12 +534,9 @@ router.put('/profile', requireAuth, async (req, res) => {
 });
 
 // PUT /api/auth/avatar — upload profile picture
-router.put('/avatar', requireAuth, async (req, res) => {
+router.put('/avatar', requireAuth, validate(uploadAvatar), async (req, res) => {
   try {
-    const { image, filename } = req.body;
-    if (!image || !filename) {
-      return res.status(400).json({ error: 'image and filename are required' });
-    }
+    const { image, filename } = res.locals.parsedBody;
 
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
     let buffer;
@@ -635,12 +577,9 @@ router.put('/avatar', requireAuth, async (req, res) => {
 });
 
 // PUT /api/auth/role  — switch between seeker and provider
-router.put('/role', requireAuth, async (req, res) => {
+router.put('/role', requireAuth, validate(updateRole), async (req, res) => {
   try {
-    const { role } = req.body;
-    if (!role || (role !== 'seeker' && role !== 'provider')) {
-      return res.status(400).json({ error: 'Role must be "seeker" or "provider"' });
-    }
+    const { role } = res.locals.parsedBody;
 
     const db = await getDb();
     db.run('UPDATE users SET role = ?, updated_at = datetime("now") WHERE id = ?', [role, req.userId]);

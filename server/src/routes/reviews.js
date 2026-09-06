@@ -3,6 +3,7 @@ const { getDb, save } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 const { sendToUser } = require('../fcm');
+const { validate, createReview } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -48,18 +49,9 @@ async function updateUserRating(userId) {
 }
 
 // POST /api/reviews — submit a review
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, validate(createReview), async (req, res) => {
   try {
-    const { jobId, revieweeId, rating, comment } = req.body;
-
-    if (!jobId || !revieweeId || !rating) {
-      return res.status(400).json({ error: 'Missing required fields: jobId, revieweeId, rating' });
-    }
-
-    const ratingNum = parseInt(rating, 10);
-    if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-      return res.status(400).json({ error: 'Rating must be between 1 and 5' });
-    }
+    const { jobId, revieweeId, rating, comment } = res.locals.parsedBody;
 
     const db = await getDb();
     const reviewerId = req.userId;

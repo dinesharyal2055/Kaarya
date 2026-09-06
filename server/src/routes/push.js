@@ -5,6 +5,7 @@ const express = require('express');
 const { getDb, save } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { storeToken, removeAllTokensForUser, fcmReady } = require('../fcm');
+const { validate, registerToken, unregisterToken } = require('../middleware/validate');
 
 const router = express.Router();
 
@@ -16,13 +17,9 @@ const router = express.Router();
  *
  * Body: { token: string }
  */
-router.post('/register', requireAuth, async (req, res) => {
+router.post('/register', requireAuth, validate(registerToken), async (req, res) => {
   try {
-    const { token } = req.body;
-
-    if (!token || typeof token !== 'string' || token.trim().length === 0) {
-      return res.status(400).json({ error: 'A valid FCM token is required' });
-    }
+    const { token } = res.locals.parsedBody;
 
     const userId = req.userId;
     await storeToken(userId, token.trim());
@@ -43,9 +40,9 @@ router.post('/register', requireAuth, async (req, res) => {
  *
  * Body: { token?: string } — if token omitted, removes ALL tokens for this user
  */
-router.delete('/unregister', requireAuth, async (req, res) => {
+router.delete('/unregister', requireAuth, validate(unregisterToken), async (req, res) => {
   try {
-    const { token } = req.body || {};
+    const { token } = res.locals.parsedBody;
     const userId = req.userId;
 
     if (token && typeof token === 'string') {

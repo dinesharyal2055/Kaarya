@@ -3,6 +3,7 @@
  * In production, protect with proper admin authentication middleware.
  */
 const express = require('express');
+const { validate, reviewVerification, updateUserRole } = require('../middleware/validate');
 const router = express.Router();
 const { getDb, save } = require('../db');
 
@@ -97,16 +98,10 @@ router.get('/verifications/:id', async (req, res) => {
 });
 
 // POST /api/admin/verifications/:id/review — approve or reject a request
-router.post('/verifications/:id/review', async (req, res) => {
+router.post('/verifications/:id/review', validate(reviewVerification), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, adminNotes } = req.body;
-
-    if (!status || !VALID_REVIEW_STATUSES.includes(status)) {
-      return res.status(400).json({
-        error: `Invalid status. Must be one of: ${VALID_REVIEW_STATUSES.join(', ')}`,
-      });
-    }
+    const { status, adminNotes } = res.locals.parsedBody;
 
     const db = await getDb();
 
@@ -162,14 +157,10 @@ router.post('/verifications/:id/review', async (req, res) => {
 });
 
 // POST /api/admin/users/:id/role — update a user's role
-router.post('/users/:id/role', async (req, res) => {
+router.post('/users/:id/role', validate(updateUserRole), async (req, res) => {
   try {
     const { id } = req.params;
-    const { role } = req.body;
-
-    if (!role || !['seeker', 'provider'].includes(role)) {
-      return res.status(400).json({ error: 'Invalid role. Must be "seeker" or "provider".' });
-    }
+    const { role } = res.locals.parsedBody;
 
     const db = await getDb();
     const result = db.exec('SELECT id, name, role FROM users WHERE id = ?', [id]);

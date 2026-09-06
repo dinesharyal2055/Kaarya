@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { getDb } = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { validate, createJob, updateJob, updateJobStatus } = require('../middleware/validate');
 const { sendToUser } = require('../fcm');
 
 const router = express.Router();
@@ -261,9 +262,9 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 // POST /api/jobs — create job (auth required, seeker only)
-router.post('/', requireAuth, async (req, res) => {
+router.post('/', requireAuth, validate(createJob), async (req, res) => {
   try {
-    const { title, description, category, location, address, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = req.body;
+    const { title, description, category, location, address, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = res.locals.parsedBody;
 
     // Check role
     const db = await getDb();
@@ -274,11 +275,6 @@ router.post('/', requireAuth, async (req, res) => {
     const role = userResult[0].values[0][0];
     if (role !== 'seeker') {
       return res.status(403).json({ error: 'Only seekers can post jobs' });
-    }
-
-    // Validate required fields
-    if (!title || !description || !category || !location) {
-      return res.status(400).json({ error: 'Missing required fields: title, description, category, location' });
     }
 
     db.run(
@@ -569,18 +565,10 @@ router.post('/:id/complete', requireAuth, async (req, res) => {
 });
 
 // PUT /api/jobs/:id/status — update status (auth required, owner only)
-router.put('/:id/status', requireAuth, async (req, res) => {
+router.put('/:id/status', requireAuth, validate(updateJobStatus), async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
-
-    if (!status) {
-      return res.status(400).json({ error: 'Missing required field: status' });
-    }
-
-    if (!VALID_STATUSES.includes(status)) {
-      return res.status(400).json({ error: `Invalid status. Must be one of: ${VALID_STATUSES.join(', ')}` });
-    }
+    const { status } = res.locals.parsedBody;
 
     const db = await getDb();
 
@@ -605,10 +593,10 @@ router.put('/:id/status', requireAuth, async (req, res) => {
 });
 
 // PATCH /api/jobs/:id — edit a job (auth required, seeker owner only, no bids yet)
-router.patch('/:id', requireAuth, async (req, res) => {
+router.patch('/:id', requireAuth, validate(updateJob), async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, location, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = req.body;
+    const { title, description, location, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = res.locals.parsedBody;
     const db = await getDb();
 
     // Verify job exists
@@ -642,11 +630,6 @@ router.patch('/:id', requireAuth, async (req, res) => {
       });
     }
 
-    // Validate: at least title must be present
-    if (!title || !title.trim()) {
-      return res.status(400).json({ error: 'Title is required' });
-    }
-
     // Build dynamic UPDATE
     const updates = [];
     const params = [];
@@ -659,10 +642,6 @@ router.patch('/:id', requireAuth, async (req, res) => {
     if (photoUrls !== undefined) { updates.push('photo_urls = ?'); params.push(JSON.stringify(photoUrls ?? [])); }
     if (latitude !== undefined) { updates.push('seeker_lat = ?'); params.push(latitude ?? null); }
     if (longitude !== undefined) { updates.push('seeker_lng = ?'); params.push(longitude ?? null); }
-
-    if (updates.length === 0) {
-      return res.status(400).json({ error: 'No fields to update' });
-    }
 
     updates.push('updated_at = datetime("now")');
     params.push(id);
