@@ -202,12 +202,7 @@
     "loadingJobs": "Loading your jobs...",
     "loadingSavedJobs": "Loading saved jobs...",
     "youAreProviding": "You are providing service",
-    "youPosted": "You posted this job",
-    "status": {
-      "assigned": "Assigned",
-      "inProgress": "In Progress",
-      "completed": "Completed"
-    }
+    "youPosted": "You posted this job"
   },
   "jobDetail": {
     "postedBy": "Posted by",
