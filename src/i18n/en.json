@@ -657,5 +657,15 @@
     "english": "English",
     "nepali": "नेपाली",
     "current": "Current"
+  },
+  "portfolio": {
+    "title": "My Portfolio",
+    "viewPortfolio": "View Portfolio",
+    "seeReviews": "See your reviews",
+    "review": "review",
+    "reviews": "reviews",
+    "noReviews": "No reviews yet",
+    "noReviewsHint": "Complete jobs to receive reviews from clients.",
+    "noComment": "No comment left"
   }
 }

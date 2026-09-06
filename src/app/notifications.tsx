@@ -114,6 +114,8 @@ export default function NotificationsScreen() {
       router.push('/offers');
     } else if (item.type === 'new_message') {
       router.push('/(tabs)/messages');
+    } else if (item.type === 'review_received') {
+      router.push('/portfolio');
     }
   };
 

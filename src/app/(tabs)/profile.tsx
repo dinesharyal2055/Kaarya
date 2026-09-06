@@ -1,5 +1,5 @@
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
@@ -143,6 +143,22 @@ export default function ProfileScreen() {
             <View style={styles.statDivider} />
             <Stat label={t('jobs.status.completed')} value={`${user.completionRate ?? 0}%`} icon="check-circle" />
           </View>
+        )}
+
+        {/* Portfolio link — visible for both roles */}
+        {(user?.reviewCount ?? 0) > 0 && (
+          <Pressable style={[styles.portfolioBanner, Shadows.sm]} onPress={() => router.push('/portfolio')}>
+            <View style={styles.portfolioIconWrap}>
+              <MaterialCommunityIcons name="star-circle" size={28} color={KaaryaColors.brand[500]} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.portfolioTitle}>{t('portfolio.viewPortfolio')}</Text>
+              <Text style={styles.portfolioSub}>
+                {user?.rating ? `${user.rating.toFixed(1)} ★ · ${user.reviewCount} ${user.reviewCount === 1 ? t('portfolio.review') : t('portfolio.reviews')}` : t('portfolio.seeReviews')}
+              </Text>
+            </View>
+            <MaterialCommunityIcons name="chevron-right" size={22} color={KaaryaColors.muted} />
+          </Pressable>
         )}
 
         {/* Bio */}
@@ -407,6 +423,35 @@ const styles = StyleSheet.create({
     width: 1,
     height: 36,
     backgroundColor: KaaryaColors.border,
+  },
+  portfolioBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: KaaryaColors.brand[50],
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: KaaryaColors.brand[200],
+    gap: 12,
+  },
+  portfolioIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: KaaryaColors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  portfolioTitle: {
+    fontSize: FontSizes.base,
+    fontWeight: '700',
+    color: KaaryaColors.brand[700],
+  },
+  portfolioSub: {
+    fontSize: FontSizes.xs,
+    color: KaaryaColors.brand[500],
+    marginTop: 2,
   },
   bioCard: {
     backgroundColor: KaaryaColors.card,
