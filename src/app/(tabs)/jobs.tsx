@@ -1,14 +1,14 @@
 /**
- * Jobs screen — Ongoing and Saved Jobs for both seekers and providers
- * Providers get two sections: Ongoing and Saved Jobs
- * Seekers only see Ongoing jobs
+ * Jobs screen — Ongoing, Posted, and Saved Jobs
+ * Providers: Ongoing + Saved tabs
+ * Seekers: Posted + Ongoing tabs
  */
 
 import { useRouter, useFocusEffect } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useCallback, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
@@ -16,15 +16,36 @@ import { jobsApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import type { Job } from '@/types';
 
-type ActiveTab = 'ongoing' | 'saved';
+type ActiveTab = 'posted' | 'ongoing' | 'saved';
 
 export default function JobsScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<ActiveTab>('ongoing');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('posted');
 
   const isProvider = user?.role === 'provider';
+
+  // ── Posted jobs (seekers only — all jobs they have posted) ─────────
+  const [postedJobs, setPostedJobs] = useState<Job[]>([]);
+  const [postedLoading, setPostedLoading] = useState(true);
+  const [postedRefreshing, setPostedRefreshing] = useState(false);
+  const [postedError, setPostedError] = useState('');
+
+  const loadPosted = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setPostedRefreshing(true);
+    else setPostedLoading(true);
+    setPostedError('');
+    try {
+      const result = await jobsApi.postedList();
+      setPostedJobs(result.jobs);
+    } catch (e: any) {
+      setPostedError(e.message ?? t('jobs.loadFailed'));
+    } finally {
+      setPostedLoading(false);
+      setPostedRefreshing(false);
+    }
+  }, [t]);
 
   // ── Ongoing jobs ──────────────────────────────────────────────────
   const [ongoingJobs, setOngoingJobs] = useState<Job[]>([]);
@@ -71,9 +92,16 @@ export default function JobsScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadOngoing();
-      if (isProvider) loadSaved();
-    }, [loadOngoing, loadSaved, isProvider])
+      if (isProvider) {
+        setActiveTab('ongoing');
+        loadOngoing();
+        loadSaved();
+      } else {
+        setActiveTab('posted');
+        loadPosted();
+        loadOngoing();
+      }
+    }, [isProvider, loadPosted, loadOngoing, loadSaved])
   );
 
   const getCategoryColor = (categoryId: string) => {
@@ -105,15 +133,73 @@ export default function JobsScreen() {
     return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric' });
   };
 
+  // ── Posted job card (seekers) ──────────────────────────────────────
+  const renderPostedJob = ({ item: job }: { item: Job }) => {
+    const statusKey = job.status;
+    const statusMap: { [key: string]: { label: string; color: string; icon: string } } = {
+      open:        { label: t('jobs.status.open'),       color: KaaryaColors.success,   icon: 'help-circle' },
+      assigned:    { label: t('jobs.status.assigned'),  color: KaaryaColors.warning,   icon: 'clock-check' },
+      in_progress: { label: t('jobs.status.inProgress'),color: KaaryaColors.brand[500],icon: 'progress-wrench' },
+      completed:   { label: t('jobs.status.completed'), color: KaaryaColors.success,   icon: 'check-circle' },
+      cancelled:   { label: t('jobs.status.cancelled'),color: KaaryaColors.danger,   icon: 'close-circle' },
+    };
+    const cfg = statusMap[statusKey] ?? { label: job.status, color: KaaryaColors.muted, icon: 'help-circle' };
+    const catColor = getCategoryColor(job.category);
+
+    return (
+      <View style={[styles.jobCard, Shadows.md]}>
+        <Pressable style={styles.cardBody} onPress={() => router.push(`/job/${job.id}`)}>
+          <View style={styles.jobHeader}>
+            <View style={[styles.catBadge, { backgroundColor: catColor + '20' }]}>
+              <MaterialCommunityIcons name={getCategoryIcon(job.category) as any} size={14} color={catColor} />
+            </View>
+            <View style={[styles.statusBadge, { backgroundColor: cfg.color + '20' }]}>
+              <MaterialCommunityIcons name={cfg.icon as any} size={12} color={cfg.color} />
+              <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+            </View>
+          </View>
+          <Text style={styles.jobTitle}>{job.title}</Text>
+          <Text style={styles.jobDesc} numberOfLines={1}>{job.description}</Text>
+          <View style={styles.jobMeta}>
+            <View style={styles.metaItem}>
+              <MaterialCommunityIcons name="map-marker-outline" size={14} color={KaaryaColors.muted} />
+              <Text style={styles.metaText}>{job.area}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <MaterialCommunityIcons name="clock-outline" size={14} color={KaaryaColors.muted} />
+              <Text style={styles.metaText}>{formatDate(job.createdAt)}</Text>
+            </View>
+            {job.offerCount !== undefined && job.offerCount > 0 && (
+              <View style={styles.metaItem}>
+                <MaterialCommunityIcons name="tag" size={14} color={KaaryaColors.brand[500]} />
+                <Text style={[styles.metaText, { color: KaaryaColors.brand[500] }]}>
+                  {job.offerCount} bid{job.offerCount !== 1 ? 's' : ''}
+                </Text>
+              </View>
+            )}
+          </View>
+        </Pressable>
+        <View style={styles.jobFooter}>
+          <View>
+            <Text style={styles.budget}>{formatBudget(job)}</Text>
+            <Text style={styles.roleLabel}>{t('jobs.youPosted')}</Text>
+          </View>
+          <Pressable style={styles.viewBtn} onPress={() => router.push(`/job/${job.id}`)}>
+            <Text style={styles.viewBtnText}>{t('common.view')}</Text>
+            <MaterialCommunityIcons name="arrow-right" size={14} color="#fff" />
+          </Pressable>
+        </View>
+      </View>
+    );
+  };
+
   // ── Ongoing job card ────────────────────────────────────────────
   const renderOngoingJob = ({ item: job }: { item: Job }) => {
     const statusKey = job.status;
     const statusMap: { [key: string]: { label: string; color: string; icon: string } } = {
-      assigned:    { label: t('jobs.status.assigned'),    color: KaaryaColors.warning, icon: 'clock-check' },
+      assigned:    { label: t('jobs.status.assigned'),    color: KaaryaColors.warning,   icon: 'clock-check' },
       in_progress: { label: t('jobs.status.inProgress'), color: KaaryaColors.brand[500], icon: 'progress-wrench' },
       completed:   { label: t('jobs.status.completed'),  color: KaaryaColors.success,   icon: 'check-circle' },
-      open:        { label: 'Open',                       color: KaaryaColors.muted,     icon: 'help-circle' },
-      cancelled:   { label: 'Cancelled',                  color: KaaryaColors.danger,    icon: 'close-circle' },
     };
     const cfg = statusMap[statusKey] ?? { label: job.status, color: KaaryaColors.muted, icon: 'help-circle' };
     const catColor = getCategoryColor(job.category);
@@ -200,47 +286,67 @@ export default function JobsScreen() {
     );
   };
 
-  const jobs = activeTab === 'ongoing' ? ongoingJobs : savedJobs;
-  const loading = activeTab === 'ongoing' ? ongoingLoading : savedLoading;
-  const refreshing = activeTab === 'ongoing' ? ongoingRefreshing : savedRefreshing;
-  const error = activeTab === 'ongoing' ? ongoingError : savedError;
-  const renderItem = activeTab === 'ongoing' ? renderOngoingJob : renderSavedJob;
+  // ── Resolver helpers ────────────────────────────────────────────
+  const allJobs = { posted: postedJobs, ongoing: ongoingJobs, saved: savedJobs };
+  const allLoading = { posted: postedLoading, ongoing: ongoingLoading, saved: savedLoading };
+  const allRefreshing = { posted: postedRefreshing, ongoing: ongoingRefreshing, saved: savedRefreshing };
+  const allError = { posted: postedError, ongoing: ongoingError, saved: savedError };
+  const allLoadFns: Record<ActiveTab, (isRefresh?: boolean) => void> = {
+    posted: loadPosted,
+    ongoing: loadOngoing,
+    saved: loadSaved,
+  };
+  const renderers: Record<ActiveTab, (props: { item: Job }) => React.ReactElement> = {
+    posted: renderPostedJob,
+    ongoing: renderOngoingJob,
+    saved: renderSavedJob,
+  };
+
+  const jobs = allJobs[activeTab];
+  const loading = allLoading[activeTab];
+  const refreshing = allRefreshing[activeTab];
+  const error = allError[activeTab];
+  const renderItem = renderers[activeTab];
+
+  // Tabs: seekers get Posted + Ongoing; providers get Ongoing + Saved
+  const seekerTabs: ActiveTab[] = ['posted', 'ongoing'];
+  const providerTabs: ActiveTab[] = ['ongoing', 'saved'];
+  const tabs = isProvider ? providerTabs : seekerTabs;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.title}>{t('jobs.title')}</Text>
-        {isProvider && (
-          <View style={styles.tabSelector}>
+        <View style={styles.tabSelector}>
+          {tabs.map((tab) => (
             <Pressable
-              style={[styles.tab, activeTab === 'ongoing' && styles.tabActive]}
-              onPress={() => setActiveTab('ongoing')}
+              key={tab}
+              style={[styles.tab, activeTab === tab && styles.tabActive]}
+              onPress={() => {
+                setActiveTab(tab);
+                const tabJobs = allJobs[tab];
+                if (tabJobs.length === 0 && !allLoading[tab]) {
+                  allLoadFns[tab]();
+                }
+              }}
             >
-              <Text style={[styles.tabText, activeTab === 'ongoing' && styles.tabTextActive]}>
-                {t('jobs.ongoing')}
+              <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+                {tab === 'posted' ? t('jobs.posted') : tab === 'ongoing' ? t('jobs.ongoing') : t('jobs.saved')}
               </Text>
-            </Pressable>
-            <Pressable
-              style={[styles.tab, activeTab === 'saved' && styles.tabActive]}
-              onPress={() => { setActiveTab('saved'); if (savedJobs.length === 0 && !savedLoading) loadSaved(); }}
-            >
-              <Text style={[styles.tabText, activeTab === 'saved' && styles.tabTextActive]}>
-                {t('jobs.saved')}
-              </Text>
-              {savedJobs.length > 0 && (
+              {tab === 'saved' && savedJobs.length > 0 && (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{savedJobs.length}</Text>
                 </View>
               )}
             </Pressable>
-          </View>
-        )}
+          ))}
+        </View>
       </View>
 
       {loading && jobs.length === 0 ? (
         <View style={styles.centerState}>
           <Text style={styles.loadingText}>
-            {activeTab === 'ongoing' ? t('jobs.loadingJobs') : t('jobs.loadingSaved')}
+            {activeTab === 'posted' ? t('jobs.loadingPosted') : activeTab === 'ongoing' ? t('jobs.loadingJobs') : t('jobs.loadingSaved')}
           </Text>
         </View>
       ) : error ? (
@@ -248,7 +354,7 @@ export default function JobsScreen() {
           <MaterialCommunityIcons name="alert-circle" size={48} color={KaaryaColors.danger} />
           <Text style={styles.errorTitle}>{t('common.loadingFailed')}</Text>
           <Text style={styles.errorText}>{error}</Text>
-          <Pressable style={styles.retryBtn} onPress={() => activeTab === 'ongoing' ? loadOngoing() : loadSaved()}>
+          <Pressable style={styles.retryBtn} onPress={() => allLoadFns[activeTab]()}>
             <Text style={styles.retryText}>{t('common.retry')}</Text>
           </Pressable>
         </View>
@@ -261,13 +367,19 @@ export default function JobsScreen() {
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => activeTab === 'ongoing' ? loadOngoing(true) : loadSaved(true)}
+              onRefresh={() => allLoadFns[activeTab](true)}
               tintColor={KaaryaColors.brand[500]}
             />
           }
           ListEmptyComponent={
             <View style={styles.centerState}>
-              {activeTab === 'ongoing' ? (
+              {activeTab === 'posted' ? (
+                <>
+                  <MaterialCommunityIcons name="plus-circle-outline" size={64} color={KaaryaColors.muted} />
+                  <Text style={styles.emptyTitle}>{t('jobs.noPostedJobs')}</Text>
+                  <Text style={styles.emptyText}>{t('jobs.noPostedJobsHint')}</Text>
+                </>
+              ) : activeTab === 'ongoing' ? (
                 <>
                   <MaterialCommunityIcons name="clipboard-list-outline" size={64} color={KaaryaColors.muted} />
                   <Text style={styles.emptyTitle}>{t('jobs.noActiveJobs')}</Text>

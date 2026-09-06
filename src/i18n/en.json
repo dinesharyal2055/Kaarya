@@ -182,11 +182,22 @@
   },
   "jobs": {
     "title": "My Jobs",
+    "posted": "Posted",
     "ongoing": "Ongoing",
     "saved": "Saved",
     "noActiveJobs": "No active jobs",
     "ongoingHint": "When you accept a provider's bid or have your bid accepted, jobs will appear here.",
     "noSavedJobs": "No saved jobs",
+    "noPostedJobs": "No posted tasks",
+    "noPostedJobsHint": "Tasks you post will appear here. Go to the home screen to post your first task.",
+    "loadingPosted": "Loading your posted tasks...",
+    "status": {
+      "open": "Open",
+      "assigned": "Assigned",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    },
     "savedHint": "Tap the bookmark icon on any job to save it here for later.",
     "loadingJobs": "Loading your jobs...",
     "loadingSavedJobs": "Loading saved jobs...",

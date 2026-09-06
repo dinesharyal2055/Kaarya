@@ -227,6 +227,9 @@ export const jobsApi = {
   /** List saved jobs for current provider */
   savedList: () => get<{ jobs: import('@/types').Job[] }>('/jobs/saved/list'),
 
+  /** List all jobs posted by current seeker (any status) */
+  postedList: () => get<{ jobs: import('@/types').Job[] }>('/jobs/posted/list'),
+
   /** Check if a job is saved */
   isSaved: (jobId: string) =>
     get<{ saved: boolean }>(`/jobs/${jobId}/saved`),

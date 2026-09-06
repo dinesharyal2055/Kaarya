@@ -33,6 +33,9 @@ export default function JobDetailScreen() {
   const [isSaved, setIsSaved] = useState(false);                 // save state
   const [saveLoading, setSaveLoading] = useState(false);          // save button loading
 
+  // True when the logged-in user is the seeker who posted this job (compares DB int to JWT string)
+  const isSeekerOwner = !!(user && job && String(job.seekerId as any) === user.id);
+
   const loadJob = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
@@ -192,7 +195,7 @@ export default function JobDetailScreen() {
                 color={isSaved ? KaaryaColors.brand[500] : KaaryaColors.muted}
               />
             </Pressable>
-          ) : user?.role === 'seeker' && job.seekerId === user?.id && job.status === 'open' ? (
+          ) : user?.role === 'seeker' && isSeekerOwner && job.status === 'open' ? (
             <Pressable
               onPress={() => router.push({ pathname: '/edit-job', params: { id: job.id } })}
               style={styles.saveBtn}
@@ -296,7 +299,7 @@ export default function JobDetailScreen() {
           {/* Offers summary */}
           <View style={[styles.section, Shadows.sm]}>
             <Text style={styles.sectionTitle}>Offers</Text>
-            {user?.role === 'seeker' && job.seekerId === user?.id ? (
+            {user?.role === 'seeker' && isSeekerOwner ? (
               receivedOffers.length > 0 ? (
                 <Pressable
                   style={styles.offersAction}
@@ -364,13 +367,13 @@ export default function JobDetailScreen() {
                   />
                 )
               )}
-              {user?.role === 'seeker' && job.seekerId === user?.id && (
+              {user?.role === 'seeker' && isSeekerOwner && (
                 <View style={styles.noOffersBar}>
                   <MaterialCommunityIcons name="inbox-outline" size={18} color={KaaryaColors.muted} />
                   <Text style={styles.noOffersText}>Check the Offers section to manage bids</Text>
                 </View>
               )}
-              {user?.role === 'seeker' && job.seekerId !== user?.id && (
+              {user?.role === 'seeker' && !isSeekerOwner && (
                 <Button
                   title="Switch to Service Provider"
                   onPress={() => router.push('/(tabs)/profile')}
@@ -384,7 +387,7 @@ export default function JobDetailScreen() {
           {/* ASSIGNED jobs */}
           {job.status === 'assigned' && (
             <>
-              {user?.role === 'seeker' && job.seekerId === user?.id && (
+              {user?.role === 'seeker' && isSeekerOwner && (
                 <View style={styles.infoBar}>
                   <MaterialCommunityIcons name="check-circle-outline" size={18} color={KaaryaColors.warning} />
                   <Text style={styles.infoText}>
@@ -416,7 +419,7 @@ export default function JobDetailScreen() {
           {/* IN_PROGRESS jobs */}
           {job.status === 'in_progress' && (
             <>
-              {user?.role === 'seeker' && job.seekerId === user?.id && (
+              {user?.role === 'seeker' && isSeekerOwner && (
                 <Button
                   title="Mark as Complete"
                   onPress={async () => {
@@ -446,7 +449,7 @@ export default function JobDetailScreen() {
           {/* COMPLETED jobs */}
           {job.status === 'completed' && (
             <>
-              {user?.role === 'seeker' && job.seekerId === user?.id && (
+              {user?.role === 'seeker' && isSeekerOwner && (
                 hasReviewed ? (
                   <View style={styles.submittedOfferBar}>
                     <MaterialCommunityIcons name="check-circle" size={18} color={KaaryaColors.success} />

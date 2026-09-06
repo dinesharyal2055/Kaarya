@@ -297,6 +297,57 @@ router.post('/', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/jobs/posted/list — all jobs posted by current seeker (any status)
+router.get('/posted/list', requireAuth, async (req, res) => {
+  try {
+    const db = await getDb();
+    const result = db.exec(
+      `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
+              j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
+              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url,
+              'seeker' as role
+       FROM jobs j
+       LEFT JOIN users u ON j.seeker_id = u.id
+       WHERE j.seeker_id = ?
+       ORDER BY j.created_at DESC`,
+      [String(req.userId)]
+    );
+
+    const jobs = [];
+    if (result.length > 0) {
+      for (const row of result[0].values) {
+        const job = {
+          id: row[0],
+          seekerId: row[1],
+          title: row[2],
+          description: row[3],
+          category: row[4],
+          area: row[5],
+          budgetMin: row[6] ?? null,
+          budgetMax: row[7] ?? null,
+          status: row[8],
+          urgency: row[9],
+          scheduledDate: row[10] ?? null,
+          photoUrls: row[11] ? JSON.parse(row[11]) : [],
+          createdAt: row[12],
+          updatedAt: row[13],
+          seekerName: row[14] ?? null,
+          seekerAvatar: row[15] ?? null,
+          userRole: 'seeker',
+        };
+        const offerCount = await getOfferCount(job.id);
+        job.offerCount = offerCount;
+        jobs.push(job);
+      }
+    }
+
+    res.json({ jobs });
+  } catch (err) {
+    console.error('[jobs/posted]', err);
+    res.status(500).json({ error: 'Failed to fetch posted jobs' });
+  }
+});
+
 // GET /api/jobs/ongoing — jobs where current user is participant (seeker or accepted provider)
 router.get('/ongoing/list', requireAuth, async (req, res) => {
   try {
@@ -518,7 +569,7 @@ router.put('/:id/status', requireAuth, async (req, res) => {
     }
 
     const ownerId = jobResult[0].values[0][0];
-    if (ownerId !== req.userId) {
+    if (String(ownerId) !== String(req.userId)) {
       return res.status(403).json({ error: 'Only the job owner can update status' });
     }
 
