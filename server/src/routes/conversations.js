@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 const { sendToUser } = require('../fcm');
 const { validate, sendMessage } = require('../middleware/validate');
+const { sanitize } = require('../middleware/sanitize');
 
 const router = express.Router();
 
@@ -306,7 +307,7 @@ router.get('/:id/messages', requireAuth, async (req, res) => {
 });
 
 // POST /api/conversations/:id/messages — send message
-router.post('/:id/messages', requireAuth, validate(sendMessage), async (req, res) => {
+router.post('/:id/messages', requireAuth, sanitize('text'), validate(sendMessage), async (req, res) => {
   try {
     const { id } = req.params;
     const { text } = res.locals.parsedBody;

@@ -7,6 +7,7 @@ const { requireAuth, signToken, hashPassword, verifyPassword } = require('../mid
 const { sendRegistrationOtp, sendPasswordReset } = require('../mailer');
 const { loginLimiter, otpLimiter, registerLimiter } = require('../middleware/rateLimit');
 const { validate, register, verifyOtp, resendOtp, login: loginSchema, forgotPassword, verifyResetOtp, resetPassword, updateProfile, uploadAvatar, updateRole } = require('../middleware/validate');
+const { sanitize } = require('../middleware/sanitize');
 
 const router = express.Router();
 
@@ -501,7 +502,7 @@ router.post('/reset-password', loginLimiter, async (req, res) => {
 // ─── Profile update ─────────────────────────────────────────────────
 
 // PUT /api/auth/profile
-router.put('/profile', requireAuth, validate(updateProfile), async (req, res) => {
+router.put('/profile', requireAuth, sanitize('name', 'bio'), validate(updateProfile), async (req, res) => {
   try {
     const { name, bio } = res.locals.parsedBody;
     const db = await getDb();

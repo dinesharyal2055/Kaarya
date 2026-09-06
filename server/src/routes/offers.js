@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 const { sendToUser } = require('../fcm');
 const { validate, createOffer, updateOffer } = require('../middleware/validate');
+const { sanitize } = require('../middleware/sanitize');
 
 const router = express.Router();
 
@@ -118,7 +119,7 @@ async function getOfferWithDetails(offerId) {
 // ─── Routes ────────────────────────────────────────────────────────────────
 
 // POST /api/offers — submit offer (provider only)
-router.post('/', requireAuth, validate(createOffer), async (req, res) => {
+router.post('/', requireAuth, sanitize('message'), validate(createOffer), async (req, res) => {
   try {
     const { jobId, price, message } = res.locals.parsedBody;
 
@@ -511,7 +512,7 @@ router.post('/:id/withdraw', requireAuth, async (req, res) => {
 });
 
 // POST /api/offers/:id/counter — counter-offer (seeker only)
-router.post('/:id/counter', requireAuth, validate(updateOffer), async (req, res) => {
+router.post('/:id/counter', requireAuth, sanitize('message'), validate(updateOffer), async (req, res) => {
   try {
     const { price, message } = res.locals.parsedBody;
 

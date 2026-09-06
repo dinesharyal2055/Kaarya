@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 const { sendToUser } = require('../fcm');
 const { validate, createReview } = require('../middleware/validate');
+const { sanitize } = require('../middleware/sanitize');
 
 const router = express.Router();
 
@@ -49,7 +50,7 @@ async function updateUserRating(userId) {
 }
 
 // POST /api/reviews — submit a review
-router.post('/', requireAuth, validate(createReview), async (req, res) => {
+router.post('/', requireAuth, sanitize('comment'), validate(createReview), async (req, res) => {
   try {
     const { jobId, revieweeId, rating, comment } = res.locals.parsedBody;
 

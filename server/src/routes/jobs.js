@@ -4,6 +4,7 @@ const path = require('path');
 const { getDb } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { validate, createJob, updateJob, updateJobStatus } = require('../middleware/validate');
+const { sanitize } = require('../middleware/sanitize');
 const { sendToUser } = require('../fcm');
 
 const router = express.Router();
@@ -262,7 +263,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 });
 
 // POST /api/jobs — create job (auth required, seeker only)
-router.post('/', requireAuth, validate(createJob), async (req, res) => {
+router.post('/', requireAuth, sanitize('title', 'description', 'location', 'address'), validate(createJob), async (req, res) => {
   try {
     const { title, description, category, location, address, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = res.locals.parsedBody;
 
@@ -593,7 +594,7 @@ router.put('/:id/status', requireAuth, validate(updateJobStatus), async (req, re
 });
 
 // PATCH /api/jobs/:id — edit a job (auth required, seeker owner only, no bids yet)
-router.patch('/:id', requireAuth, validate(updateJob), async (req, res) => {
+router.patch('/:id', requireAuth, sanitize('title', 'description', 'location'), validate(updateJob), async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, location, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = res.locals.parsedBody;
