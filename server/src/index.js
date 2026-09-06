@@ -3,12 +3,43 @@ const cors = require('cors');
 const path = require('path');
 const { getDb } = require('./db');
 
-const app = express();
-const PORT = 5000;
+// Load .env in development
+try { require('dotenv').config(); } catch (_) {}
 
-// Middleware
-app.use(cors({ origin: '*' }));
-app.use(express.json({ limit: '20mb' })); // larger limit for base64 image uploads
+const app = express();
+const PORT = Number(process.env.PORT) || 5000;
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
+// Restrict to allowed origins. In production the variable is required.
+// In development, allow localhost variants.
+function getCorsOptions() {
+  const allowed = process.env.ALLOWED_ORIGINS;
+  if (process.env.NODE_ENV === 'production') {
+    if (!allowed) {
+      console.warn('[cors] WARNING: ALLOWED_ORIGINS not set — blocking all cross-origin requests.');
+      return { origin: false };
+    }
+    const origins = allowed.split(',').map((o) => o.trim());
+    return { origin: origins, credentials: true };
+  }
+  // Development: allow localhost, file://, and the Expo dev server
+  const devOrigins = [
+    'http://localhost:3000',
+    'http://localhost:8081',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:8081',
+    'exp://localhost:8081',
+    'exp://127.0.0.1:8081',
+  ];
+  if (allowed) {
+    // Also honour the env var in dev so testers can add extra origins
+    allowed.split(',').forEach((o) => devOrigins.push(o.trim()));
+  }
+  return { origin: devOrigins, credentials: false };
+}
+
+app.use(cors(getCorsOptions()));
+app.use(express.json({ limit: '2mb' })); // larger limit for base64 image uploads
 
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

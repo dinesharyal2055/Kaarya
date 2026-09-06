@@ -1,9 +1,27 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
-const JWT_SECRET = 'kaarya-jwt-secret-change-in-production';
-const JWT_EXPIRY = '7d';
-const BCRYPT_ROUNDS = 10;
+// Load .env in development (no-op if vars are already set)
+try { require('dotenv').config(); } catch (_) {}
+
+/**
+ * JWT secret — MUST be set via JWT_SECRET env var in production.
+ * Falls back to a dev-only string only when NODE_ENV !== 'production'.
+ */
+function getJwtSecret() {
+  if (process.env.NODE_ENV === 'production') {
+    if (!process.env.JWT_SECRET) {
+      throw new Error('FATAL: JWT_SECRET environment variable is not set in production. Aborting startup.');
+    }
+    return process.env.JWT_SECRET;
+  }
+  // Development fallback — never used in production
+  return process.env.JWT_SECRET || '***REMOVED***';
+}
+
+const JWT_SECRET = getJwtSecret();
+const JWT_EXPIRY = process.env.JWT_EXPIRY || '7d';
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 10;
 
 function requireAuth(req, res, next) {
   const header = req.headers.authorization;
