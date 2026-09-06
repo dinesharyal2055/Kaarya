@@ -259,7 +259,9 @@
     "status": {
       "pending": "Pending",
       "accepted": "Accepted",
-      "rejected": "Rejected"
+      "rejected": "Rejected",
+      "withdrawn": "Withdrawn",
+      "countered": "Countered"
     },
     "acceptTitle": "Accept Offer",
     "acceptMessage": "Are you sure you want to accept this offer?",
@@ -427,7 +429,8 @@
       "jobComplete": "Job Complete",
       "newReview": "New Review",
       "verified": "Verified",
-      "verification": "Verification"
+      "verification": "Verification",
+      "notification": "Notification"
     }
   },
   "profile": {
@@ -564,7 +567,13 @@
     "backToProfile": "Back to Profile",
     "permissionNeeded": "Please grant photo library access to upload documents.",
     "cameraPermissionNeeded": "Please grant camera access to take photos.",
-    "submissionFailed": "Submission failed. Please try again."
+    "submissionFailed": "Submission failed. Please try again.",
+    "nagarikSubtitle": "Government ID (Instant)",
+    "nagarikDescription": "Verify instantly using Nepal's Nagarik App OAuth. Highest trust level.",
+    "esewaSubtitle": "Payment KYC (Instant)",
+    "esewaDescription": "Verify using your eSewa or Khalti KYC. Fast and trusted.",
+    "manualSubtitle": "Citizenship Documents",
+    "manualDescription": "Upload your citizenship card photos and a selfie. Reviewed within 12 hours."
   },
   "paymentMethods": {
     "title": "Payment Methods",

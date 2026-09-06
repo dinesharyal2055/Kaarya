@@ -39,8 +39,8 @@ const TIERS = (t: (k: string) => string): Tier[] => [
   {
     id: 1,
     labelKey: 'verification.nagarikApp',
-    subtitleKey: 'verification.nagarikSubtitle',
-    descriptionKey: 'verification.nagarikDescription',
+    subtitleKey: 'verification.nagarikAppSub',
+    descriptionKey: 'verification.nagarikAppDesc',
     icon: 'card-account-details',
     badgeKey: 'verification.comingSoon',
     active: false,
@@ -49,8 +49,8 @@ const TIERS = (t: (k: string) => string): Tier[] => [
   {
     id: 2,
     labelKey: 'verification.esewaKhalti',
-    subtitleKey: 'verification.esewaSubtitle',
-    descriptionKey: 'verification.esewaDescription',
+    subtitleKey: 'verification.esewaKhaltiSub',
+    descriptionKey: 'verification.esewaKhaltiDesc',
     icon: 'wallet',
     badgeKey: 'verification.comingSoon',
     active: false,
@@ -59,8 +59,8 @@ const TIERS = (t: (k: string) => string): Tier[] => [
   {
     id: 3,
     labelKey: 'verification.manualReview',
-    subtitleKey: 'verification.manualSubtitle',
-    descriptionKey: 'verification.manualDescription',
+    subtitleKey: 'verification.manualReviewSub',
+    descriptionKey: 'verification.manualReviewDesc',
     icon: 'shield-account',
     badgeKey: 'verification.availableNow',
     active: true,

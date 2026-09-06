@@ -14,16 +14,16 @@ import type { Notification } from '@/types';
 type NotifType = Notification['type'];
 
 const TYPE_META: Record<NotifType, { icon: string; color: string; labelKey: string }> = {
-  new_offer:             { icon: 'gavel',            color: KaaryaColors.brand[500], labelKey: 'notifications.type.newOffer' },
-  offer_accepted:        { icon: 'check-circle',    color: KaaryaColors.success,    labelKey: 'notifications.type.offerAccepted' },
-  offer_rejected:        { icon: 'close-circle',    color: KaaryaColors.danger,    labelKey: 'notifications.type.notSelected' },
-  offer_countered:       { icon: 'swap-horizontal', color: KaaryaColors.warning,   labelKey: 'notifications.type.counterOffer' },
-  new_message:           { icon: 'email-outline',    color: KaaryaColors.brand[500], labelKey: 'notifications.type.newMessage' },
-  job_started:           { icon: 'play-circle',     color: KaaryaColors.brand[500], labelKey: 'notifications.type.jobStarted' },
-  job_completed:         { icon: 'check-circle',    color: KaaryaColors.success,    labelKey: 'notifications.type.jobComplete' },
-  review_received:       { icon: 'star',             color: '#F59E0B',              labelKey: 'notifications.type.newReview' },
-  verification_approved:  { icon: 'shield-check',    color: KaaryaColors.success,   labelKey: 'notifications.type.verified' },
-  verification_rejected:  { icon: 'shield-off',      color: KaaryaColors.danger,    labelKey: 'notifications.type.verification' },
+  new_offer:             { icon: 'gavel',            color: KaaryaColors.brand[500], labelKey: 'notifications.types.newOffer' },
+  offer_accepted:        { icon: 'check-circle',    color: KaaryaColors.success,    labelKey: 'notifications.types.offerAccepted' },
+  offer_rejected:        { icon: 'close-circle',    color: KaaryaColors.danger,    labelKey: 'notifications.types.notSelected' },
+  offer_countered:       { icon: 'swap-horizontal', color: KaaryaColors.warning,   labelKey: 'notifications.types.counterOffer' },
+  new_message:           { icon: 'email-outline',    color: KaaryaColors.brand[500], labelKey: 'notifications.types.newMessage' },
+  job_started:           { icon: 'play-circle',     color: KaaryaColors.brand[500], labelKey: 'notifications.types.jobStarted' },
+  job_completed:         { icon: 'check-circle',    color: KaaryaColors.success,    labelKey: 'notifications.types.jobComplete' },
+  review_received:       { icon: 'star',             color: '#F59E0B',              labelKey: 'notifications.types.newReview' },
+  verification_approved:  { icon: 'shield-check',    color: KaaryaColors.success,   labelKey: 'notifications.types.verified' },
+  verification_rejected:  { icon: 'shield-off',      color: KaaryaColors.danger,    labelKey: 'notifications.types.verification' },
 };
 
 function relativeTime(dateStr: string, t: (key: string) => string): string {
@@ -38,7 +38,7 @@ function relativeTime(dateStr: string, t: (key: string) => string): string {
 }
 
 function NotifCard({ item, onPress, t }: { item: Notification; onPress: () => void; t: (key: string) => string }) {
-  const meta = TYPE_META[item.type] ?? { icon: 'bell', color: KaaryaColors.brand[500], labelKey: 'notifications.type.notification' };
+  const meta = TYPE_META[item.type] ?? { icon: 'bell', color: KaaryaColors.brand[500], labelKey: 'notifications.types.notification' };
 
   return (
     <Pressable

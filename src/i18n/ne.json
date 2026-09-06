@@ -258,7 +258,9 @@
     "status": {
       "pending": "पेन्डिङ",
       "accepted": "स्वीकृत",
-      "rejected": "अस्वीकृत"
+      "rejected": "अस्वीकृत",
+      "withdrawn": "撤回",
+      "countered": "カウンターオファー"
     },
     "acceptTitle": "आशयपत्र स्वीकार गर्नुहोस्",
     "acceptMessage": "के तपाईं यो आशयपत्र स्वीकार गर्न निश्चित हुनुहुन्छ?",
@@ -426,7 +428,8 @@
       "jobComplete": "काम सम्पन्न",
       "newReview": "नयाँ समीक्षा",
       "verified": "प्रमाणित",
-      "verification": "प्रमाणिकरण"
+      "verification": "प्रमाणिकरण",
+      "notification": "सूचना"
     }
   },
   "profile": {
@@ -563,7 +566,8 @@
     "permissionTitle": "अनुमति आवश्यक",
     "cameraMessage": "फोटो खिच्न क्यामेरा पहुँच दिनुहोस्।",
     "photoLibraryMessage": "कागजातहरू अपलोड गर्न फोटो लाइब्रेरी पहुँच दिनुहोस्।",
-    "status": "स्थिति"
+    "status": "स्थिति",
+    "reviewSubmitSubtitle": "कृपया समीक्षा गर्नुअघि तलका विवरणहरू पुष्टि गर्नुहोस्।"
   },
   "paymentMethods": {
     "title": "भुक्तानी विधिहरू",
