@@ -262,7 +262,15 @@
       "rejected": "Rejected"
     },
     "acceptTitle": "Accept Offer",
-    "acceptMessage": "Are you sure you want to accept this offer?"
+    "acceptMessage": "Are you sure you want to accept this offer?",
+    "loadFailed": "Failed to load offers",
+    "noConversationMessage": "Start a conversation to discuss the details",
+    "noConversationTitle": "No conversation yet",
+    "offerAcceptedMessage": "Offer accepted! You can now chat with the provider.",
+    "offerAcceptedTitle": "Offer Accepted",
+    "postTaskToReceive": "Post a task to start receiving offers",
+    "rejectMessage": "Are you sure you want to reject this offer?",
+    "rejectTitle": "Reject Offer"
   },
   "postJob": {
     "title": "Post a Task",
@@ -348,7 +356,9 @@
     "locationDeniedHint": "Please enable location access in your device settings to share your precise location.",
     "locationError": "Could not get location",
     "locationErrorHint": "Please try again or check your device settings.",
-    "locationSavedHint": "Your precise location will be shared only with the provider you accept."
+    "locationSavedHint": "Your precise location will be shared only with the provider you accept.",
+    "budget": "Budget",
+    "photos": "Photos"
   },
   "editJob": {
     "title": "Edit Job",
@@ -381,7 +391,9 @@
     "priceHint": "Enter your offer amount",
     "tipText": "Tip: Be specific about what you can offer",
     "successTitle": "Offer Submitted!",
-    "successMessage": "Your offer has been sent to the seeker"
+    "successMessage": "Your offer has been sent to the seeker",
+    "enterValidAmount": "Please enter a valid amount",
+    "submitFailed": "Failed to submit offer. Please try again."
   },
   "messages": {
     "title": "Messages",
@@ -472,7 +484,16 @@
     "nameRequired": "Name is required",
     "nameTooShort": "Name must be at least 2 characters",
     "bioTooLong": "Bio must be 500 characters or less",
-    "profileUpdated": "Profile updated successfully."
+    "profileUpdated": "Profile updated successfully.",
+    "bioMaxChars": "Maximum 500 characters",
+    "cameraMessage": "Please grant camera access to take a profile photo.",
+    "enterName": "Please enter your name",
+    "nameMinChars": "Name must be at least 2 characters",
+    "permissionTitle": "Permission Required",
+    "photoLibraryMessage": "Please grant photo library access to change your profile photo.",
+    "readImageError": "Could not read the selected image. Please try again.",
+    "updateFailed": "Failed to update profile. Please try again.",
+    "uploadFailedMessage": "Could not upload your profile photo. Please try again."
   },
   "verification": {
     "title": "Verify Your Account",
@@ -505,8 +526,29 @@
     "uploaded": "Uploaded ✓",
     "missing": "Missing ✗",
     "reviewSubmit": "Review & Submit",
-    "reviewSubmitSub": "Please confirm the details below before submitting for review.",
+    "reviewSubmitSubtitle": "Please confirm the details below before submitting for review.",
+    "chooseMethodSubtitle": "Select a verification level. Higher tiers offer more trust badges.",
+    "chooseSource": "Choose Source",
+    "chooseFromLibrary": "Choose from Library",
+    "takePhoto": "Take Photo",
+    "approvedTitle": "Account Verified",
+    "submittedTitle": "Documents Submitted",
+    "submittedMessage": "Your documents have been submitted for review.",
+    "verificationError": "Verification failed. Please try again.",
+    "uploadDocumentsSubtitle": "We'll use these to verify your identity. All documents are encrypted and stored securely.",
     "verificationTier": "Verification Tier",
+    "stepDocuments": "Step 1: Documents",
+    "stepReview": "Step 2: Review",
+    "stepTier": "Step 3: Verification",
+    "addPhoto": "Add Photo",
+    "selfieDescription": "A clear photo of yourself",
+    "citizenshipFrontDescription": "Front side of your Nepali citizenship card",
+    "citizenshipBackDescription": "Back side of your Nepali citizenship card",
+    "tapToAddPhoto": "Tap to add photo",
+    "permissionTitle": "Permission Required",
+    "cameraMessage": "Please grant camera access to take photos.",
+    "photoLibraryMessage": "Please grant photo library access to upload documents.",
+    "status": "Status",
     "submitted": "Submitted",
     "submittedStatus": "Status",
     "underReview": "Under Review",
@@ -529,7 +571,9 @@
     "noPaymentMethods": "No Payment Methods",
     "addMethodSubtitle": "Add a payment method to receive payments or pay for tasks on Kaarya.",
     "addPaymentMethod": "Add Payment Method",
-    "securityNote": "Your payment information is encrypted and securely stored. We never share your card details."
+    "securityNote": "Your payment information is encrypted and securely stored. We never share your card details.",
+    "addPaymentMethodHint": "Add a payment method to receive or make payments securely.",
+    "encryptionNote": "Your payment information is encrypted and securely stored."
   },
   "notificationSettings": {
     "title": "Notifications",
@@ -550,7 +594,14 @@
     "other": "OTHER",
     "promotionsTips": "Promotions & Tips",
     "promotionsTipsDesc": "Deals, offers, and tips to get the most from Kaarya",
-    "footerNote": "You can update your notification preferences at any time. Changes apply immediately."
+    "footerNote": "You can update your notification preferences at any time. Changes apply immediately.",
+    "jobUpdatesDescription": "Status changes on your posted or accepted jobs",
+    "messagesDescription": "When you receive a new chat message",
+    "newOffersDescription": "When someone sends you an offer on your job",
+    "promotionsTipsDescription": "Tips, news, and special offers",
+    "pushDescription": "Receive push notifications on your device",
+    "soundDescription": "Notification sound",
+    "vibrationDescription": "Vibration on notification"
   },
   "review": {
     "title": "Leave a Review",
@@ -576,7 +627,10 @@
     "excellent": "Excellent",
     "shareExperience": "Share your experience...",
     "reviewSubmitted": "Review Submitted",
-    "thankYou": "Thank you for your feedback!"
+    "thankYou": "Thank you for your feedback!",
+    "selectRatingFirst": "Please select a star rating first",
+    "submitFailed": "Failed to submit review. Please try again.",
+    "theProvider": "the Provider"
   },
   "post": {
     "findWork": "Find Work",
