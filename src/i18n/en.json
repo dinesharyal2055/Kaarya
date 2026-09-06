@@ -327,6 +327,23 @@
     "successTitle": "Success!",
     "successMessage": "Your task has been posted. Providers will start bidding soon."
   },
+  "editJob": {
+    "title": "Edit Job",
+    "categoryLocked": "Category cannot be changed after posting",
+    "taskTitle": "Task Title",
+    "description": "Description",
+    "areaLocation": "Area / Location",
+    "photos": "Photos",
+    "budget": "Budget",
+    "negotiationStyle": "Negotiation Style",
+    "saveChanges": "Save Changes",
+    "loadFailed": "Failed to load job details.",
+    "saveFailed": "Failed to save changes. Please try again.",
+    "successTitle": "Changes Saved",
+    "successMessage": "Your job has been updated successfully.",
+    "bidsExistTitle": "Cannot Edit",
+    "bidsExistMessage": "This job already has bids. Editing is locked to protect providers who placed bids."
+  },
   "makeOffer": {
     "title": "Submit Offer",
     "yourOffer": "Your Offer",

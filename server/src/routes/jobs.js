@@ -531,6 +531,94 @@ router.put('/:id/status', requireAuth, async (req, res) => {
   }
 });
 
+// PATCH /api/jobs/:id — edit a job (auth required, seeker owner only, no bids yet)
+router.patch('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, location, budgetMin, budgetMax, negotiationMode, photoUrls } = req.body;
+    const db = await getDb();
+
+    // Verify job exists
+    const jobResult = db.exec('SELECT seeker_id, status FROM jobs WHERE id = ?', [id]);
+    if (jobResult.length === 0 || jobResult[0].values.length === 0) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    const ownerId = jobResult[0].values[0][0];
+    const jobStatus = jobResult[0].values[0][1];
+
+    // Must be the seeker who posted this job
+    if (String(ownerId) !== String(req.userId)) {
+      return res.status(403).json({ error: 'Only the job owner can edit it' });
+    }
+
+    // Can only edit open jobs (before any bids)
+    if (jobStatus !== 'open') {
+      return res.status(400).json({
+        error: 'Cannot edit a job after bids have been placed. The job must be in "open" status.',
+        code: 'BID_EXISTS',
+      });
+    }
+
+    // Check for existing bids
+    const offerCount = await getOfferCount(id);
+    if (offerCount > 0) {
+      return res.status(400).json({
+        error: 'Cannot edit a job that already has bids. Please cancel and repost if needed.',
+        code: 'BID_EXISTS',
+      });
+    }
+
+    // Validate: at least title must be present
+    if (!title || !title.trim()) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+
+    // Build dynamic UPDATE
+    const updates = [];
+    const params = [];
+
+    if (title !== undefined) { updates.push('title = ?'); params.push(title.trim()); }
+    if (description !== undefined) { updates.push('description = ?'); params.push(description.trim()); }
+    if (location !== undefined) { updates.push('location = ?'); params.push(location.trim()); }
+    if (budgetMin !== undefined) { updates.push('budget_min = ?'); params.push(budgetMin ?? null); }
+    if (budgetMax !== undefined) { updates.push('budget_max = ?'); params.push(budgetMax ?? null); }
+    if (photoUrls !== undefined) { updates.push('photo_urls = ?'); params.push(JSON.stringify(photoUrls ?? [])); }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    updates.push('updated_at = datetime("now")');
+    params.push(id);
+
+    db.run(`UPDATE jobs SET ${updates.join(', ')} WHERE id = ?`, params);
+    require('../db').save();
+
+    // Return updated job
+    const updatedResult = db.exec(
+      `SELECT j.id, j.seeker_id, j.title, j.description, j.category, j.location,
+              j.budget_min, j.budget_max, j.status, j.urgency, j.scheduled_date,
+              j.photo_urls, j.created_at, j.updated_at, u.name, u.avatar_url
+       FROM jobs j
+       LEFT JOIN users u ON j.seeker_id = u.id
+       WHERE j.id = ?`,
+      [id]
+    );
+
+    const row = updatedResult[0].values[0];
+    const seekerName = row[14] ?? null;
+    const seekerAvatar = row[15] ?? null;
+    const job = jobFromRow(row, seekerName, seekerAvatar);
+    job.offerCount = 0;
+
+    res.json(job);
+  } catch (err) {
+    console.error('[jobs/edit]', err);
+    res.status(500).json({ error: 'Failed to edit job' });
+  }
+});
+
 // POST /api/jobs/:id/save — save/unsave a job (auth required, provider only)
 router.post('/:id/save', requireAuth, async (req, res) => {
   try {

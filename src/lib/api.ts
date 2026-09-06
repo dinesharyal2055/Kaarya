@@ -205,6 +205,9 @@ export const jobsApi = {
   create: (data: Partial<import('@/types').Job>) =>
     post<import('@/types').Job>('/jobs', data),
 
+  update: (id: string, data: Partial<import('@/types').Job>) =>
+    request<import('@/types').Job>('PATCH', `/jobs/${id}`, data),
+
   updateStatus: (id: string, status: string) =>
     put(`/jobs/${id}/status`, { status }),
 

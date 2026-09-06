@@ -81,3 +81,23 @@ export async function createJob(data: {
     photoUrls: data.photoUrls,
   } as any);
 }
+
+export async function updateJob(id: string, data: {
+  title?: string;
+  description?: string;
+  location?: string;
+  budgetMin?: number;
+  budgetMax?: number;
+  negotiationMode?: string;
+  photoUrls?: string[];
+}): Promise<Job> {
+  return jobsApi.update(id, {
+    title: data.title,
+    description: data.description,
+    location: data.location,
+    budgetMin: data.budgetMin,
+    budgetMax: data.budgetMax,
+    negotiationMode: data.negotiationMode as any,
+    photoUrls: data.photoUrls,
+  } as any);
+}

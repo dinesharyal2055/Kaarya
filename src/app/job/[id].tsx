@@ -192,6 +192,13 @@ export default function JobDetailScreen() {
                 color={isSaved ? KaaryaColors.brand[500] : KaaryaColors.muted}
               />
             </Pressable>
+          ) : user?.role === 'seeker' && job.seekerId === user?.id && job.status === 'open' ? (
+            <Pressable
+              onPress={() => router.push({ pathname: '/edit-job', params: { id: job.id } })}
+              style={styles.saveBtn}
+            >
+              <MaterialCommunityIcons name="pencil" size={22} color={KaaryaColors.brand[500]} />
+            </Pressable>
           ) : (
             <View style={{ width: 40 }} />
           )}
