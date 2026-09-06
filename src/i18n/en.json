@@ -42,7 +42,9 @@
     "daysAgo": "{{count}}d ago",
     "today": "Today",
     "yesterday": "Yesterday",
-    "ago": "ago"
+    "ago": "ago",
+    "accept": "Accept",
+    "reject": "Reject"
   },
   "nav": {
     "home": "Home",
@@ -258,7 +260,9 @@
       "pending": "Pending",
       "accepted": "Accepted",
       "rejected": "Rejected"
-    }
+    },
+    "acceptTitle": "Accept Offer",
+    "acceptMessage": "Are you sure you want to accept this offer?"
   },
   "postJob": {
     "title": "Post a Task",
@@ -372,7 +376,12 @@
     "tipTitle": "A clear message and competitive price increases your chances of getting accepted.",
     "submitOffer": "Submit Offer",
     "invalidPrice": "Please enter a valid offer amount",
-    "success": "Your offer has been submitted."
+    "success": "Your offer has been submitted.",
+    "seekerBudget": "Seeker budget:",
+    "priceHint": "Enter your offer amount",
+    "tipText": "Tip: Be specific about what you can offer",
+    "successTitle": "Offer Submitted!",
+    "successMessage": "Your offer has been sent to the seeker"
   },
   "messages": {
     "title": "Messages",
@@ -559,7 +568,15 @@
       "3": "Good",
       "4": "Great",
       "5": "Excellent"
-    }
+    },
+    "great": "Great!",
+    "fair": "Fair",
+    "good": "Good",
+    "poor": "Poor",
+    "excellent": "Excellent",
+    "shareExperience": "Share your experience...",
+    "reviewSubmitted": "Review Submitted",
+    "thankYou": "Thank you for your feedback!"
   },
   "post": {
     "findWork": "Find Work",
