@@ -205,4 +205,38 @@ router.post('/users/:id/role', requireAuth, requireAdmin, validate(updateUserRol
   }
 });
 
+// DELETE /api/admin/users/:id — delete a user and all related data
+router.delete('/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+
+    // Check user exists
+    const userResult = db.exec('SELECT id, email, name FROM users WHERE id = ?', [id]);
+    if (userResult.length === 0 || userResult[0].values.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const [userId, email, name] = userResult[0].values[0];
+
+    // Delete in correct order (respect foreign key constraints)
+    db.run('DELETE FROM notifications WHERE user_id = ?', [id]);
+    db.run('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', [id, id]);
+    db.run('DELETE FROM conversations WHERE user1_id = ? OR user2_id = ?', [id, id]);
+    db.run('DELETE FROM offers WHERE user_id = ?', [id]);
+    db.run('DELETE FROM reviews WHERE reviewee_id = ? OR reviewer_id = ?', [id, id]);
+    db.run('DELETE FROM otp_codes WHERE phone = ?', [email]);
+    db.run('DELETE FROM verification_requests WHERE user_id = ?', [id]);
+    db.run('DELETE FROM jobs WHERE poster_id = ?', [id]);
+    db.run('DELETE FROM users WHERE id = ?', [id]);
+
+    save();
+
+    console.log(`[ADMIN] Deleted user ${id} (${email})`);
+    res.json({ message: `User ${name} (${email}) deleted successfully`, userId: id });
+  } catch (err) {
+    console.error('[admin/users/:id DELETE]', err);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
+});
+
 module.exports = router;

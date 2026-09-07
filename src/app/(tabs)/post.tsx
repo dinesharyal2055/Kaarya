@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ export default function PostScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const isProvider = user?.role === 'provider';
+  const isVerified = user?.verificationStatus === 'verified';
 
   if (isProvider) {
     return (
@@ -49,7 +50,24 @@ export default function PostScreen() {
         <Text style={styles.subtitle}>{t('post.postTaskSub')}</Text>
 
         <View style={{ marginTop: Spacing.xl, width: '100%', gap: Spacing.sm }}>
-          <Button title={t('post.postTask')} onPress={() => router.push('/post-job')} fullWidth />
+          <Button
+            title={t('post.postTask')}
+            onPress={() => {
+              if (!isVerified) {
+                Alert.alert(
+                  t('alerts.verificationRequiredTitle'),
+                  t('alerts.verificationRequiredBody'),
+                  [
+                    { text: t('common.cancel'), style: 'cancel' },
+                    { text: t('alerts.goVerify'), onPress: () => router.push('/verification') },
+                  ]
+                );
+                return;
+              }
+              router.push('/post-job');
+            }}
+            fullWidth
+          />
           <Button
             title={t('post.receivedOffers')}
             variant="secondary"

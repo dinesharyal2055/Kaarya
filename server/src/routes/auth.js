@@ -205,10 +205,12 @@ router.post('/register/verify', otpLimiter, validate(verifyOtp), async (req, res
       return res.status(409).json({ error: 'Email already registered' });
     }
 
-    // Create user — is_active = 1, is_verified = 1 (email verified via OTP)
+    // Create user — is_active = 1, is_verified = 0
+    // Email is verified via OTP, but identity verification requires manual review.
+    // Users can browse/view jobs unverified, but cannot post tasks or make offers.
     const passwordHash = await hashPassword(password);
     db.run(
-      'INSERT INTO users (name, email, phone, password_hash, role, is_active, is_verified) VALUES (?, ?, ?, ?, ?, 1, 1)',
+      'INSERT INTO users (name, email, phone, password_hash, role, is_active, is_verified) VALUES (?, ?, ?, ?, ?, 1, 0)',
       [name, email, phone, passwordHash, role]
     );
 
@@ -309,31 +311,31 @@ const genericError = (res) => res.status(401).json({ error: 'Invalid credentials
 // POST /api/auth/login
 router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
   try {
-    const { phone, password } = res.locals.parsedBody;
+    const { email, password } = res.locals.parsedBody;
 
     // 1. Check lockout before any other logic
-    const guard = checkGuard(phone);
+    const guard = checkGuard(email);
     if (!guard.allowed) {
       // Deliberate delay to mask lockout vs other failures
-      await new Promise(r => setTimeout(r, 1000));
+      await new Promise(v => setTimeout(v, 1000));
       return genericError(res);
     }
 
     const db = await getDb();
     const result = db.exec(
-      'SELECT id, name, email, phone, password_hash, role, avatar_url, bio, rating, review_count, is_verified, is_active, fcm_token, created_at, updated_at FROM users WHERE phone = ?',
-      [phone]
+      'SELECT id, name, email, phone, password_hash, role, avatar_url, bio, rating, review_count, is_verified, is_active, fcm_token, created_at, updated_at FROM users WHERE email = ?',
+      [email]
     );
 
     if (result.length === 0 || result[0].values.length === 0) {
       // User not found — still record failure for brute-force uniformity
-      const fail = recordFailure(phone);
+      const fail = recordFailure(email);
       if (fail.lockout) {
         // Cannot send email (no user record) — just delay and return generic error
-        await new Promise(r => setTimeout(r, Math.min(fail.delay, 5000)));
+        await new Promise(v => setTimeout(v, Math.min(fail.delay, 5000)));
         return genericError(res);
       }
-      await new Promise(r => setTimeout(r, Math.min(fail.delay, 5000)));
+      await new Promise(v => setTimeout(v, Math.min(fail.delay, 5000)));
       return genericError(res);
     }
 
@@ -341,27 +343,21 @@ router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
     const valid = await verifyPassword(password, row[4]);
 
     if (!valid) {
-      const fail = recordFailure(phone);
+      const fail = recordFailure(email);
       if (fail.lockout) {
         // Lockout triggered — send notification email, then delay and return generic error
         const userEmail = row[2];
         const userName = row[1];
         sendPasswordReset(userEmail, userName, 'LOCKED').catch(() => {});
-        await new Promise(r => setTimeout(r, Math.min(fail.delay, 5000)));
+        await new Promise(v => setTimeout(v, Math.min(fail.delay, 5000)));
         return genericError(res);
       }
-      await new Promise(r => setTimeout(r, Math.min(fail.delay, 5000)));
+      await new Promise(v => setTimeout(v, Math.min(fail.delay, 5000)));
       return genericError(res);
     }
 
-    // Account not verified — record success to reset counter, return specific error
-    if (row[10] === 0) {
-      recordSuccess(phone);
-      return res.status(403).json({ error: 'Please verify your account before logging in', code: 'UNVERIFIED' });
-    }
-
     // Success — reset counter before issuing token
-    recordSuccess(phone);
+    recordSuccess(email);
 
     const { token } = signTokenWithJti(row[0]);
     const user = userFromRow(row);

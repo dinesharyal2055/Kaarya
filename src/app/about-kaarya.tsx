@@ -81,6 +81,20 @@ export default function AboutKaaryaScreen() {
               onPress={() => {}}
             />
           </View>
+
+          {/* Contact Support */}
+          <View style={[styles.section, Shadows.sm]}>
+            <Text style={styles.sectionTitle}>{t('about.contactSupport')}</Text>
+            <Text style={styles.sectionText}>{t('about.contactSupportSub')}</Text>
+            <Pressable
+              style={styles.emailRow}
+              onPress={() => Linking.openURL('mailto:karyaapp.support@gmail.com')}
+            >
+              <MaterialCommunityIcons name="email-outline" size={18} color={KaaryaColors.brand[500]} />
+              <Text style={styles.emailText}>karyaapp.support@gmail.com</Text>
+              <MaterialCommunityIcons name="open-in-new" size={14} color={KaaryaColors.muted} />
+            </Pressable>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </>
@@ -141,4 +155,14 @@ const styles = StyleSheet.create({
   },
   linkText: { fontSize: FontSizes.sm, color: KaaryaColors.brand[500], fontWeight: '500' },
   linkDivider: { height: 1, backgroundColor: KaaryaColors.border },
+
+  /* Email */
+  emailRow: {
+    flexDirection: 'row', alignItems: 'center',
+    marginTop: Spacing.md, gap: Spacing.sm,
+    backgroundColor: KaaryaColors.brand[50],
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+  },
+  emailText: { flex: 1, fontSize: FontSizes.sm, color: KaaryaColors.brand[600], fontWeight: '600' },
 });

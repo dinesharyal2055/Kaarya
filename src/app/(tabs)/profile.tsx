@@ -253,7 +253,7 @@ export default function ProfileScreen() {
           <Button title={t('profile.logOut')} variant="danger" onPress={logout} fullWidth />
         </View>
 
-        <Text style={styles.version}>Kaarya v1.0.0 · Nepal</Text>
+        <Text style={styles.version}>{t('profile.version', { version: '1.0.0' })}</Text>
       </ScrollView>
     </SafeAreaView>
   );

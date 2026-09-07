@@ -13,7 +13,7 @@ export default function LoginScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const { login, isAuthenticated } = useAuth();
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -27,19 +27,17 @@ export default function LoginScreen() {
   }, [isAuthenticated]);
 
   async function handleLogin() {
-    if (!phone.trim() || !password.trim()) {
+    if (!email.trim() || !password.trim()) {
       setError(t('auth.login.errors.fillAllFields'));
       return;
     }
     setError('');
     setLoading(true);
     try {
-      await login(phone.trim(), password);
+      await login(email.trim(), password);
     } catch (e: any) {
       const apiErr = e as ApiError;
-      if (apiErr.code === 'UNVERIFIED') {
-        setError(t('auth.login.errors.verifyAccountFirst'));
-      } else if (apiErr.status === 401) {
+      if (apiErr.status === 401) {
         setError(t('auth.login.errors.incorrectCredentials'));
       } else {
         setError(e.message ?? t('auth.login.errors.loginFailed'));
@@ -67,14 +65,15 @@ export default function LoginScreen() {
               <Text style={styles.subtitle}>{t('auth.login.signInContinue')}</Text>
               <View style={{ marginTop: Spacing.xl }}>
                 <Input
-                  label={t('auth.login.phoneNumber')}
-                  placeholder={t('auth.login.phonePlaceholder')}
-                  value={phone}
-                  onChangeText={setPhone}
-                  keyboardType="phone-pad"
+                  label={t('auth.login.email')}
+                  placeholder={t('auth.login.emailPlaceholder')}
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  leftIcon={<MaterialCommunityIcons name="phone" size={20} color={KaaryaColors.muted} />}
+                  style={{ letterSpacing: 0 }}
+                  leftIcon={<MaterialCommunityIcons name="email" size={20} color={KaaryaColors.muted} />}
                 />
                 <Input
                   label={t('auth.login.password')}
@@ -92,7 +91,15 @@ export default function LoginScreen() {
                   <Button title={t('auth.login.signIn')} onPress={handleLogin} loading={loading} fullWidth />
                 </View>
                 <View style={{ alignItems: 'flex-end', marginTop: Spacing.sm }}>
-                  <Text style={styles.forgotLink} onPress={() => router.push('/(auth)/forgot-password')}>
+                  <Text
+                    style={styles.forgotLink}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/(auth)/forgot-password',
+                        params: { email: email.trim() },
+                      })
+                    }
+                  >
                     {t('auth.login.forgotPassword')}
                   </Text>
                 </View>

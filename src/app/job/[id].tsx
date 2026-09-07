@@ -122,7 +122,7 @@ export default function JobDetailScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingState}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{t('jobDetail.loading')}</Text>
         </View>
       </SafeAreaView>
     );
@@ -134,10 +134,10 @@ export default function JobDetailScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={styles.errorState}>
           <MaterialCommunityIcons name="alert-circle" size={64} color={KaaryaColors.danger} />
-          <Text style={styles.errorTitle}>Job not found</Text>
-          <Text style={styles.errorText}>{error || 'This job may have been removed.'}</Text>
+          <Text style={styles.errorTitle}>{t('jobDetail.jobNotFound')}</Text>
+          <Text style={styles.errorText}>{error || t('jobDetail.jobNotFoundSub')}</Text>
           <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Text style={styles.backButtonText}>Go Back</Text>
+            <Text style={styles.backButtonText}>{t('jobDetail.goBack')}</Text>
           </Pressable>
         </View>
       </SafeAreaView>
@@ -153,17 +153,17 @@ export default function JobDetailScreen() {
     }
     if (job.budgetMax) return `Up to Rs. ${job.budgetMax.toLocaleString()}`;
     if (job.budgetMin) return `Rs. ${job.budgetMin.toLocaleString()}+`;
-    return 'Budget TBD';
+    return t('jobDetail.budgetTbd');
   };
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
     const now = new Date();
     const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-    if (diff < 60) return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-    if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
+    if (diff < 60) return t('jobDetail.justNow');
+    if (diff < 3600) return t('jobDetail.minAgo', { count: Math.floor(diff / 60) });
+    if (diff < 86400) return t('jobDetail.hoursAgo', { count: Math.floor(diff / 3600) });
+    if (diff < 604800) return t('jobDetail.daysAgo', { count: Math.floor(diff / 86400) });
     return d.toLocaleDateString('en-NP', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
@@ -182,7 +182,7 @@ export default function JobDetailScreen() {
           <Pressable onPress={() => router.back()} style={styles.backBtn}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={KaaryaColors.text} />
           </Pressable>
-          <Text style={styles.headerTitle}>Task Details</Text>
+          <Text style={styles.headerTitle}>{t('jobDetail.taskDetails')}</Text>
           {user?.role === 'provider' && job.status === 'open' ? (
             <Pressable
               onPress={async () => {
@@ -192,7 +192,7 @@ export default function JobDetailScreen() {
                   const result = await jobsApi.toggleSave(job.id);
                   setIsSaved(result.saved);
                 } catch (e: any) {
-                  Alert.alert('Error', e.message ?? 'Failed to save job');
+                  Alert.alert(t('common.error'), e.message ?? t('jobDetail.saveFailed'));
                 } finally {
                   setSaveLoading(false);
                 }
@@ -268,7 +268,7 @@ export default function JobDetailScreen() {
           <View style={[styles.budgetCard, Shadows.sm]}>
             <MaterialCommunityIcons name="currency-inr" size={24} color={KaaryaColors.brand[500]} />
             <View style={{ marginLeft: 12 }}>
-              <Text style={styles.budgetLabel}>Budget Range</Text>
+              <Text style={styles.budgetLabel}>{t('jobDetail.budgetRange')}</Text>
               <Text style={styles.budgetValue}>{formatBudget()}</Text>
             </View>
           </View>
@@ -276,14 +276,14 @@ export default function JobDetailScreen() {
           {/* Description */}
           {job.description && (
             <View style={[styles.section, Shadows.sm]}>
-              <Text style={styles.sectionTitle}>Description</Text>
+              <Text style={styles.sectionTitle}>{t('jobDetail.description')}</Text>
               <Text style={styles.descText}>{job.description}</Text>
             </View>
           )}
 
           {/* Location */}
           <View style={[styles.section, Shadows.sm]}>
-            <Text style={styles.sectionTitle}>Location</Text>
+            <Text style={styles.sectionTitle}>{t('jobDetail.location')}</Text>
             <View style={styles.locationRow}>
               <MaterialCommunityIcons name="map-marker" size={18} color={KaaryaColors.brand[500]} />
               <Text style={styles.locationText}>{job.area}, Kathmandu</Text>
@@ -306,14 +306,14 @@ export default function JobDetailScreen() {
           {/* Seeker */}
           {job.seekerName && (
             <View style={[styles.section, Shadows.sm]}>
-              <Text style={styles.sectionTitle}>Posted By</Text>
+              <Text style={styles.sectionTitle}>{t('jobDetail.postedBy')}</Text>
               <View style={styles.seekerRow}>
                 <View style={[styles.avatar, { backgroundColor: catColor }]}>
                   <Text style={styles.avatarText}>{job.seekerName.charAt(0).toUpperCase()}</Text>
                 </View>
                 <View>
                   <Text style={styles.seekerName}>{job.seekerName}</Text>
-                  <Text style={styles.seekerPhone}>Job Seeker</Text>
+                  <Text style={styles.seekerPhone}>{t('jobDetail.jobSeeker')}</Text>
                 </View>
               </View>
             </View>
@@ -321,7 +321,7 @@ export default function JobDetailScreen() {
 
           {/* Offers summary */}
           <View style={[styles.section, Shadows.sm]}>
-            <Text style={styles.sectionTitle}>Offers</Text>
+            <Text style={styles.sectionTitle}>{t('jobDetail.offers')}</Text>
             {user?.role === 'seeker' && isSeekerOwner ? (
               receivedOffers.length > 0 ? (
                 <Pressable
@@ -330,20 +330,20 @@ export default function JobDetailScreen() {
                 >
                   <View style={styles.offersInfo}>
                     <Text style={styles.offersCount}>
-                      {receivedOffers.length} offer{receivedOffers.length !== 1 ? 's' : ''} received
+                      {t('jobDetail.offersReceived', { count: receivedOffers.length })}
                     </Text>
-                    <Text style={styles.offersSubtext}>Tap to accept or decline</Text>
+                    <Text style={styles.offersSubtext}>{t('jobDetail.tapToManage')}</Text>
                   </View>
                   <MaterialCommunityIcons name="chevron-right" size={20} color={KaaryaColors.brand[500]} />
                 </Pressable>
               ) : (
-                <Text style={styles.emptyText}>No offers yet. Check back soon!</Text>
+                <Text style={styles.emptyText}>{t('jobDetail.noOffersYet')}</Text>
               )
             ) : (
               <Text style={styles.emptyText}>
                 {job.offerCount && job.offerCount > 0
-                  ? `${job.offerCount} provider${job.offerCount !== 1 ? 's' : ''} have placed bids.`
-                  : 'No offers yet. Providers will bid once this job is posted.'}
+                  ? t('jobDetail.providersBid', { count: job.offerCount })
+                  : t('jobDetail.noOffersProviders')}
               </Text>
             )}
           </View>
@@ -361,20 +361,20 @@ export default function JobDetailScreen() {
                   <View style={styles.submittedOfferBar}>
                     <MaterialCommunityIcons name="check-circle" size={18} color={KaaryaColors.success} />
                     <Text style={styles.submittedOfferText}>
-                      Offer submitted — Rs. {myOffer.price.toLocaleString()}
-                      {myOffer.status === 'pending' ? ' (pending)' : myOffer.status === 'accepted' ? ' (accepted!)' : myOffer.status === 'rejected' ? ' (rejected)' : ''}
+                      {t('jobDetail.offerSubmitted', { price: myOffer.price.toLocaleString() })}
+                      {myOffer.status === 'pending' ? ` ${t('jobDetail.offerPending')}` : myOffer.status === 'accepted' ? ` ${t('jobDetail.offerAccepted')}` : myOffer.status === 'rejected' ? ` ${t('jobDetail.offerRejected')}` : ''}
                     </Text>
                     <Pressable onPress={() => router.push('/offers')}>
-                      <Text style={styles.submittedOfferLink}>View</Text>
+                      <Text style={styles.submittedOfferLink}>{t('jobDetail.view')}</Text>
                     </Pressable>
                   </View>
                 ) : (
                   <Button
-                    title="Make an Offer"
+                    title={t('jobDetail.makeOffer')}
                     onPress={() => {
-                      if (!user) { Alert.alert('Login required', 'Please log in to make an offer'); return; }
-                      if (user.role !== 'provider') { Alert.alert('Providers only', 'Only verified providers can submit offers'); return; }
-                      if (user.verificationStatus !== 'verified') { Alert.alert('Verification required', 'Please verify your account before making offers'); return; }
+                      if (!user) { Alert.alert(t('common.error'), t('alerts.loginRequired')); return; }
+                      if (user.role !== 'provider') { Alert.alert(t('common.error'), t('alerts.providersOnly')); return; }
+                      if (user.verificationStatus !== 'verified') { Alert.alert(t('common.error'), t('alerts.verificationRequired')); return; }
                       router.push({
                         pathname: '/make-offer',
                         params: {
@@ -393,12 +393,12 @@ export default function JobDetailScreen() {
               {user?.role === 'seeker' && isSeekerOwner && (
                 <View style={styles.noOffersBar}>
                   <MaterialCommunityIcons name="inbox-outline" size={18} color={KaaryaColors.muted} />
-                  <Text style={styles.noOffersText}>Check the Offers section to manage bids</Text>
+                  <Text style={styles.noOffersText}>{t('jobDetail.checkOffersSection')}</Text>
                 </View>
               )}
               {user?.role === 'seeker' && !isSeekerOwner && (
                 <Button
-                  title="Switch to Service Provider"
+                  title={t('post.findWork')}
                   onPress={() => router.push('/(tabs)/profile')}
                   variant="secondary"
                   fullWidth
@@ -463,7 +463,7 @@ export default function JobDetailScreen() {
               {user?.role === 'provider' && job.acceptedOffer?.providerId === user?.id && (
                 <View style={styles.infoBar}>
                   <MaterialCommunityIcons name="progress-wrench" size={18} color={KaaryaColors.brand[500]} />
-                  <Text style={styles.infoText}>Work in progress. The seeker will confirm when done.</Text>
+                  <Text style={styles.infoText}>{t('jobDetail.workInProgress')}</Text>
                 </View>
               )}
             </>
@@ -476,14 +476,14 @@ export default function JobDetailScreen() {
                 hasReviewed ? (
                   <View style={styles.submittedOfferBar}>
                     <MaterialCommunityIcons name="check-circle" size={18} color={KaaryaColors.success} />
-                    <Text style={styles.submittedOfferText}>Review submitted!</Text>
+                    <Text style={styles.submittedOfferText}>{t('jobDetail.reviewSubmitted')}</Text>
                   </View>
                 ) : (
                   <Button
-                    title="Leave a Review"
+                    title={t('jobDetail.leaveReview')}
                     onPress={() => {
                       const providerId = job.acceptedOffer?.providerId;
-                      if (!providerId) { Alert.alert('Error', 'Provider info not available'); return; }
+                      if (!providerId) { Alert.alert(t('common.error'), t('jobDetail.providerNotAvailable')); return; }
                       router.push({
                         pathname: '/review',
                         params: { jobId: job.id, revieweeId: providerId, revieweeName: job.acceptedOffer?.providerName ?? 'Provider' },
@@ -497,11 +497,11 @@ export default function JobDetailScreen() {
                 hasReviewed ? (
                   <View style={styles.submittedOfferBar}>
                     <MaterialCommunityIcons name="check-circle" size={18} color={KaaryaColors.success} />
-                    <Text style={styles.submittedOfferText}>Review submitted!</Text>
+                    <Text style={styles.submittedOfferText}>{t('jobDetail.reviewSubmitted')}</Text>
                   </View>
                 ) : (
                   <Button
-                    title="Leave a Review"
+                    title={t('jobDetail.leaveReview')}
                     onPress={() => {
                       router.push({
                         pathname: '/review',

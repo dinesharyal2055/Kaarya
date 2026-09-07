@@ -126,13 +126,17 @@ router.post('/', offersLimiter, requireAuth, sanitize('message'), validate(creat
 
     const db = await getDb();
 
-    // Verify the user is a provider
-    const userResult = db.exec('SELECT role FROM users WHERE id = ?', [req.userId]);
+    // Verify the user is a verified provider
+    const userResult = db.exec('SELECT role, is_verified FROM users WHERE id = ?', [req.userId]);
     if (userResult.length === 0 || userResult[0].values.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-    if (userResult[0].values[0][0] !== 'provider') {
+    const userRow = userResult[0].values[0];
+    if (userRow[0] !== 'provider') {
       return res.status(403).json({ error: 'Only providers can submit offers' });
+    }
+    if (userRow[1] !== 1) {
+      return res.status(403).json({ error: 'Only verified providers can submit offers' });
     }
 
     // Verify the job exists and is open

@@ -3,7 +3,7 @@
  */
 import { useState } from 'react';
 import { useRouter, Stack } from 'expo-router';
-import { LayoutAnimation, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LayoutAnimation, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -100,6 +100,20 @@ export default function HelpSupportScreen() {
             <MaterialCommunityIcons name="lightbulb-outline" size={18} color={KaaryaColors.warning} />
             <Text style={styles.noteText}>{t('help.note')}</Text>
           </View>
+
+          {/* Contact email */}
+          <View style={[styles.contactCard, Shadows.sm]}>
+            <Text style={styles.contactTitle}>{t('help.cantFindAnswer')}</Text>
+            <Text style={styles.contactSub}>{t('help.cantFindAnswerSub')}</Text>
+            <Pressable
+              style={styles.emailRow}
+              onPress={() => Linking.openURL('mailto:karyaapp.support@gmail.com')}
+            >
+              <MaterialCommunityIcons name="email-outline" size={18} color={KaaryaColors.brand[500]} />
+              <Text style={styles.emailText}>karyaapp.support@gmail.com</Text>
+              <MaterialCommunityIcons name="open-in-new" size={14} color={KaaryaColors.muted} />
+            </Pressable>
+          </View>
         </ScrollView>
       </SafeAreaView>
     </>
@@ -149,4 +163,20 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   noteText: { flex: 1, fontSize: FontSizes.sm, color: KaaryaColors.textSecondary, lineHeight: 20 },
+
+  /* Contact */
+  contactCard: {
+    backgroundColor: KaaryaColors.card, borderRadius: BorderRadius.lg,
+    padding: Spacing.lg, marginTop: Spacing.sm,
+  },
+  contactTitle: { fontSize: FontSizes.base, fontWeight: '700', color: KaaryaColors.text, marginBottom: 4 },
+  contactSub: { fontSize: FontSizes.sm, color: KaaryaColors.textSecondary, marginBottom: Spacing.md, lineHeight: 20 },
+  emailRow: {
+    flexDirection: 'row', alignItems: 'center',
+    gap: Spacing.sm,
+    backgroundColor: KaaryaColors.brand[50],
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+  },
+  emailText: { flex: 1, fontSize: FontSizes.sm, color: KaaryaColors.brand[600], fontWeight: '600' },
 });

@@ -11,10 +11,12 @@ import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/const
 import { CATEGORIES } from '@/constants/categories';
 import { Button, Input } from '@/components/ui';
 import { submitOffer } from '@/services/offers';
+import { useAuth } from '@/context/AuthContext';
 
 export default function MakeOfferScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { user } = useAuth();
   const { jobId, jobTitle, jobCategory, budgetMin, budgetMax } = useLocalSearchParams<{
     jobId: string;
     jobTitle: string;
@@ -31,6 +33,18 @@ export default function MakeOfferScreen() {
   const catColor = catData?.color ?? KaaryaColors.brand[500];
 
   async function handleSubmit() {
+    if (user?.verificationStatus !== 'verified') {
+      Alert.alert(
+        t('alerts.verificationRequiredTitle'),
+        t('alerts.onlyVerifiedProvidersCanBid'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('alerts.goVerify'), onPress: () => router.push('/verification') },
+        ]
+      );
+      return;
+    }
+
     if (!price || parseFloat(price) <= 0) {
       Alert.alert(t('makeOffer.invalidPrice'), t('makeOffer.enterValidAmount'));
       return;

@@ -34,7 +34,7 @@ interface AuthState {
 }
 
 interface AuthContextValue extends AuthState {
-  login: (phone: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   register: (data: {
     phone: string;
     password: string;
@@ -89,8 +89,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const login = useCallback(async (phone: string, password: string) => {
-    const { token, user } = await authApi.login({ phone, password });
+  const login = useCallback(async (email: string, password: string) => {
+    const { token, user } = await authApi.login({ email, password });
     await saveToken(token);
     setState({ user, token, isLoading: false, isAuthenticated: true });
     // Register FCM push token after successful login

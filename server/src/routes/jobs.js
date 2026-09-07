@@ -267,15 +267,19 @@ router.post('/', requireAuth, sanitize('title', 'description', 'location', 'addr
   try {
     const { title, description, category, location, address, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = res.locals.parsedBody;
 
-    // Check role
+    // Check role and verification status
     const db = await getDb();
-    const userResult = db.exec('SELECT role FROM users WHERE id = ?', [req.userId]);
+    const userResult = db.exec('SELECT role, is_verified FROM users WHERE id = ?', [req.userId]);
     if (userResult.length === 0 || userResult[0].values.length === 0) {
       return res.status(404).json({ error: 'User not found' });
     }
-    const role = userResult[0].values[0][0];
+    const userRow = userResult[0].values[0];
+    const role = userRow[0];
     if (role !== 'seeker') {
       return res.status(403).json({ error: 'Only seekers can post jobs' });
+    }
+    if (userRow[1] !== 1) {
+      return res.status(403).json({ error: 'Only verified users can post tasks' });
     }
 
     db.run(

@@ -33,6 +33,26 @@ i18n.use(initReactI18next).init({
   react: {
     useSuspense: false,
   },
+  /**
+   * Dev-time safeguard: if a translation key is missing, show [MISSING: key]
+   * in development so developers notice it immediately. In production this
+   * returns the raw key (normal i18next fallback behaviour) so the app
+   * never exposes raw key strings to users.
+   */
+  missingKeyHandler: (__lngs, __ns, key) => {
+    if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.warn(`[i18n] Missing translation key: "${key}"`);
+    }
+  },
+  parseMissingKeyHandler: (key) => {
+    if (!process.env.NODE_ENV || process.env.NODE_ENV !== 'production') {
+      return `[MISSING: ${key}]`;
+    }
+    // Production: return the raw key so the user sees something rather
+    // than an empty string (this is i18next's default behaviour).
+    return key;
+  },
 });
 
 /**

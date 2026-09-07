@@ -50,7 +50,7 @@ const resendOtp = z.object({
 });
 
 const login = z.object({
-  phone:    phoneSchema,
+  email:    emailSchema,
   password: z.string().min(1, 'Password is required'),
 });
 

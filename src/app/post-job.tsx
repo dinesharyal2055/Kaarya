@@ -14,6 +14,7 @@ import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/const
 import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
 import { Button, Input } from '@/components/ui';
 import { createJob, uploadJobImage } from '@/services/jobs';
+import { useAuth } from '@/context/AuthContext';
 import type { NegotiationMode } from '@/types';
 
 type Step = 'category' | 'details' | 'photos' | 'budget' | 'confirm';
@@ -28,6 +29,7 @@ type UploadedImage = {
 export default function PostJobScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const { user } = useAuth();
   const [step, setStep] = useState<Step>('category');
   const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
@@ -160,6 +162,18 @@ export default function PostJobScreen() {
 
   // ─── Submit ──────────────────────────────────────────────────────
   async function handlePostTask() {
+    if (user?.verificationStatus !== 'verified') {
+      Alert.alert(
+        t('alerts.verificationRequiredTitle'),
+        t('alerts.verificationRequiredBody'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('alerts.goVerify'), onPress: () => router.push('/verification') },
+        ]
+      );
+      return;
+    }
+
     setLoading(true);
     try {
       // Upload each photo first

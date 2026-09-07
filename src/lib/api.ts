@@ -156,7 +156,7 @@ export const authApi = {
       data
     ),
 
-  login: (data: { phone: string; password: string }) =>
+  login: (data: { email: string; password: string }) =>
     post<{ token: string; user: import('@/types').User }>('/auth/login', data),
 
   me: () => get<import('@/types').User>('/auth/me'),
@@ -166,19 +166,19 @@ export const authApi = {
   logoutAll: () => post('/auth/logout-all'),
 
   /** Step 1 of forgot password: send OTP */
-  forgotPasswordSend: (data: { phone: string }) =>
-    post<{ message: string; phone: string; expiresIn: number }>(
+  forgotPasswordSend: (data: { email: string }) =>
+    post<{ message: string; identifier: string; expiresIn: number }>(
       '/auth/forgot-password',
       data
     ),
 
   /** Step 2 of forgot password: verify OTP only */
-  forgotPasswordVerify: (data: { phone: string; code: string }) =>
+  forgotPasswordVerify: (data: { email: string; code: string }) =>
     post<{ message: string }>('/auth/forgot-password/verify', data),
 
   /** Step 3 of forgot password: reset with OTP */
   forgotPasswordReset: (data: {
-    phone: string;
+    email: string;
     code: string;
     newPassword: string;
   }) => post<{ message: string }>('/auth/forgot-password/reset', data),

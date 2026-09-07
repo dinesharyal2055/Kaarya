@@ -52,3 +52,6 @@ server/src/uploads/
 .env
 server/.env
 .env.local
+
+# Cleanup reports
+kaarya-cleanup.bfg-report/
