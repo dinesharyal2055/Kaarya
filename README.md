@@ -7,7 +7,7 @@ A mobile app connecting service seekers (task posters) with service providers (t
 - **Frontend**: Expo (SDK 57) + React Native 0.86 + TypeScript
 - **Backend**: Express.js (Node.js) + SQLite (sql.js)
 - **Styling**: NativeWind (Tailwind CSS) + React Native StyleSheet
-- **Auth**: JWT tokens with email OTP verification via Mailtrap
+- **Auth**: JWT tokens with email OTP verification via Resend
 - **i18n**: i18next with AsyncStorage persistence (English + Nepali)
 - **Push Notifications**: Firebase Cloud Messaging (FCM) — **on hold** (see below)
 - **Payments**: eSewa / Khalti QR-based — **on hold** (see below)
@@ -88,7 +88,7 @@ npx expo run:ios
 ## Environment
 
 - **Server port**: 5000
-- **Email (dev)**: Mailtrap SMTP — sandbox.smtp.mailtrap.io:2525
+- **Email**: Resend API — real email delivery to verified domains
 - **Database**: SQLite via sql.js (WASM)
 
 ## Last Updated

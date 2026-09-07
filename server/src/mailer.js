@@ -1,26 +1,18 @@
 /**
- * Mailtrap Email Configuration
- * Used for development/testing - sends emails to Mailtrap sandbox inbox
+ * Resend Email Configuration
+ * Production email service for sending real emails to users
  */
 
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
 // Load environment variables
 try { require('dotenv').config(); } catch (_) {}
 
-// Create transporter for Mailtrap
-const transporter = nodemailer.createTransport({
-  host: 'sandbox.smtp.mailtrap.io',
-  port: 2525,
-  auth: {
-    user: process.env.MAILTRAP_USER,
-    pass: process.env.MAILTRAP_PASS,
-  },
-  secure: false,
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+// Create Resend client
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// From email address (must be verified in Resend)
+const FROM_EMAIL = process.env.FROM_EMAIL || 'Kaarya <onboarding@resend.dev>';
 
 // Email templates
 const templates = {
@@ -117,23 +109,28 @@ const templates = {
 };
 
 /**
- * Send email using Mailtrap
+ * Send email using Resend
  * @param {string} to - Recipient email
  * @param {object} template - Email template with subject, html, text
  */
 async function sendEmail(to, template) {
   try {
-    const info = await transporter.sendMail({
-      from: '"Kaarya" <noreply@mailtrap.kaarya.com>',
-      to: to,
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [to],
       subject: template.subject,
       html: template.html,
       text: template.text,
     });
 
+    if (error) {
+      console.error('❌ Email send error:', error.message);
+      return { success: false, error: error.message };
+    }
+
     console.log(`✅ Email sent successfully to ${to}`);
-    console.log(`   Message ID: ${info.messageId}`);
-    return { success: true, messageId: info.messageId };
+    console.log(`   Message ID: ${data?.id}`);
+    return { success: true, messageId: data?.id };
   } catch (error) {
     console.error('❌ Email send error:', error.message);
     return { success: false, error: error.message };

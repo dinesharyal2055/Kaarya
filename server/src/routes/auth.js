@@ -83,7 +83,7 @@ function deleteExpiredOtps(db) {
 // ─── Registration ──────────────────────────────────────────────────────
 //
 // Flow (mobile app):
-//   Step 1: POST /auth/register   → sends OTP to email (Mailtrap)
+//   Step 1: POST /auth/register   → sends OTP to email (Resend)
 //   Step 2: POST /auth/register/verify → verifies OTP, creates user
 //   Resend:  POST /auth/register/resend → resends OTP
 //   Email-specific alias: POST /auth/register/initiate (same as /register)
@@ -93,6 +93,8 @@ function deleteExpiredOtps(db) {
 router.post('/register', registerLimiter, validate(register), async (req, res) => {
   try {
     const { name, email, phone, password, role } = res.locals.parsedBody;
+
+    const db = await getDb();
 
     // Check duplicate phone
     const existingPhone = db.exec('SELECT id FROM users WHERE phone = ?', [phone]);
@@ -126,7 +128,7 @@ router.post('/register', registerLimiter, validate(register), async (req, res) =
       [email, code, 'register', expiresAt, regData]
     );
 
-    // Send email via Mailtrap — fire and forget so response isn't blocked
+    // Send email via Resend — fire and forget so response isn't blocked
     sendRegistrationOtp(email, name, code).catch(err => {
       console.error('[EMAIL ERROR] Failed to send registration OTP:', err.message);
     });
@@ -274,7 +276,7 @@ router.post('/register/resend', otpLimiter, validate(resendOtp), async (req, res
       [email, code, 'register', expiresAt, regDataJson]
     );
 
-    // Send email via Mailtrap — fire and forget
+    // Send email via Resend — fire and forget
     sendRegistrationOtp(email, name, code).catch(err => {
       console.error('[EMAIL ERROR] Failed to resend registration OTP:', err.message);
     });
@@ -416,7 +418,7 @@ router.post('/forgot-password', otpLimiter, validate(forgotPassword), async (req
       [identifier, code, otpType, expiresAt]
     );
 
-    // Send email via Mailtrap for email-based flow — fire and forget
+    // Send email via Resend for email-based flow — fire and forget
     if (isEmailFlow && userEmail) {
       sendPasswordReset(userEmail, userName, code).catch(err => {
         console.error('[EMAIL ERROR] Failed to send password reset email:', err.message);
