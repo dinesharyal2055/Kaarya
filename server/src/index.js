@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const path = require('path');
 const { getDb } = require('./db');
 
@@ -37,6 +38,11 @@ function getCorsOptions() {
   }
   return { origin: devOrigins, credentials: false };
 }
+
+app.use(helmet({
+  // Disable Content-Security-Policy — this is a JSON API, not a website
+  contentSecurityPolicy: false,
+}));
 
 app.use(cors(getCorsOptions()));
 app.use(express.json({ limit: '2mb' })); // larger limit for base64 image uploads

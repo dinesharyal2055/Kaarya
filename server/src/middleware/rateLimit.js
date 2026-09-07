@@ -21,12 +21,13 @@ const MAX_OTP     = Number(process.env.RATE_LIMIT_MAX_OTP)     || 5;
 const MAX_REGISTER= Number(process.env.RATE_LIMIT_MAX_REGISTER)|| 5;
 
 /**
- * Skips rate limiting when running in development with no env vars set.
- * Set RATE_LIMIT_ENABLED=1 even in dev to enable it.
+ * Skips rate limiting only when explicitly disabled.
+ * Set RATE_LIMIT_ENABLED=0 to disable (e.g. load-testing environments).
+ * Rate limiting is ON by default in all environments.
  */
 const skipIfDev = (req) => {
-  if (process.env.NODE_ENV !== 'production' && process.env.RATE_LIMIT_ENABLED !== '1') {
-    return true; // skip in dev unless explicitly enabled
+  if (process.env.RATE_LIMIT_ENABLED === '0') {
+    return true; // skip only when explicitly disabled
   }
   return false;
 };
@@ -77,4 +78,34 @@ const registerLimiter = rateLimit({
   statusCode: 429,
 });
 
-module.exports = { loginLimiter, otpLimiter, registerLimiter };
+/**
+ * Offers endpoint — prevents spamming job postings with rapid offer submissions.
+ * 10 offers per 15-minute window per IP.
+ */
+const offersLimiter = rateLimit({
+  windowMs: WINDOW_MS,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req) + (req.headers['x-forwarded-for'] ? `:${req.headers['x-forwarded-for'].split(',')[0].trim()}` : ''),
+  skip: skipIfDev,
+  message: { error: 'Too many offer submissions. Please try again later.' },
+  statusCode: 429,
+});
+
+/**
+ * Message sending — prevents spam within a single conversation.
+ * 10 messages per 1-minute window per IP.
+ */
+const messagesLimiter = rateLimit({
+  windowMs: LOGIN_WINDOW_MS,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => ipKeyGenerator(req) + (req.headers['x-forwarded-for'] ? `:${req.headers['x-forwarded-for'].split(',')[0].trim()}` : ''),
+  skip: skipIfDev,
+  message: { error: 'Too many messages. Please slow down.' },
+  statusCode: 429,
+});
+
+module.exports = { loginLimiter, otpLimiter, registerLimiter, offersLimiter, messagesLimiter };

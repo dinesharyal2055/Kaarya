@@ -25,6 +25,7 @@ import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
 import { Button, Input } from '@/components/ui';
 import { updateJob, uploadJobImage } from '@/services/jobs';
 import { fetchJob } from '@/services/jobs';
+import { API_ROOT } from '@/lib/api';
 import type { Job, NegotiationMode } from '@/types';
 
 type UploadedImage = {
@@ -75,7 +76,7 @@ export default function EditJobScreen() {
         // Load existing photo URLs as local UploadedImage entries
         if (data.photoUrls && data.photoUrls.length > 0) {
           const existing: UploadedImage[] = data.photoUrls.map((url) => ({
-            uri: `http://192.168.1.79:5000${url}`,
+            uri: `${API_ROOT}${url}`,
             base64: '',
             filename: url.split('/').pop() ?? 'photo.jpg',
             uploadedUrl: url,

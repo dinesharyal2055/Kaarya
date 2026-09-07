@@ -5,22 +5,28 @@
  * 1. Go to https://console.firebase.google.com/ and create a project (or use an existing one)
  * 2. Generate a service account key:
  *    - Project Settings → Service Accounts → Generate new private key
- *    - Save the JSON file as `firebase-service-account.json` in the server/src/ folder
+ *    - Or use the JSON file path via FCM_SERVICE_ACCOUNT_PATH env var
  * 3. Enable Cloud Messaging API:
  *    - APIs & Services → Library → search "Firebase Cloud Messaging API" → Enable
  *
- * ENV VARIABLE (optional alternative to the JSON file):
- *   GOOGLE_APPLICATION_CREDENTIALS=./src/serviceAccountKey.json
- *   # or set the path in the FCM_SERVICE_ACCOUNT_KEY env var below
+ * CREDENTIALS (in order of priority):
+ *   1. Env vars (recommended for production):
+ *      - FIREBASE_PROJECT_ID
+ *      - FIREBASE_PRIVATE_KEY  (the full -----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY----- string)
+ *      - FIREBASE_CLIENT_EMAIL
+ *   2. JSON file at FCM_SERVICE_ACCOUNT_PATH or ./firebase-service-account.json
  *
- * Without setup the app will log a warning but continue to function normally
+ * Without credentials the app logs a warning but continues to function normally
  * (no push notifications will be sent until credentials are configured).
  */
 
 const admin = require('firebase-admin');
 const { getDb } = require('./db');
 
-/** Path to the Firebase service account key JSON file */
+// Load env
+try { require('dotenv').config(); } catch (_) {}
+
+/** Path to the Firebase service account key JSON file (fallback) */
 const SERVICE_ACCOUNT_PATH = process.env.FCM_SERVICE_ACCOUNT_PATH
   || process.env.GOOGLE_APPLICATION_CREDENTIALS
   || require('path').join(__dirname, 'firebase-service-account.json');
@@ -29,12 +35,22 @@ let fcmApp = null;
 let fcmReady = false;
 
 try {
-  // Check if a service account file exists
   const fs = require('fs');
-  if (fs.existsSync(SERVICE_ACCOUNT_PATH)) {
-    const serviceAccount = require(SERVICE_ACCOUNT_PATH);
 
-    // Check if default app already initialized
+  // Prefer env vars (safer — credentials not on disk)
+  const projectId     = process.env.FIREBASE_PROJECT_ID;
+  const privateKey    = process.env.FIREBASE_PRIVATE_KEY;
+  const clientEmail   = process.env.FIREBASE_CLIENT_EMAIL;
+
+  if (projectId && privateKey && clientEmail) {
+    // Build service account object from env vars
+    const serviceAccount = {
+      type: 'service_account',
+      project_id: projectId,
+      private_key: privateKey.replace(/\\n/g, '\n'),
+      client_email: clientEmail,
+    };
+
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
@@ -42,13 +58,24 @@ try {
     }
     fcmApp = admin.app();
     fcmReady = true;
-    console.log('[fcm] Firebase Admin initialized successfully');
+    console.log('[fcm] Firebase Admin initialized from env vars');
+  } else if (fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+    // Fallback: load from JSON file
+    const serviceAccount = require(SERVICE_ACCOUNT_PATH);
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+    }
+    fcmApp = admin.app();
+    fcmReady = true;
+    console.log('[fcm] Firebase Admin initialized from JSON file');
   } else {
     console.warn(
-      '[fcm] ⚠️  Firebase service account key not found at:\n'
-      + `         ${SERVICE_ACCOUNT_PATH}\n`
-      + '         Push notifications are DISABLED until you add the JSON file.\n'
-      + '         See server/src/fcm.js for setup instructions.'
+      '[fcm] ⚠️  Firebase credentials not found.\n'
+      + '         Set FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL env vars\n'
+      + '         or place firebase-service-account.json at the path above.\n'
+      + '         Push notifications are DISABLED.'
     );
   }
 } catch (err) {

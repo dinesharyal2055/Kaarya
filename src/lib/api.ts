@@ -1,13 +1,23 @@
 /**
  * API service — typed fetch wrapper for Kaarya backend
- * Uses the BASE_URL env variable (set via app.json extra or .env)
- * Falls back to localhost for development
+ * BASE_URL is configured via app.json extra.apiUrl (expo prebuild variable).
+ * Fallback: use LAN_IP from Constants if available, else localhost.
  */
+import { getToken } from './storage';
+import Constants from 'expo-constants';
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// Configure your server URL here (used in all API calls and avatar URLs)
+// In development: set to your machine's LAN IP (e.g. 192.168.1.XX:5000)
+// In production: set to your deployed API domain (e.g. https://api.kaarya.app)
+const DEV_API_URL = 'http://192.168.1.79:5000/api';
 
-// TODO: Replace with your actual backend URL when deployed
-const BASE_URL = 'http://192.168.1.79:5000/api';
+// Use app.json extra.apiUrl if configured, otherwise fall back to DEV_API_URL
+// (expo dev servers use the LAN IP automatically when you pass --lan)
+const BASE_URL: string =
+  (Constants.expoConfig?.extra?.apiUrl as string | undefined) || DEV_API_URL;
+
+// API_ROOT is BASE_URL without the /api suffix — use for serving static files (avatars, uploads)
+const API_ROOT = BASE_URL.replace(/\/api$/, '');
 
 export class ApiError extends Error {
   constructor(
@@ -22,7 +32,7 @@ export class ApiError extends Error {
 }
 
 async function getAuthHeader(): Promise<Record<string, string>> {
-  const token = await AsyncStorage.getItem('kaarya_token');
+  const token = await getToken();
   if (!token) return {};
   return { Authorization: `Bearer ${token}` };
 }
@@ -80,7 +90,7 @@ export const profileApi = {
     mimeType?: string;
     fileName?: string;
   }): Promise<import('@/types').User> => {
-    const token = await AsyncStorage.getItem('kaarya_token');
+    const token = await getToken();
     if (!token) throw new ApiError('Not authenticated', 401);
 
     if (!image.base64) throw new ApiError('Image must be provided as base64', 400);
@@ -110,6 +120,7 @@ export const profileApi = {
 
 /* ─── Auth ────────────────────────────────────────────────────────── */
 
+export { BASE_URL, API_ROOT };
 export const authApi = {
   /** Step 1: Initiate registration — sends OTP */
   registerInitiate: (data: {
@@ -347,7 +358,7 @@ interface ImagePickerResult {
 export const verificationApi = {
   /** Upload a single image and return the stored URL */
   uploadDocument: async (image: ImagePickerResult): Promise<UploadResult> => {
-    const token = await AsyncStorage.getItem('kaarya_token');
+    const token = await getToken();
     if (!token) throw new ApiError('Not authenticated', 401);
 
     if (!image.base64) {

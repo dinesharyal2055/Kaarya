@@ -68,8 +68,16 @@ export default function ForgotPasswordScreen() {
 
   // ─── Step 3: set new password ────────────────────────────────────
   async function handleResetPassword() {
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       setError(t('forgotPassword.passwordMinChars'));
+      return;
+    }
+    if (!/\d/.test(newPassword)) {
+      setError(t('forgotPassword.passwordNeedsNumber'));
+      return;
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword)) {
+      setError(t('forgotPassword.passwordNeedsSpecial'));
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -226,6 +234,7 @@ export default function ForgotPasswordScreen() {
                       />
                     }
                   />
+                  <Text style={styles.passwordHint}>{t('forgotPassword.passwordRequirements')}</Text>
                   <Input
                     label={t('forgotPassword.confirmPassword')}
                     placeholder={t('forgotPassword.reEnterPassword')}
@@ -296,6 +305,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: FontSizes.base, color: KaaryaColors.muted, textAlign: 'center', marginTop: Spacing.sm, lineHeight: 22 },
   phoneHighlight: { color: KaaryaColors.brand[500], fontWeight: '600' },
   error: { color: KaaryaColors.danger, fontSize: FontSizes.sm, marginTop: Spacing.sm, textAlign: 'center' },
+  passwordHint: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 4, marginBottom: Spacing.md },
   resendRow: { flexDirection: 'row', justifyContent: 'center', marginTop: Spacing.md },
   resendText: { fontSize: FontSizes.sm, color: KaaryaColors.muted },
   resendLink: { fontSize: FontSizes.sm, color: KaaryaColors.brand[500], fontWeight: '600' },

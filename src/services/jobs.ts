@@ -1,11 +1,9 @@
 /**
  * Jobs service — wraps the jobs API with typed methods
  */
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { jobsApi } from '@/lib/api';
+import { jobsApi, BASE_URL } from '@/lib/api';
+import { getToken } from '@/lib/storage';
 import type { Job } from '@/types';
-
-const BASE_URL = 'http://192.168.1.79:5000/api';
 
 export interface ImagePickerResult {
   uri: string;
@@ -15,7 +13,7 @@ export interface ImagePickerResult {
 }
 
 export async function uploadJobImage(image: ImagePickerResult): Promise<string> {
-  const token = await AsyncStorage.getItem('kaarya_token');
+  const token = await getToken();
   if (!token) throw new Error('Not authenticated');
 
   if (!image.base64) throw new Error('Image must be provided as base64');

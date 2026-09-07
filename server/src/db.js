@@ -3,6 +3,9 @@ const bcrypt = require('bcryptjs');
 const fs = require('fs');
 const path = require('path');
 
+// Load .env so DEMO_PASSWORD is available (no-op if vars are already set)
+try { require('dotenv').config(); } catch (_) {}
+
 const DB_PATH = path.join(__dirname, 'database.sqlite');
 
 let db;
@@ -71,6 +74,11 @@ function initSchema() {
   }
   try {
     db.run('ALTER TABLE users ADD COLUMN fcm_token TEXT');
+  } catch (e) {
+    // Column already exists, ignore
+  }
+  try {
+    db.run('ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0');
   } catch (e) {
     // Column already exists, ignore
   }
@@ -248,6 +256,19 @@ function initSchema() {
     )
   `);
   db.run('CREATE INDEX IF NOT EXISTS idx_saved_jobs_user ON saved_jobs(user_id)');
+
+  // JWT blocklist — tokens added here on logout, checked on every requireAuth
+  db.run(`
+    CREATE TABLE IF NOT EXISTS jwt_blocklist (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      jti TEXT UNIQUE NOT NULL,
+      expires_at TEXT NOT NULL,
+      revoked_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+
+  // Index for fast blocklist lookups
+  db.run('CREATE INDEX IF NOT EXISTS idx_jwt_blocklist_jti ON jwt_blocklist(jti)');
 }
 
 /**
@@ -256,26 +277,31 @@ function initSchema() {
  * repeatedly never creates duplicates. Accounts are skipped if they already exist.
  */
 function seedDemoAccounts() {
-  // Hash password at runtime so it is correct every time
-  const pwHash = bcrypt.hashSync('demo1234', 10);
+  const demoPassword = process.env.DEMO_PASSWORD;
+  if (!demoPassword) {
+    console.warn('[db] WARNING: DEMO_PASSWORD is not set — demo accounts will not be seeded.');
+    return;
+  }
+  const pwHash = bcrypt.hashSync(demoPassword, 10);
 
   const demoUsers = [
+    // Super Admin (verified)
+    [1,    'Super Admin',     'admin@kaarya.demo',  '9800000001', 'admin',   1, 1],
     // Service Providers (verified)
-    [100, 'Ganesh Pandey',   'ganesh@kaarya.demo', '9801000001', 'provider', 1],
-    [101, 'Abhinav Kaphle',  'abhinav@kaarya.demo','9801000002', 'provider', 1],
+    [100,  'Ganesh Pandey',   'ganesh@kaarya.demo', '9801000001', 'provider', 1, 0],
+    [101,  'Abhinav Kaphle',  'abhinav@kaarya.demo','9801000002', 'provider', 1, 0],
     // Task Posters (verified so they can log in without OTP)
-    [102, 'Dinesh Aryal',    'dinesh@kaarya.demo', '9801000003', 'seeker',  1],
-    [103, 'Suman Adhikari',  'suman@kaarya.demo', '9801000004', 'seeker',  1],
+    [102,  'Dinesh Aryal',    'dinesh@kaarya.demo', '9801000003', 'seeker',  1, 0],
+    [103,  'Suman Adhikari',  'suman@kaarya.demo', '9801000004', 'seeker',  1, 0],
   ];
 
-  for (const [id, name, email, phone, role, isVerified] of demoUsers) {
+  for (const [id, name, email, phone, role, isVerified, isAdmin] of demoUsers) {
     db.run(
-      `INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role, is_verified, is_active)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
-      [id, name, email, phone, pwHash, role, isVerified]
+      `INSERT OR IGNORE INTO users (id, name, email, phone, password_hash, role, is_verified, is_admin, is_active)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+      [id, name, email, phone, pwHash, role, isVerified, isAdmin]
     );
   }
-  console.log('[db] Demo accounts ready (password: demo1234)');
 }
 
 function seedJobs() {

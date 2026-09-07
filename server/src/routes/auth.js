@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { getDb, save } = require('../db');
-const { requireAuth, signToken, hashPassword, verifyPassword } = require('../middleware/auth');
+const { requireAuth, signToken, signTokenWithJti, addToBlocklist, hashPassword, verifyPassword } = require('../middleware/auth');
 const { sendRegistrationOtp, sendPasswordReset } = require('../mailer');
 const { loginLimiter, otpLimiter, registerLimiter } = require('../middleware/rateLimit');
 const { checkGuard, recordFailure, recordSuccess } = require('../middleware/loginGuard');
@@ -73,7 +73,7 @@ function userResponse(userId) {
 }
 
 function generateOTP() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+  return String(crypto.randomInt(100000, 1000000));
 }
 
 function deleteExpiredOtps(db) {
@@ -176,6 +176,9 @@ router.post('/register/verify', otpLimiter, validate(verifyOtp), async (req, res
       db.run('DELETE FROM otp_codes WHERE id = ?', [otpId]);
       return res.status(401).json({ error: 'Too many failed attempts. Please request a new OTP.' });
     }
+
+    // Increment attempts counter on wrong OTP
+    db.run('UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?', [otpId]);
 
     // Get pending registration data from OTP record (persisted to DB)
     if (!dataJson) {
@@ -358,7 +361,7 @@ router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
     // Success — reset counter before issuing token
     recordSuccess(phone);
 
-    const token = signToken(row[0]);
+    const { token } = signTokenWithJti(row[0]);
     const user = userFromRow(row);
 
     res.json({ token, user });
@@ -460,6 +463,9 @@ router.post('/forgot-password/verify', otpLimiter, validate(verifyResetOtp), asy
       return res.status(401).json({ error: 'Too many failed attempts. Please request a new OTP.' });
     }
 
+    // Increment attempts counter on wrong OTP
+    db.run('UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?', [otpId]);
+
     res.json({ message: 'OTP verified', identifier });
   } catch (err) {
     console.error('[auth/forgot-password/verify]', err);
@@ -490,6 +496,9 @@ router.post('/forgot-password/reset', loginLimiter, validate(resetPassword), asy
       db.run('DELETE FROM otp_codes WHERE id = ?', [otpId]);
       return res.status(401).json({ error: 'Too many failed attempts. Please request a new OTP.' });
     }
+
+    // Increment attempts counter on wrong OTP
+    db.run('UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?', [otpId]);
 
     // Find user by phone or email
     const byPhone = db.exec('SELECT id FROM users WHERE phone = ?', [phone || '']);
@@ -643,8 +652,19 @@ router.get('/me', requireAuth, async (req, res) => {
 });
 
 // POST /api/auth/logout
-router.post('/logout', requireAuth, (req, res) => {
-  res.json({ message: 'Logged out successfully' });
+router.post('/logout', requireAuth, async (req, res) => {
+  try {
+    // Revoke this token by adding its JTI to the blocklist
+    if (req.tokenJti && req.tokenExp) {
+      const expiresAt = new Date(req.tokenExp * 1000).toISOString();
+      await addToBlocklist(req.tokenJti, expiresAt);
+    }
+    res.json({ message: 'Logged out successfully' });
+  } catch (err) {
+    console.error('[auth/logout]', err);
+    // Still return success — client will clear token anyway
+    res.json({ message: 'Logged out successfully' });
+  }
 });
 
 // ─── Utility ─────────────────────────────────────────────────────────

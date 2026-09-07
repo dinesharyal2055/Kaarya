@@ -10,7 +10,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
-import { reviewsApi } from '@/lib/api';
+import { reviewsApi, API_ROOT } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar, Button } from '@/components/ui';
 import type { Review } from '@/types';
@@ -68,7 +68,7 @@ const ratingBarStyles = StyleSheet.create({
 
 function ReviewCard({ review, t }: { review: Review; t: (key: string) => string }) {
   const avatarUrl = review.reviewerAvatar
-    ? `http://192.168.1.79:5000${review.reviewerAvatar}`
+    ? `${API_ROOT}${review.reviewerAvatar}`
     : undefined;
 
   return (

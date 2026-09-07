@@ -15,6 +15,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { User, UserRole } from '@/types';
 import { authApi, profileApi } from '@/lib/api';
+import { saveToken, getToken, removeToken } from '@/lib/storage';
 import {
   setupNotifications,
   unregisterPushToken,
@@ -64,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     async function restore() {
       try {
-        const token = await AsyncStorage.getItem('kaarya_token');
+        const token = await getToken();
         if (!token) {
           setState((s) => ({ ...s, isLoading: false }));
           await SplashScreen.hideAsync();
@@ -78,7 +79,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setupNotifications().catch(() => {});
       } catch {
         // token invalid — clear it
-        await AsyncStorage.removeItem('kaarya_token');
+        await removeToken();
         setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
       } finally {
         await SplashScreen.hideAsync();
@@ -90,7 +91,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (phone: string, password: string) => {
     const { token, user } = await authApi.login({ phone, password });
-    await AsyncStorage.setItem('kaarya_token', token);
+    await saveToken(token);
     setState({ user, token, isLoading: false, isAuthenticated: true });
     // Register FCM push token after successful login
     setupNotifications().catch(() => {});
@@ -112,7 +113,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     // Unregister FCM push token so device stops receiving notifications
     await unregisterPushToken();
-    await AsyncStorage.removeItem('kaarya_token');
+    await removeToken();
     setState({ user: null, token: null, isLoading: false, isAuthenticated: false });
   }, []);
 

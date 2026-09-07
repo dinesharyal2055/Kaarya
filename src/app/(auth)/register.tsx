@@ -46,7 +46,9 @@ export default function RegisterScreen() {
     if (!name.trim()) { setError(t('auth.register.errors.fillAllFields')); return; }
     if (!email.trim() || !email.includes('@')) { setError(t('auth.register.errors.invalidEmail')); return; }
     if (!phone.trim() || phone.length < 8) { setError(t('auth.register.errors.fillAllFields')); return; }
-    if (password.length < 6) { setError(t('auth.register.errors.passwordTooShort')); return; }
+    if (password.length < 8) { setError(t('auth.register.errors.passwordTooShort')); return; }
+    if (!/\d/.test(password)) { setError(t('auth.register.errors.passwordNeedsNumber')); return; }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) { setError(t('auth.register.errors.passwordNeedsSpecial')); return; }
     if (password !== confirmPassword) { setError(t('auth.register.errors.passwordsDoNotMatch')); return; }
 
     setLoading(true);
@@ -188,6 +190,7 @@ export default function RegisterScreen() {
                       />
                     }
                   />
+                  <Text style={styles.passwordHint}>{t('auth.register.passwordRequirements')}</Text>
                   <Input
                     label={t('auth.register.confirmPassword')}
                     placeholder={t('auth.register.confirmPasswordPlaceholder')}
@@ -319,6 +322,7 @@ const styles = StyleSheet.create({
   roleLabelSelected: { color: KaaryaColors.brand[600] },
   roleDesc: { fontSize: FontSizes.xs, color: KaaryaColors.muted, textAlign: 'center', marginTop: 4 },
   error: { color: KaaryaColors.danger, fontSize: FontSizes.sm, marginTop: Spacing.sm, textAlign: 'center' },
+  passwordHint: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 4, marginBottom: Spacing.md },
   footer: { alignItems: 'center', paddingVertical: Spacing.xl },
   footerText: { fontSize: FontSizes.base, color: KaaryaColors.textSecondary },
   footerLink: { color: KaaryaColors.brand[500], fontWeight: '600' },

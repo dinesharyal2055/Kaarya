@@ -25,8 +25,10 @@ const phoneSchema = z.string()
   .regex(/^9[89]\d{8}$/, 'Phone must be a valid Nepali number (9800000000–9899999999)');
 
 const passwordSchema = z.string()
-  .min(6, 'Password must be at least 6 characters')
-  .max(128, 'Password must be at most 128 characters');
+  .min(8, 'Password must be at least 8 characters')
+  .max(128, 'Password must be at most 128 characters')
+  .regex(/\d/, 'Password must contain at least one number')
+  .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, 'Password must contain at least one special character');
 
 // ─── Auth schemas ─────────────────────────────────────────────────────
 
@@ -204,7 +206,8 @@ function validate(schema) {
     const result = schema.safeParse(req.body);
     if (!result.success) {
       // Return the first validation error message for clarity
-      const message = result.error.errors[0]?.message || 'Invalid request body';
+      const errors = result.error?.errors;
+      const message = (errors && errors.length > 0) ? errors[0].message : 'Invalid request body';
       return res.status(400).json({ error: message });
     }
     // Attach parsed + coerced data for downstream handlers

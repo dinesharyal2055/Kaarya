@@ -1,16 +1,41 @@
 /**
- * Admin routes — verification request review
- * In production, protect with proper admin authentication middleware.
+ * Admin routes — verification request review and user management.
+ * All routes require authentication AND admin role.
  */
 const express = require('express');
 const { validate, reviewVerification, updateUserRole } = require('../middleware/validate');
+const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
 const { getDb, save } = require('../db');
+
+/**
+ * Require admin role — must be called after requireAuth.
+ * Checks is_admin = 1 on the authenticated user.
+ */
+async function requireAdmin(req, res, next) {
+  try {
+    const db = await getDb();
+    const result = db.exec(
+      'SELECT is_admin FROM users WHERE id = ?',
+      [req.userId]
+    );
+    if (result.length === 0 || result[0].values.length === 0) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    const isAdmin = result[0].values[0][0];
+    if (!isAdmin) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    next();
+  } catch (err) {
+    next(err);
+  }
+}
 
 const VALID_REVIEW_STATUSES = ['approved', 'rejected', 'more_info_needed'];
 
 // GET /api/admin/verifications — list all verification requests
-router.get('/verifications', async (req, res) => {
+router.get('/verifications', requireAuth, requireAdmin, async (req, res) => {
   try {
     const db = await getDb();
     const result = db.exec(
@@ -54,7 +79,7 @@ router.get('/verifications', async (req, res) => {
 });
 
 // GET /api/admin/verifications/:id — get single request
-router.get('/verifications/:id', async (req, res) => {
+router.get('/verifications/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const db = await getDb();
@@ -98,7 +123,7 @@ router.get('/verifications/:id', async (req, res) => {
 });
 
 // POST /api/admin/verifications/:id/review — approve or reject a request
-router.post('/verifications/:id/review', validate(reviewVerification), async (req, res) => {
+router.post('/verifications/:id/review', requireAuth, requireAdmin, validate(reviewVerification), async (req, res) => {
   try {
     const { id } = req.params;
     const { status, adminNotes } = res.locals.parsedBody;
@@ -116,7 +141,7 @@ router.post('/verifications/:id/review', validate(reviewVerification), async (re
 
     const [reqId, userId, currentStatus] = reqResult[0].values[0];
     if (currentStatus !== 'pending') {
-      return res.status(400).json({ error: `Request already ${currentStatus}` });
+      return res.status(400).json({ error: 'Request has already been reviewed' });
     }
 
     // Update the request
@@ -157,7 +182,7 @@ router.post('/verifications/:id/review', validate(reviewVerification), async (re
 });
 
 // POST /api/admin/users/:id/role — update a user's role
-router.post('/users/:id/role', validate(updateUserRole), async (req, res) => {
+router.post('/users/:id/role', requireAuth, requireAdmin, validate(updateUserRole), async (req, res) => {
   try {
     const { id } = req.params;
     const { role } = res.locals.parsedBody;

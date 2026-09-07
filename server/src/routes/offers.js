@@ -4,6 +4,7 @@ const { requireAuth } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
 const { sendToUser } = require('../fcm');
 const { validate, createOffer, updateOffer } = require('../middleware/validate');
+const { offersLimiter } = require('../middleware/rateLimit');
 const { sanitize } = require('../middleware/sanitize');
 
 const router = express.Router();
@@ -119,7 +120,7 @@ async function getOfferWithDetails(offerId) {
 // ─── Routes ────────────────────────────────────────────────────────────────
 
 // POST /api/offers — submit offer (provider only)
-router.post('/', requireAuth, sanitize('message'), validate(createOffer), async (req, res) => {
+router.post('/', offersLimiter, requireAuth, sanitize('message'), validate(createOffer), async (req, res) => {
   try {
     const { jobId, price, message } = res.locals.parsedBody;
 
@@ -278,12 +279,26 @@ router.get('/received', requireAuth, async (req, res) => {
 });
 
 // GET /api/offers/:id — get offer with negotiation history
+// Authorization: only the provider who made the offer or the job seeker can view it
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const offer = await getOfferWithDetails(req.params.id);
     if (!offer) {
       return res.status(404).json({ error: 'Offer not found' });
     }
+
+    // Verify the requester is either the provider or the job seeker
+    const db = await getDb();
+    const jobResult = db.exec('SELECT seeker_id FROM jobs WHERE id = ?', [offer.jobId]);
+    const seekerId = jobResult.length > 0 ? String(jobResult[0].values[0][0]) : null;
+
+    const isProvider = String(offer.providerId) === String(req.userId);
+    const isSeeker   = seekerId !== null && seekerId === String(req.userId);
+
+    if (!isProvider && !isSeeker) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
     res.json(offer);
   } catch (err) {
     console.error('[offers/get]', err);

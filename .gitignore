@@ -47,3 +47,8 @@ google-services.json
 server/src/firebase-service-account.json
 server/src/database.sqlite
 server/src/uploads/
+
+# Local .env files with real secrets
+.env
+server/.env
+.env.local

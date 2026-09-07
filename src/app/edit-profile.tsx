@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius, Shadows } from '@/constants/theme';
 import { Button, Input } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
+import { API_ROOT } from '@/lib/api';
 
 export default function EditProfileScreen() {
   const { t } = useTranslation();
@@ -24,11 +25,9 @@ export default function EditProfileScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; bio?: string }>({});
 
-  const BASE_URL = 'http://192.168.1.79:5000';
-
   // Show existing avatar if no local preview is set
   const avatarUri = avatarPreview
-    ?? (user?.avatarUrl ? `${BASE_URL}${user.avatarUrl}` : null);
+    ?? (user?.avatarUrl ? `${API_ROOT}${user.avatarUrl}` : null);
 
   async function pickImage() {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();

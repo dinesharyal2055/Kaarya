@@ -1,9 +1,12 @@
 /**
- * Async storage service — thin wrapper over @react-native-async-storage/async-storage
- * Handles JSON serialization/deserialization and provides typed get/set methods
+ * Storage service — typed wrapper over AsyncStorage and SecureStore.
+ *
+ * JWT token is stored in SecureStore (encrypted, not world-readable).
+ * All other data (user profile, preferences) uses AsyncStorage.
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 const KEYS = {
   AUTH_TOKEN: 'kaarya_token',
@@ -12,17 +15,28 @@ const KEYS = {
   LANGUAGE: 'kaarya_language',
 } as const;
 
-/* ─── Auth ─────────────────────────────────────────────────────────── */
+/* ─── Auth (SecureStore) ────────────────────────────────────────────── */
 
 export async function saveToken(token: string): Promise<void> {
-  await AsyncStorage.setItem(KEYS.AUTH_TOKEN, token);
+  await SecureStore.setItemAsync(KEYS.AUTH_TOKEN, token);
 }
 
 export async function getToken(): Promise<string | null> {
-  return AsyncStorage.getItem(KEYS.AUTH_TOKEN);
+  try {
+    return await SecureStore.getItemAsync(KEYS.AUTH_TOKEN);
+  } catch {
+    // Fallback to AsyncStorage if SecureStore fails (e.g. on web)
+    return AsyncStorage.getItem(KEYS.AUTH_TOKEN);
+  }
 }
 
 export async function removeToken(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(KEYS.AUTH_TOKEN);
+  } catch {
+    // ignore
+  }
+  // Also clear AsyncStorage fallback (for safety on upgrade)
   await AsyncStorage.removeItem(KEYS.AUTH_TOKEN);
 }
 

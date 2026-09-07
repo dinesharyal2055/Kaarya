@@ -99,7 +99,7 @@ router.post('/', requireAuth, sanitize('comment'), validate(createReview), async
 
     db.run(
       'INSERT INTO reviews (job_id, reviewer_id, reviewee_id, rating, comment) VALUES (?, ?, ?, ?, ?)',
-      [jobId, reviewerId, revieweeId, ratingNum, comment || null]
+      [jobId, reviewerId, revieweeId, rating, comment || null]
     );
     const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
 
@@ -113,12 +113,12 @@ router.post('/', requireAuth, sanitize('comment'), validate(createReview), async
     createNotification(
       db, revieweeId, 'review_received',
       'New review received ⭐',
-      `${reviewerResult[0]?.values[0]?.[0] ?? 'Someone'} left you a ${ratingNum}-star review for "${jobTitleResult[0]?.values[0]?.[0] ?? 'a job'}"`,
+      `${reviewerResult[0]?.values[0]?.[0] ?? 'Someone'} left you a ${rating}-star review for "${jobTitleResult[0]?.values[0]?.[0] ?? 'a job'}"`,
       { jobId, reviewId: String(newId) }
     );
     pushNotify(revieweeId, {
       title: 'New review received ⭐',
-      body: `${reviewerResult[0]?.values[0]?.[0] ?? 'Someone'} left you a ${ratingNum}-star review`,
+      body: `${reviewerResult[0]?.values[0]?.[0] ?? 'Someone'} left you a ${rating}-star review`,
       data: { type: 'review_received', jobId, reviewId: String(newId) },
     });
     save();

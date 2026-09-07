@@ -12,11 +12,9 @@ import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
 import { fetchJob } from '@/services/jobs';
-import { offersApi, reviewsApi, jobsApi } from '@/lib/api';
+import { offersApi, reviewsApi, jobsApi, API_ROOT } from '@/lib/api';
 import { Button } from '@/components/ui';
 import type { Job } from '@/types';
-
-const BASE_URL = 'http://192.168.1.79:5000';
 
 export default function JobDetailScreen() {
   const router = useRouter();
@@ -257,7 +255,7 @@ export default function JobDetailScreen() {
               {job.photoUrls.map((url, index) => (
                 <View key={index} style={styles.photoFrame}>
                   <Image
-                    source={{ uri: `${BASE_URL}${url}` }}
+                    source={{ uri: `${API_ROOT}${url}` }}
                     style={styles.photoThumb}
                     resizeMode="cover"
                   />

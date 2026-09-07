@@ -9,12 +9,10 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
-import { offersApi, chatApi } from '@/lib/api';
+import { offersApi, chatApi, API_ROOT } from '@/lib/api';
 import { acceptOffer, rejectOffer } from '@/services/offers';
 import { useAuth } from '@/context/AuthContext';
 import type { Offer } from '@/types';
-
-const BASE_URL = 'http://192.168.1.79:5000';
 
 export default function OffersScreen() {
   const { t } = useTranslation();
@@ -201,7 +199,7 @@ export default function OffersScreen() {
                 getCatIcon={getCatIcon}
                 formatDate={formatDate}
                 statusConfig={statusConfig}
-                BASE_URL={BASE_URL}
+                BASE_URL={API_ROOT}
                 onChat={handleChat}
                 t={t}
               />

@@ -5,13 +5,16 @@
 
 const nodemailer = require('nodemailer');
 
+// Load environment variables
+try { require('dotenv').config(); } catch (_) {}
+
 // Create transporter for Mailtrap
 const transporter = nodemailer.createTransport({
   host: 'sandbox.smtp.mailtrap.io',
   port: 2525,
   auth: {
-    user: 'REDACTED_MAILTRAP_USER',
-    pass: 'REDACTED_MAILTRAP_PASS',
+    user: process.env.MAILTRAP_USER,
+    pass: process.env.MAILTRAP_PASS,
   },
   secure: false,
   tls: {
