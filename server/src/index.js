@@ -1,11 +1,32 @@
+// Diagnostic: Check DATABASE_URL at the very start
+if (process.env.DATABASE_URL) {
+  const url = process.env.DATABASE_URL;
+  const protocol = url.split(':')[0];
+  console.log(`[diagnostic] DATABASE_URL is SET at process startup (protocol: ${protocol}://)`);
+} else {
+  console.log('[diagnostic] DATABASE_URL is NOT SET at process startup');
+}
+
+// Load .env in development
+try { require('dotenv').config(); } catch (_) {}
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-const { getDb } = require('./db');
+
+// Diagnostic: Check DATABASE_URL at the very start
+if (process.env.DATABASE_URL) {
+  const url = process.env.DATABASE_URL;
+  const protocol = url.split(':')[0];
+  console.log(`[diagnostic] DATABASE_URL is SET at process startup (protocol: ${protocol}://)`);
+} else {
+  console.log('[diagnostic] DATABASE_URL is NOT SET at process startup');
+}
 
 // Load .env in development
 try { require('dotenv').config(); } catch (_) {}
+
+const { getDb } = require('./db');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -92,7 +113,21 @@ const BANNER = `
 `;
 
 async function start() {
-  await getDb(); // initialise DB (schema + seed)
+  if (process.env.DATABASE_URL) {
+    console.log('[server] DATABASE_URL detected — using PostgreSQL driver.');
+    try {
+      const dbPg = require('./db-pg');
+      await dbPg.query('SELECT 1');
+      console.log('[server] ✅ PostgreSQL connectivity confirmed.');
+    } catch (err) {
+      console.error('[server] ❌ PostgreSQL connection failed:', err.message);
+      process.exit(1);
+    }
+  } else {
+    console.log('[server] No DATABASE_URL set — using local SQLite/sql.js driver.');
+    await getDb(); // initialise SQLite DB (schema + seed)
+  }
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(BANNER);
     console.log('[server] Ready and listening on http://0.0.0.0:' + PORT);
