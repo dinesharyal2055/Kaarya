@@ -20,7 +20,7 @@ function getPool() {
   pool = new Pool({
     connectionString,
     ssl: process.env.PGSSLMODE === 'require' || process.env.NODE_ENV === 'production'
-      ? { rejectUnauthorized: false }
+      ? { rejectUnauthorized: true } // Security: Validate SSL certificate in production
       : false,
     max: Number(process.env.PG_POOL_SIZE) || 20,
     idleTimeoutMillis: 30000,

@@ -1,27 +1,8 @@
-// Diagnostic: Check DATABASE_URL at the very start
-if (process.env.DATABASE_URL) {
-  const url = process.env.DATABASE_URL;
-  const protocol = url.split(':')[0];
-  console.log(`[diagnostic] DATABASE_URL is SET at process startup (protocol: ${protocol}://)`);
-} else {
-  console.log('[diagnostic] DATABASE_URL is NOT SET at process startup');
-}
-
-// Load .env in development
-try { require('dotenv').config(); } catch (_) {}
+// Remove diagnostic blocks and keep only one .env load
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const path = require('path');
-
-// Diagnostic: Check DATABASE_URL at the very start
-if (process.env.DATABASE_URL) {
-  const url = process.env.DATABASE_URL;
-  const protocol = url.split(':')[0];
-  console.log(`[diagnostic] DATABASE_URL is SET at process startup (protocol: ${protocol}://)`);
-} else {
-  console.log('[diagnostic] DATABASE_URL is NOT SET at process startup');
-}
 
 // Load .env in development
 try { require('dotenv').config(); } catch (_) {}
