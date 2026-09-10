@@ -2,29 +2,20 @@
  * Push notification routes — FCM token registration and management
  */
 const express = require('express');
-const { getDb, save } = require('../db');
+const { getDb, save, usePostgres } = require('../db');
 const { requireAuth } = require('../middleware/auth');
 const { storeToken, removeAllTokensForUser, fcmReady } = require('../fcm');
 const { validate, registerToken, unregisterToken } = require('../middleware/validate');
 
 const router = express.Router();
 
-/**
- * POST /api/push/register
- *
- * Register (or refresh) the device's FCM token with the server.
- * Called by the app on login and whenever the FCM token changes.
- *
- * Body: { token: string }
- */
+// POST /api/push/register
 router.post('/register', requireAuth, validate(registerToken), async (req, res) => {
   try {
     const { token } = res.locals.parsedBody;
-
     const userId = req.userId;
     await storeToken(userId, token.trim());
-    save();
-
+    if (!usePostgres) save();
     res.json({ message: 'Token registered', fcmEnabled: fcmReady });
   } catch (err) {
     console.error('[/api/push/register]', err);
@@ -32,14 +23,7 @@ router.post('/register', requireAuth, validate(registerToken), async (req, res) 
   }
 });
 
-/**
- * DELETE /api/push/unregister
- *
- * Unregister the device's FCM token on logout.
- * Called when the user logs out of the app.
- *
- * Body: { token?: string } — if token omitted, removes ALL tokens for this user
- */
+// DELETE /api/push/unregister
 router.delete('/unregister', requireAuth, validate(unregisterToken), async (req, res) => {
   try {
     const { token } = res.locals.parsedBody;
@@ -47,12 +31,16 @@ router.delete('/unregister', requireAuth, validate(unregisterToken), async (req,
 
     if (token && typeof token === 'string') {
       const db = await getDb();
-      db.run('DELETE FROM fcm_tokens WHERE user_id = ? AND token = ?', [userId, token]);
+      if (usePostgres) {
+        await db.query('DELETE FROM fcm_tokens WHERE user_id = $1 AND token = $2', [userId, token]);
+      } else {
+        db.run('DELETE FROM fcm_tokens WHERE user_id = ? AND token = ?', [userId, token]);
+      }
     } else {
       await removeAllTokensForUser(userId);
     }
 
-    save();
+    if (!usePostgres) save();
     res.json({ message: 'Token unregistered' });
   } catch (err) {
     console.error('[/api/push/unregister]', err);
@@ -60,12 +48,7 @@ router.delete('/unregister', requireAuth, validate(unregisterToken), async (req,
   }
 });
 
-/**
- * GET /api/push/status
- *
- * Returns whether FCM is configured on the server side.
- * The client can use this to know if push notifications are available.
- */
+// GET /api/push/status
 router.get('/status', (req, res) => {
   res.json({ fcmEnabled: fcmReady });
 });

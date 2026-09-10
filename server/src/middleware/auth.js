@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 
 // Load .env in development (no-op if vars are already set)
 try { require('dotenv').config(); } catch (_) {}
@@ -28,12 +29,23 @@ function getDb() {
  */
 async function addToBlocklist(jti, expiresAt) {
   const db = await getDb();
-  db.run(
-    'INSERT OR IGNORE INTO jwt_blocklist (jti, expires_at) VALUES (?, ?)',
-    [jti, expiresAt]
-  );
-  // Cleanup expired entries periodically (cheap, runs on each logout)
-  db.run('DELETE FROM jwt_blocklist WHERE expires_at < datetime("now")');
+  const usePostgres = !!process.env.DATABASE_URL;
+
+  if (usePostgres) {
+    await db.query(
+      'INSERT INTO jwt_blocklist (jti, expires_at) VALUES ($1, $2) ON CONFLICT (jti) DO NOTHING',
+      [jti, expiresAt]
+    );
+    // Cleanup expired entries periodically (cheap, runs on each logout)
+    await db.query('DELETE FROM jwt_blocklist WHERE expires_at < NOW()');
+  } else {
+    db.run(
+      'INSERT OR IGNORE INTO jwt_blocklist (jti, expires_at) VALUES (?, ?)',
+      [jti, expiresAt]
+    );
+    // Cleanup expired entries periodically (cheap, runs on each logout)
+    db.run('DELETE FROM jwt_blocklist WHERE expires_at < datetime("now")');
+  }
 }
 
 /**
@@ -41,11 +53,21 @@ async function addToBlocklist(jti, expiresAt) {
  */
 async function isBlocked(jti) {
   const db = await getDb();
-  const result = db.exec(
-    'SELECT 1 FROM jwt_blocklist WHERE jti = ? AND expires_at > datetime("now") LIMIT 1',
-    [jti]
-  );
-  return result.length > 0 && result[0].values.length > 0;
+  const usePostgres = !!process.env.DATABASE_URL;
+
+  if (usePostgres) {
+    const res = await db.query(
+      'SELECT 1 FROM jwt_blocklist WHERE jti = $1 AND expires_at > NOW() LIMIT 1',
+      [jti]
+    );
+    return res.rowCount > 0;
+  } else {
+    const result = db.exec(
+      'SELECT 1 FROM jwt_blocklist WHERE jti = ? AND expires_at > datetime("now") LIMIT 1',
+      [jti]
+    );
+    return result.length > 0 && result[0].values.length > 0;
+  }
 }
 
 /**

@@ -8,14 +8,26 @@ try { require('dotenv').config(); } catch (_) {}
 
 const DB_PATH = path.join(__dirname, 'database.sqlite');
 
-let db;
+// Lazy import to avoid circular dependency
+let _db = null;
+let _pg = null;
+
+const usePostgres = !!process.env.DATABASE_URL;
 
 /**
- * Initialise (or return) the singleton sql.js database instance.
- * sql.js is async because it loads a WASM binary.
+ * Initialise (or return) the singleton database instance.
+ * Returns sql.js instance if DATABASE_URL is not set, otherwise
+ * returns a wrapper around the pg connection pool.
  */
 async function getDb() {
-  if (db) return db;
+  if (usePostgres) {
+    if (!_pg) {
+      _pg = require('./db-pg');
+    }
+    return _pg; // returns the db-pg module which has query, getPool, etc.
+  }
+
+  if (_db) return _db;
 
   const SQL = await initSqlJs();
 
@@ -24,28 +36,30 @@ async function getDb() {
     data = fs.readFileSync(DB_PATH);
   }
 
-  db = new SQL.Database(data);
+  const db = new SQL.Database(data);
   db.run('PRAGMA journal_mode = WAL');
   db.run('PRAGMA foreign_keys = ON');
 
-  initSchema();
-  seedDemoAccounts();
-  seedJobs();
-  seedConversations();
+  _db = db;
+
+  initSchema(_db);
+  seedDemoAccounts(_db);
+  seedJobs(_db);
+  seedConversations(_db);
   save();
 
-  return db;
+  return _db;
 }
 
 /** Persist the in-memory database to disk. */
 function save() {
-  if (!db) return;
-  const buf = db.export();
+  if (usePostgres || !_db) return;
+  const buf = _db.export();
   const arr = new Uint8Array(buf);
   fs.writeFileSync(DB_PATH, arr);
 }
 
-function initSchema() {
+function initSchema(db) {
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -276,7 +290,7 @@ function initSchema() {
  * Uses INSERT OR IGNORE with fixed IDs so it is idempotent — calling it
  * repeatedly never creates duplicates. Accounts are skipped if they already exist.
  */
-function seedDemoAccounts() {
+function seedDemoAccounts(db) {
   const demoPassword = process.env.DEMO_PASSWORD;
   if (!demoPassword) {
     console.warn('[db] WARNING: DEMO_PASSWORD is not set — demo accounts will not be seeded.');
@@ -304,7 +318,7 @@ function seedDemoAccounts() {
   }
 }
 
-function seedJobs() {
+function seedJobs(db) {
   const result = db.exec('SELECT COUNT(*) as cnt FROM jobs');
   const count = result.length > 0 ? result[0].values[0][0] : 0;
   if (count > 0) return;
@@ -340,7 +354,7 @@ function seedJobs() {
   console.log(`[db] Seeded ${jobs.length} demo jobs`);
 }
 
-function seedConversations() {
+function seedConversations(db) {
   const result = db.exec('SELECT COUNT(*) as cnt FROM conversations');
   const count = result.length > 0 ? result[0].values[0][0] : 0;
   if (count > 0) return;
@@ -361,4 +375,4 @@ function seedConversations() {
   console.log('[db] Demo conversations seeded (Ganesh ↔ Dinesh on job 1)');
 }
 
-module.exports = { getDb, save };
+module.exports = { getDb, save, usePostgres };

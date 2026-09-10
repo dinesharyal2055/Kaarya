@@ -21,7 +21,8 @@
  */
 
 const admin = require('firebase-admin');
-const { getDb } = require('./db');
+const { getDb, save, usePostgres } = require('./db');
+const { getClient } = require('./db-pg');
 
 // Load env
 try { require('dotenv').config(); } catch (_) {}
@@ -154,19 +155,37 @@ async function sendToUser(userId, payload) {
   if (!fcmReady) return 0;
 
   const db = await getDb();
-  const result = db.exec(
-    'SELECT token FROM fcm_tokens WHERE user_id = ? AND expires_at > datetime("now")',
-    [userId]
-  );
 
-  if (!result.length || !result[0].values.length) return 0;
+  if (usePostgres) {
+    const client = await getClient();
+    try {
+      const result = await client.query(
+        'SELECT token FROM fcm_tokens WHERE user_id = $1 AND expires_at > NOW()',
+        [userId]
+      );
+      let sent = 0;
+      for (const row of result.rows) {
+        const ok = await sendPushNotification(row.token, payload);
+        if (ok) sent++;
+      }
+      return sent;
+    } finally {
+      client.release();
+    }
+  } else {
+    // SQLite fallback
+    const result = db.exec(
+      'SELECT token FROM fcm_tokens WHERE user_id = ? AND expires_at > datetime("now")',
+      [userId]
+    );
 
-  let sent = 0;
-  for (const [token] of result[0].values) {
-    const ok = await sendPushNotification(token, payload);
-    if (ok) sent++;
+    let sent = 0;
+    for (const [token] of result[0].values) {
+      const ok = await sendPushNotification(token, payload);
+      if (ok) sent++;
+    }
+    return sent;
   }
-  return sent;
 }
 
 /**
@@ -181,14 +200,27 @@ async function storeToken(userId, token) {
   // Tokens expire after 30 days; refresh on each register call
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  db.run(
-    `INSERT OR REPLACE INTO fcm_tokens (user_id, token, created_at, expires_at)
-     VALUES (?, ?, ?, ?)`,
-    [userId, token, now, expiresAt]
-  );
-
-  // Also update the user's fcm_token column for convenience
-  db.run('UPDATE users SET fcm_token = ? WHERE id = ?', [token, userId]);
+  if (usePostgres) {
+    const client = await getClient();
+    try {
+      await client.query(
+        'INSERT INTO fcm_tokens (user_id, token, created_at, expires_at) VALUES ($1, $2, $3, $4) ON CONFLICT (user_id, token) DO UPDATE SET created_at = EXCLUDED.created_at, expires_at = EXCLUDED.expires_at',
+        [userId, token, now, expiresAt]
+      );
+      // Also update the user's fcm_token column for convenience
+      await client.query('UPDATE users SET fcm_token = $1 WHERE id = $2', [token, userId]);
+    } finally {
+      client.release();
+    }
+  } else {
+    // SQLite
+    db.run(
+      `INSERT OR REPLACE INTO fcm_tokens (user_id, token, created_at, expires_at)
+       VALUES (?, ?, ?, ?)`,
+      [userId, token, now, expiresAt]
+    );
+    db.run('UPDATE users SET fcm_token = ? WHERE id = ?', [token, userId]);
+  }
 }
 
 /**
@@ -198,7 +230,16 @@ async function storeToken(userId, token) {
  */
 async function removeToken(token) {
   const db = await getDb();
-  db.run('DELETE FROM fcm_tokens WHERE token = ?', [token]);
+  if (usePostgres) {
+    const client = await getClient();
+    try {
+      await client.query('DELETE FROM fcm_tokens WHERE token = $1', [token]);
+    } finally {
+      client.release();
+    }
+  } else {
+    db.run('DELETE FROM fcm_tokens WHERE token = ?', [token]);
+  }
 }
 
 /**
@@ -208,7 +249,16 @@ async function removeToken(token) {
  */
 async function removeAllTokensForUser(userId) {
   const db = await getDb();
-  db.run('DELETE FROM fcm_tokens WHERE user_id = ?', [userId]);
+  if (usePostgres) {
+    const client = await getClient();
+    try {
+      await client.query('DELETE FROM fcm_tokens WHERE user_id = $1', [userId]);
+    } finally {
+      client.release();
+    }
+  } else {
+    db.run('DELETE FROM fcm_tokens WHERE user_id = ?', [userId]);
+  }
 }
 
 module.exports = {

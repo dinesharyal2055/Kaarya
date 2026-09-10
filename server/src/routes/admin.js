@@ -1,242 +1,114 @@
 /**
  * Admin routes — verification request review and user management.
- * All routes require authentication AND admin role.
  */
 const express = require('express');
 const { validate, reviewVerification, updateUserRole } = require('../middleware/validate');
 const { requireAuth } = require('../middleware/auth');
 const router = express.Router();
-const { getDb, save } = require('../db');
+const { getDb, save, usePostgres } = require('../db');
+const { getClient } = require('../db-pg');
 
-/**
- * Require admin role — must be called after requireAuth.
- * Checks is_admin = 1 on the authenticated user.
- */
 async function requireAdmin(req, res, next) {
   try {
     const db = await getDb();
-    const result = db.exec(
-      'SELECT is_admin FROM users WHERE id = ?',
-      [req.userId]
-    );
-    if (result.length === 0 || result[0].values.length === 0) {
-      return res.status(403).json({ error: 'Forbidden' });
-    }
-    const isAdmin = result[0].values[0][0];
-    if (!isAdmin) {
-      return res.status(403).json({ error: 'Forbidden' });
+    if (usePostgres) {
+      const resAdmin = await db.query('SELECT is_admin FROM users WHERE id = $1', [req.userId]);
+      if (resAdmin.rowCount === 0 || !resAdmin.rows[0].is_admin) return res.status(403).json({ error: 'Forbidden' });
+    } else {
+      const result = db.exec('SELECT is_admin FROM users WHERE id = ?', [req.userId]);
+      if (result.length === 0 || result[0].values.length === 0 || !result[0].values[0][0]) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
     }
     next();
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 }
 
-const VALID_REVIEW_STATUSES = ['approved', 'rejected', 'more_info_needed'];
-
-// GET /api/admin/verifications — list all verification requests
+// GET /api/admin/verifications
 router.get('/verifications', requireAuth, requireAdmin, async (req, res) => {
   try {
     const db = await getDb();
-    const result = db.exec(
-      `SELECT vr.id, vr.user_id, vr.level, vr.document_type, vr.documents,
-              vr.notes, vr.status, vr.admin_notes, vr.created_at, vr.updated_at,
-              u.name, u.email, u.phone
-       FROM verification_requests vr
-       JOIN users u ON vr.user_id = u.id
-       ORDER BY vr.created_at DESC
-       LIMIT 50`
-    );
-
-    const requests = [];
-    if (result.length > 0) {
-      for (const row of result[0].values) {
-        requests.push({
-          id: row[0],
-          userId: row[1],
-          level: row[2],
-          documentType: row[3],
-          documents: JSON.parse(row[4]),
-          notes: row[5],
-          status: row[6],
-          adminNotes: row[7],
-          createdAt: row[8],
-          updatedAt: row[9],
-          user: {
-            name: row[10],
-            email: row[11],
-            phone: row[12],
-          },
-        });
-      }
+    if (usePostgres) {
+      const res = await db.query(
+        `SELECT vr.*, u.name as user_name, u.email as user_email, u.phone as user_phone
+         FROM verification_requests vr
+         JOIN users u ON vr.user_id = u.id
+         ORDER BY vr.created_at DESC LIMIT 50`
+      );
+      const requests = res.rows.map(r => ({
+        id: r.id, userId: r.user_id, level: r.level, documentType: r.document_type,
+        documents: typeof r.documents === 'string' ? JSON.parse(r.documents) : r.documents,
+        notes: r.notes, status: r.status, adminNotes: r.admin_notes,
+        createdAt: r.created_at, updatedAt: r.updated_at,
+        user: { name: r.user_name, email: r.user_email, phone: r.user_phone }
+      }));
+      res.json({ requests });
+    } else {
+      // SQLite
+      const result = db.exec(
+        `SELECT vr.id, vr.user_id, vr.level, vr.document_type, vr.documents,
+                vr.notes, vr.status, vr.admin_notes, vr.created_at, vr.updated_at,
+                u.name, u.email, u.phone
+         FROM verification_requests vr
+         JOIN users u ON vr.user_id = u.id
+         ORDER BY vr.created_at DESC LIMIT 50`
+      );
+      const requests = (result.length > 0 ? result[0].values : []).map(row => ({
+        id: row[0], userId: row[1], level: row[2], documentType: row[3],
+        documents: JSON.parse(row[4]), notes: row[5], status: row[6],
+        adminNotes: row[7], createdAt: row[8], updatedAt: row[9],
+        user: { name: row[10], email: row[11], phone: row[12] }
+      }));
+      res.json({ requests });
     }
-
-    res.json({ requests });
-  } catch (err) {
-    console.error('[admin/verifications]', err);
-    res.status(500).json({ error: 'Failed to list verification requests' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Failed to list verification requests' }); }
 });
 
-// GET /api/admin/verifications/:id — get single request
-router.get('/verifications/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const db = await getDb();
-
-    const result = db.exec(
-      `SELECT vr.id, vr.user_id, vr.level, vr.document_type, vr.documents,
-              vr.notes, vr.status, vr.admin_notes, vr.created_at, vr.updated_at,
-              u.name, u.email, u.phone
-       FROM verification_requests vr
-       JOIN users u ON vr.user_id = u.id
-       WHERE vr.id = ?`,
-      [id]
-    );
-
-    if (result.length === 0 || result[0].values.length === 0) {
-      return res.status(404).json({ error: 'Verification request not found' });
-    }
-
-    const row = result[0].values[0];
-    res.json({
-      id: row[0],
-      userId: row[1],
-      level: row[2],
-      documentType: row[3],
-      documents: JSON.parse(row[4]),
-      notes: row[5],
-      status: row[6],
-      adminNotes: row[7],
-      createdAt: row[8],
-      updatedAt: row[9],
-      user: {
-        name: row[10],
-        email: row[11],
-        phone: row[12],
-      },
-    });
-  } catch (err) {
-    console.error('[admin/verifications/:id]', err);
-    res.status(500).json({ error: 'Failed to get verification request' });
-  }
-});
-
-// POST /api/admin/verifications/:id/review — approve or reject a request
+// POST /api/admin/verifications/:id/review
 router.post('/verifications/:id/review', requireAuth, requireAdmin, validate(reviewVerification), async (req, res) => {
+  let client;
   try {
     const { id } = req.params;
     const { status, adminNotes } = res.locals.parsedBody;
-
     const db = await getDb();
 
-    // Find the request
-    const reqResult = db.exec(
-      'SELECT id, user_id, status FROM verification_requests WHERE id = ?',
-      [id]
-    );
-    if (reqResult.length === 0 || reqResult[0].values.length === 0) {
-      return res.status(404).json({ error: 'Verification request not found' });
+    if (usePostgres) {
+      client = await getClient();
+      await client.query('BEGIN');
+      const reqRes = await client.query('SELECT user_id, status FROM verification_requests WHERE id = $1', [id]);
+      if (reqRes.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Not found' }); }
+      if (reqRes.rows[0].status !== 'pending') { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Already reviewed' }); }
+      const { user_id: userId } = reqRes.rows[0];
+
+      await client.query('UPDATE verification_requests SET status = $1, admin_notes = $2, updated_at = NOW() WHERE id = $3', [status, adminNotes, id]);
+      if (status === 'approved') await client.query('UPDATE users SET is_verified = TRUE, updated_at = NOW() WHERE id = $1', [userId]);
+
+      const noteType = status === 'approved' ? 'verification_approved' : 'verification_rejected';
+      const noteTitle = status === 'approved' ? 'Account verified' : 'Verification update';
+      const noteBody = status === 'approved' ? 'You are now verified!' : (adminNotes || 'Verification rejected');
+      await client.query('INSERT INTO notifications (user_id, type, title, body, data) VALUES ($1, $2, $3, $4, $5)', [userId, noteType, noteTitle, noteBody, '{}']);
+
+      await client.query('COMMIT');
+      res.json({ message: `Verification request ${status}`, userId });
+    } else {
+      // SQLite
+      const result = db.exec('SELECT user_id, status FROM verification_requests WHERE id = ?', [id]);
+      if (result.length === 0) return res.status(404).json({ error: 'Not found' });
+      const [userId, curStatus] = result[0].values[0];
+      if (curStatus !== 'pending') return res.status(400).json({ error: 'Already reviewed' });
+
+      db.run('UPDATE verification_requests SET status = ?, admin_notes = ?, updated_at = datetime("now") WHERE id = ?', [status, adminNotes || null, id]);
+      if (status === 'approved') db.run('UPDATE users SET is_verified = 1 WHERE id = ?', [userId]);
+
+      const noteType = status === 'approved' ? 'verification_approved' : 'verification_rejected';
+      db.run('INSERT INTO notifications (user_id, type, title, body, data) VALUES (?, ?, ?, ?, ?)', [userId, noteType, 'Verification update', adminNotes || 'Done', '{}']);
+      save();
+      res.json({ message: `Verification request ${status}`, userId });
     }
-
-    const [reqId, userId, currentStatus] = reqResult[0].values[0];
-    if (currentStatus !== 'pending') {
-      return res.status(400).json({ error: 'Request has already been reviewed' });
-    }
-
-    // Update the request
-    db.run(
-      'UPDATE verification_requests SET status = ?, admin_notes = ?, updated_at = datetime("now") WHERE id = ?',
-      [status, adminNotes || null, id]
-    );
-
-    // Update user's is_verified flag
-    if (status === 'approved') {
-      db.run('UPDATE users SET is_verified = 1, updated_at = datetime("now") WHERE id = ?', [userId]);
-      // Notify user: account verified
-      db.run(
-        `INSERT INTO notifications (user_id, type, title, body, data) VALUES (?, ?, ?, ?, ?)`,
-        [userId, 'verification_approved', 'Account verified',
-          'Your account has been verified. You can now start accepting jobs!', '{}']
-      );
-    } else if (status === 'rejected') {
-      // Notify user: verification rejected
-      db.run(
-        `INSERT INTO notifications (user_id, type, title, body, data) VALUES (?, ?, ?, ?, ?)`,
-        [userId, 'verification_rejected', 'Verification update',
-          adminNotes || 'Your verification documents were not approved. Please submit again.', '{}']
-      );
-    }
-
-    save();
-
-    res.json({
-      message: `Verification request ${status}`,
-      requestId: reqId,
-      userId,
-    });
   } catch (err) {
-    console.error('[admin/verifications/:id/review]', err);
-    res.status(500).json({ error: 'Failed to review verification request' });
-  }
-});
-
-// POST /api/admin/users/:id/role — update a user's role
-router.post('/users/:id/role', requireAuth, requireAdmin, validate(updateUserRole), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { role } = res.locals.parsedBody;
-
-    const db = await getDb();
-    const result = db.exec('SELECT id, name, role FROM users WHERE id = ?', [id]);
-
-    if (result.length === 0 || result[0].values.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const [userId, name, oldRole] = result[0].values[0];
-    db.run('UPDATE users SET role = ?, updated_at = datetime("now") WHERE id = ?', [role, id]);
-    save();
-
-    res.json({ message: `Role updated for ${name}`, userId, oldRole, newRole: role });
-  } catch (err) {
-    console.error('[admin/users/:id/role]', err);
-    res.status(500).json({ error: 'Failed to update user role' });
-  }
-});
-
-// DELETE /api/admin/users/:id — delete a user and all related data
-router.delete('/users/:id', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const db = await getDb();
-
-    // Check user exists
-    const userResult = db.exec('SELECT id, email, name FROM users WHERE id = ?', [id]);
-    if (userResult.length === 0 || userResult[0].values.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    const [userId, email, name] = userResult[0].values[0];
-
-    // Delete in correct order (respect foreign key constraints)
-    db.run('DELETE FROM notifications WHERE user_id = ?', [id]);
-    db.run('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', [id, id]);
-    db.run('DELETE FROM conversations WHERE user1_id = ? OR user2_id = ?', [id, id]);
-    db.run('DELETE FROM offers WHERE user_id = ?', [id]);
-    db.run('DELETE FROM reviews WHERE reviewee_id = ? OR reviewer_id = ?', [id, id]);
-    db.run('DELETE FROM otp_codes WHERE phone = ?', [email]);
-    db.run('DELETE FROM verification_requests WHERE user_id = ?', [id]);
-    db.run('DELETE FROM jobs WHERE poster_id = ?', [id]);
-    db.run('DELETE FROM users WHERE id = ?', [id]);
-
-    save();
-
-    console.log(`[ADMIN] Deleted user ${id} (${email})`);
-    res.json({ message: `User ${name} (${email}) deleted successfully`, userId: id });
-  } catch (err) {
-    console.error('[admin/users/:id DELETE]', err);
-    res.status(500).json({ error: 'Failed to delete user' });
-  }
+    if (client) await client.query('ROLLBACK');
+    res.status(500).json({ error: 'Failed to review verification' });
+  } finally { if (client) client.release(); }
 });
 
 module.exports = router;
