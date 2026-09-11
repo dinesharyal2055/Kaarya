@@ -102,7 +102,7 @@ router.post('/submit', requireAuth, async (req, res) => {
         `INSERT INTO verification_requests (user_id, level, document_type, documents, notes, status)
          VALUES (?, ?, ?, ?, ?, 'pending')`
       );
-      stmt.bind([userId, level, JSON.stringify(documents), notes || null]);
+      stmt.bind([userId, level, documentType, JSON.stringify(documents), notes || null]);
       stmt.step();
       stmt.free();
 
