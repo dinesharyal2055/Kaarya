@@ -1,20 +1,22 @@
 /**
- * API service — typed fetch wrapper for Kaarya backend
- * BASE_URL is configured via app.json extra.apiUrl (expo prebuild variable).
- * Fallback: use LAN_IP from Constants if available, else localhost.
+ * API service — typed fetch wrapper for Kaarya backend.
+ * BASE_URL resolution order:
+ *   1. EXPO_PUBLIC_API_URL — Expo env var, inlined at bundle time (.env / .env.local / EAS)
+ *   2. app.config.js extra.apiUrl — production default for production builds
+ *   3. DEV_API_URL — local LAN fallback used by the Expo dev server
  */
 import { getToken } from './storage';
 import Constants from 'expo-constants';
 
-// Configure your server URL here (used in all API calls and avatar URLs)
+// Configure your local server URL here (used in all API calls and avatar URLs)
 // In development: set to your machine's LAN IP (e.g. 192.168.1.XX:5000)
-// In production: set to your deployed API domain (e.g. https://api.kaarya.app)
+// Production is configured in app.config.js (extra.apiUrl), not in this file.
 const DEV_API_URL = 'http://192.168.1.79:5000/api';
 
-// Use app.json extra.apiUrl if configured, otherwise fall back to DEV_API_URL
-// (expo dev servers use the LAN IP automatically when you pass --lan)
 const BASE_URL: string =
-  (Constants.expoConfig?.extra?.apiUrl as string | undefined) || DEV_API_URL;
+  process.env.EXPO_PUBLIC_API_URL ||
+  (Constants.expoConfig?.extra?.apiUrl as string | undefined) ||
+  DEV_API_URL;
 
 // API_ROOT is BASE_URL without the /api suffix — use for serving static files (avatars, uploads)
 const API_ROOT = BASE_URL.replace(/\/api$/, '');
