@@ -1,6 +1,9 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://kaarya-4qft.onrender.com';
+const RAW_API_URL = import.meta.env.VITE_API_URL || 'https://kaarya-4qft.onrender.com';
+// Request paths already include the `/api` prefix, so normalize away a trailing `/api`
+// (e.g. VITE_API_URL=".../api") to avoid a doubled `/api/api/...`.
+const API_URL = RAW_API_URL.replace(/\/+$/, '').replace(/\/api$/i, '');
 
 const api = axios.create({
   baseURL: API_URL,
