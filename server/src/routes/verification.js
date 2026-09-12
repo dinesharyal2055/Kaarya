@@ -2,8 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getDb, save, usePostgres } = require('../db');
 const { requireAuth } = require('../middleware/auth');
-const fs = require('fs');
-const path = require('path');
+const storage = require('../storage');
 
 // Upload a verification document image (returns the stored filename)
 router.post('/upload', requireAuth, async (req, res) => {
@@ -30,12 +29,11 @@ router.post('/upload', requireAuth, async (req, res) => {
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     const storedFilename = `${Date.now()}_${safeName}.${ext}`;
 
-    const uploadsDir = path.join(__dirname, '..', 'uploads', 'verification');
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    fs.writeFileSync(path.join(uploadsDir, storedFilename), buffer);
+    await storage.saveVerificationImage({
+      filename: storedFilename,
+      buffer,
+      contentType: mime,
+    });
 
     const url = `/uploads/verification/${storedFilename}`;
     res.json({ url, filename: storedFilename, size: buffer.length });

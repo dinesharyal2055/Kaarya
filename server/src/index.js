@@ -8,6 +8,7 @@ const path = require('path');
 try { require('dotenv').config(); } catch (_) {}
 
 const { getDb } = require('./db');
+const { createVerificationDownloadHandler } = require('./storage');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -57,7 +58,12 @@ app.use(helmet({
 app.use(cors(getCorsOptions()));
 app.use(express.json({ limit: '2mb' })); // larger limit for base64 image uploads
 
-// Serve uploaded files
+// Serve verification documents via the storage proxy (R2 in production, local
+// filesystem in development). Mounted BEFORE the static folder so documents are
+// fetched securely from private R2 instead of the public uploads directory.
+app.get('/uploads/verification/:filename', createVerificationDownloadHandler());
+
+// Serve uploaded files (job photos, avatars, legacy local files)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Health check
