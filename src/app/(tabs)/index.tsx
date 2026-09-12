@@ -14,6 +14,7 @@ import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/const
 import { CATEGORIES } from '@/constants/categories';
 import { fetchJobs } from '@/services/jobs';
 import { offersApi, notifApi } from '@/lib/api';
+import { parseServerTime, formatNepalShort, nepalHour } from '@/lib/time';
 import type { Job } from '@/types';
 
 export default function HomeScreen() {
@@ -75,18 +76,17 @@ export default function HomeScreen() {
   };
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+    const ms = parseServerTime(dateStr);
+    const diff = Math.floor((Date.now() - ms) / 1000);
     if (diff < 60) return t('common.justNow');
     if (diff < 3600) return t('common.minutesAgo', { count: Math.floor(diff / 60) });
     if (diff < 86400) return t('common.hoursAgo', { count: Math.floor(diff / 3600) });
     if (diff < 604800) return t('common.daysAgo', { count: Math.floor(diff / 86400) });
-    return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric' });
+    return formatNepalShort(ms);
   };
 
   const getGreeting = () => {
-    const hour = new Date().getHours();
+    const hour = nepalHour(Date.now());
     if (hour < 12) return t('home.greeting.morning');
     if (hour < 17) return t('home.greeting.afternoon');
     return t('home.greeting.evening');

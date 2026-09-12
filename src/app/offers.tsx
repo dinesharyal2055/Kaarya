@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
 import { offersApi, chatApi, API_ROOT } from '@/lib/api';
+import { parseServerTime, formatNepalShort } from '@/lib/time';
 import { acceptOffer, rejectOffer } from '@/services/offers';
 import { useAuth } from '@/context/AuthContext';
 import type { Offer } from '@/types';
@@ -52,14 +53,13 @@ export default function OffersScreen() {
   const getCatIcon = (categoryId: string) => getCatData(categoryId)?.icon || 'help-circle';
 
   const formatDate = (dateStr: string, tFn: (key: string) => string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+    const ms = parseServerTime(dateStr);
+    const diff = Math.floor((Date.now() - ms) / 1000);
     if (diff < 60) return tFn('common.justNow');
     if (diff < 3600) return `${Math.floor(diff / 60)}m ${tFn('common.ago')}`;
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ${tFn('common.ago')}`;
     if (diff < 604800) return `${Math.floor(diff / 86400)}d ${tFn('common.ago')}`;
-    return d.toLocaleDateString('en-NP', { day: 'numeric', month: 'short' });
+    return formatNepalShort(ms);
   };
 
   const statusConfig: Record<string, { color: string; labelKey: string; bg: string }> = {

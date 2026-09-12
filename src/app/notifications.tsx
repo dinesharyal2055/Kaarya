@@ -8,6 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { notifApi } from '@/lib/api';
+import { parseServerTime, formatNepalShort } from '@/lib/time';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import type { Notification } from '@/types';
 
@@ -27,14 +28,13 @@ const TYPE_META: Record<NotifType, { icon: string; color: string; labelKey: stri
 };
 
 function relativeTime(dateStr: string, t: (key: string) => string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+  const ms = parseServerTime(dateStr);
+  const diff = Math.floor((Date.now() - ms) / 1000);
   if (diff < 60)  return t('common.justNow');
   if (diff < 3600) return `${Math.floor(diff / 60)}m ${t('common.ago')}`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ${t('common.ago')}`;
   if (diff < 172800) return t('common.yesterday');
-  return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric' });
+  return formatNepalShort(ms);
 }
 
 function NotifCard({ item, onPress, t }: { item: Notification; onPress: () => void; t: (key: string) => string }) {

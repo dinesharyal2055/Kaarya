@@ -11,19 +11,19 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { reviewsApi, API_ROOT } from '@/lib/api';
+import { parseServerTime, formatNepalMedium } from '@/lib/time';
 import { useAuth } from '@/context/AuthContext';
 import { Avatar, Button } from '@/components/ui';
 import type { Review } from '@/types';
 
 function timeAgo(dateStr: string, t: (key: string) => string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+  const ms = parseServerTime(dateStr);
+  const diff = Math.floor((Date.now() - ms) / 1000);
   if (diff < 60) return t('common.justNow');
   if (diff < 3600) return `${Math.floor(diff / 60)}m ${t('common.ago')}`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ${t('common.ago')}`;
   if (diff < 172800) return t('common.yesterday');
-  return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric', year: 'numeric' });
+  return formatNepalMedium(ms);
 }
 
 function StarRow({ rating, max = 5 }: { rating: number; max?: number }) {

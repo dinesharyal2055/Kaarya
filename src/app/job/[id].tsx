@@ -13,6 +13,7 @@ import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/const
 import { CATEGORIES } from '@/constants/categories';
 import { fetchJob } from '@/services/jobs';
 import { offersApi, reviewsApi, jobsApi, API_ROOT } from '@/lib/api';
+import { parseServerTime, formatNepalMedium } from '@/lib/time';
 import { Button } from '@/components/ui';
 import type { Job } from '@/types';
 
@@ -157,14 +158,13 @@ export default function JobDetailScreen() {
   };
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+    const ms = parseServerTime(dateStr);
+    const diff = Math.floor((Date.now() - ms) / 1000);
     if (diff < 60) return t('jobDetail.justNow');
     if (diff < 3600) return t('jobDetail.minAgo', { count: Math.floor(diff / 60) });
     if (diff < 86400) return t('jobDetail.hoursAgo', { count: Math.floor(diff / 3600) });
     if (diff < 604800) return t('jobDetail.daysAgo', { count: Math.floor(diff / 86400) });
-    return d.toLocaleDateString('en-NP', { day: 'numeric', month: 'short', year: 'numeric' });
+    return formatNepalMedium(ms);
   };
 
   const statusColor = job.status === 'open'

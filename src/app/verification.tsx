@@ -22,6 +22,7 @@ import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius, Shadows } from '@/constants/theme';
 import { Button, Badge } from '@/components/ui';
 import { verificationApi } from '@/lib/api';
+import { parseServerTime, formatNepalLong } from '@/lib/time';
 import { useAuth } from '@/context/AuthContext';
 import type { VerificationRequest } from '@/types';
 
@@ -477,7 +478,7 @@ export default function VerificationScreen() {
                 <View style={styles.statusRow}>
                   <Text style={styles.statusLabel}>{t('verification.submitted')}</Text>
                   <Text style={styles.statusValue}>
-                    {new Date(existingRequest.createdAt).toLocaleDateString('en-NP', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    {formatNepalLong(parseServerTime(existingRequest.createdAt))}
                   </Text>
                 </View>
                 <View style={styles.statusRow}>

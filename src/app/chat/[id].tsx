@@ -18,6 +18,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { chatApi } from '@/lib/api';
+import { parseServerTime, formatNepalTime, formatNepalShort, nepalDateKey, nepalTodayKey } from '@/lib/time';
 import { useAuth } from '@/context/AuthContext';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import type { Conversation, Message } from '@/types';
@@ -25,19 +26,15 @@ import type { Conversation, Message } from '@/types';
 // ─── Time formatter ────────────────────────────────────────────────
 
 function formatTime(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleTimeString('en-NP', { hour: '2-digit', minute: '2-digit' });
+  return formatNepalTime(parseServerTime(dateStr));
 }
 
 function formatDate(dateStr: string, t: (key: string) => string): string {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const isToday = d.toDateString() === now.toDateString();
-  if (isToday) return t('common.today');
-  const yesterday = new Date(now);
-  yesterday.setDate(now.getDate() - 1);
-  if (d.toDateString() === yesterday.toDateString()) return t('common.yesterday');
-  return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric' });
+  const ms = parseServerTime(dateStr);
+  const key = nepalDateKey(ms);
+  if (key === nepalTodayKey()) return t('common.today');
+  if (key === nepalDateKey(Date.now() - 86400000)) return t('common.yesterday');
+  return formatNepalShort(ms);
 }
 
 // ─── Date separator ────────────────────────────────────────────────
@@ -183,7 +180,7 @@ export default function ChatScreen() {
   let prevSenderId = '';
 
   rawMessages.forEach((msg) => {
-    const msgDate = new Date(msg.createdAt).toDateString();
+    const msgDate = nepalDateKey(parseServerTime(msg.createdAt));
     if (msgDate !== lastDate2) {
       enrichedItems.push({ id: `date-${msgDate}`, type: 'date', date: msg.createdAt });
       lastDate2 = msgDate;

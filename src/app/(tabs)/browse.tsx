@@ -14,6 +14,7 @@ import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/const
 import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
 import { fetchJobs } from '@/services/jobs';
 import { offersApi } from '@/lib/api';
+import { parseServerTime, formatNepalShort } from '@/lib/time';
 import { useAuth } from '@/context/AuthContext';
 import type { Job } from '@/types';
 
@@ -51,14 +52,13 @@ const formatBudget = (job: Job) => {
 };
 
 const formatDate = (dateStr: string, t: (key: string, opts?: object) => string) => {
-  const d = new Date(dateStr);
-  const now = new Date();
-  const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+  const ms = parseServerTime(dateStr);
+  const diff = Math.floor((Date.now() - ms) / 1000);
   if (diff < 60) return t('common.justNow');
   if (diff < 3600) return t('common.minutesAgo', { count: Math.floor(diff / 60) });
   if (diff < 86400) return t('common.hoursAgo', { count: Math.floor(diff / 3600) });
   if (diff < 604800) return t('common.daysAgo', { count: Math.floor(diff / 86400) });
-  return d.toLocaleDateString('en-NP', { month: 'short', day: 'numeric' });
+  return formatNepalShort(ms);
 };
 
 // ─── Job Card ─────────────────────────────────────────────────────────────────
