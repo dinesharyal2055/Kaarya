@@ -285,12 +285,12 @@ router.get('/users', requireAuth, requireAdmin, async (req, res) => {
       params.push(req.query.role);
     }
 
-    if (req.query.verified !== undefined) {
+    if (req.query.verified === 'true' || req.query.verified === 'false') {
       whereClause += (whereClause ? 'AND ' : 'WHERE ') + 'is_verified = $' + (params.length + 1) + ' ';
       params.push(req.query.verified === 'true' ? (usePostgres ? true : 1) : (usePostgres ? false : 0));
     }
 
-    if (req.query.active !== undefined) {
+    if (req.query.active === 'true' || req.query.active === 'false') {
       whereClause += (whereClause ? 'AND ' : 'WHERE ') + 'is_active = $' + (params.length + 1) + ' ';
       params.push(req.query.active === 'true' ? (usePostgres ? true : 1) : (usePostgres ? false : 0));
     }
