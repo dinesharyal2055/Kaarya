@@ -80,6 +80,7 @@ router.post('/submit', requireAuth, async (req, res) => {
       const request = {
         ...reqRes.rows[0],
         documents: typeof reqRes.rows[0].documents === 'string' ? JSON.parse(reqRes.rows[0].documents) : reqRes.rows[0].documents,
+        documentType: reqRes.rows[0].document_type,
         adminNotes: reqRes.rows[0].admin_notes ?? undefined,
       };
 
@@ -144,6 +145,7 @@ router.get('/status', requireAuth, async (req, res) => {
       const request = {
         ...resReq.rows[0],
         documents: typeof resReq.rows[0].documents === 'string' ? JSON.parse(resReq.rows[0].documents) : resReq.rows[0].documents,
+        documentType: resReq.rows[0].document_type,
         adminNotes: resReq.rows[0].admin_notes ?? undefined,
       };
       res.json({ request, status: request.status });

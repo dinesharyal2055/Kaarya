@@ -82,6 +82,7 @@ describe('rejection reason data flow — Postgres driver', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('rejected');
     expect(res.body.request.adminNotes).toBe(REASON);
+    expect(res.body.request.documentType).toBe('citizenship');
     expect(res.body.request.documents).toEqual(['/uploads/verification/clearer-document.jpg']);
   });
 });

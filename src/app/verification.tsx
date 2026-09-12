@@ -132,6 +132,9 @@ export default function VerificationScreen() {
   const [citizenshipFront, setCitizenshipFront] = useState<UploadedImage | null>(null);
   const [citizenshipBack, setCitizenshipBack] = useState<UploadedImage | null>(null);
 
+  const [documentType, setDocumentType] = useState<'nid' | 'citizenship' | null>(null);
+  const [docTypeOpen, setDocTypeOpen] = useState(false);
+
   const tiers = TIERS(t);
 
   useEffect(() => {
@@ -225,7 +228,7 @@ export default function VerificationScreen() {
   }
 
   async function handleSubmit() {
-    if (!selectedTier || !selfie || !citizenshipFront || !citizenshipBack) return;
+    if (!selectedTier || !documentType || !selfie || !citizenshipFront || !citizenshipBack) return;
 
     setSubmitting(true);
     try {
@@ -243,10 +246,9 @@ export default function VerificationScreen() {
       }
 
       // Submit verification request
-      const docType = 'citizenship_card';
       const request = await verificationApi.submit({
         level: selectedTier.id,
-        documentType: docType,
+        documentType,
         documents: uploadedUrls,
         notes: `Selfie: ${uploadedUrls[0] ?? 'N/A'}`,
       });
@@ -266,6 +268,8 @@ export default function VerificationScreen() {
   function handleResubmit() {
     const previousTier = existingRequest ? tiers.find((tier) => tier.id === existingRequest.level) : null;
     setSelectedTier(previousTier ?? null);
+    setDocumentType(existingRequest && existingRequest.documentType === 'nid' ? 'nid' : 'citizenship');
+    setDocTypeOpen(false);
     setSelfie(null);
     setCitizenshipFront(null);
     setCitizenshipBack(null);
@@ -367,6 +371,60 @@ export default function VerificationScreen() {
 
             <Text style={styles.sectionLabel}>{t('verification.requiredDocuments')}</Text>
 
+            {/* Identity document type dropdown */}
+            <View style={styles.dropdownWrap}>
+              <Pressable
+                style={[styles.dropdownTrigger, docTypeOpen && styles.dropdownTriggerOpen]}
+                onPress={() => setDocTypeOpen(o => !o)}
+              >
+                <View>
+                  <Text style={styles.dropdownLabel}>
+                    {t('verification.documentTypeLabel')}
+                    <Text style={styles.required}> *</Text>
+                  </Text>
+                  <View style={styles.dropdownInner}>
+                    <Text style={documentType ? styles.dropdownValue : styles.dropdownPlaceholder}>
+                      {documentType === 'nid'
+                        ? t('verification.documentTypeNid')
+                        : documentType === 'citizenship'
+                          ? t('verification.documentTypeCitizenship')
+                          : t('verification.selectDocumentType')}
+                    </Text>
+                    <MaterialCommunityIcons name={docTypeOpen ? 'chevron-up' : 'chevron-down'} size={20} color={KaaryaColors.muted} />
+                  </View>
+                </View>
+              </Pressable>
+
+              {docTypeOpen && (
+                <View style={styles.dropdownMenu}>
+                  {(['nid', 'citizenship'] as const).map((opt, i) => {
+                    const selected = documentType === opt;
+                    return (
+                      <Pressable
+                        key={opt}
+                        style={[styles.dropdownOption, i === 0 && styles.dropdownOptionBorder]}
+                        onPress={() => { setDocumentType(opt); setDocTypeOpen(false); }}
+                      >
+                        <View style={styles.dropdownOptionLeft}>
+                          <MaterialCommunityIcons
+                            name={opt === 'nid' ? 'card-account-details-outline' : 'card-account-details'}
+                            size={18}
+                            color={selected ? KaaryaColors.brand[500] : KaaryaColors.muted}
+                          />
+                          <Text style={[styles.dropdownOptionText, selected && styles.dropdownOptionTextSelected]}>
+                            {opt === 'nid' ? t('verification.documentTypeNid') : t('verification.documentTypeCitizenship')}
+                          </Text>
+                        </View>
+                        {selected && <MaterialCommunityIcons name="check" size={18} color={KaaryaColors.brand[500]} />}
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+
+              <Text style={styles.dropdownHint}>{t('verification.documentTypeDescription')}</Text>
+            </View>
+
             {/* Selfie */}
             <DocumentUploadCard
               title={t('verification.selfiePhoto')}
@@ -405,7 +463,7 @@ export default function VerificationScreen() {
               <Button
                 title={t('verification.review')}
                 onPress={() => setStep(3)}
-                disabled={!selfie || !citizenshipFront || !citizenshipBack}
+                disabled={!selfie || !citizenshipFront || !citizenshipBack || !documentType}
                 style={{ flex: 1, marginLeft: Spacing.sm }}
               />
             </View>
@@ -422,6 +480,10 @@ export default function VerificationScreen() {
 
             <View style={[styles.reviewCard, Shadows.sm]}>
               <ReviewRow label={t('verification.verificationTier')} value={selectedTier ? t(selectedTier.labelKey) : ''} />
+              <ReviewRow
+                label={t('verification.documentTypeLabel')}
+                value={documentType === 'nid' ? t('verification.documentTypeNid') : t('verification.documentTypeCitizenship')}
+              />
               <ReviewRow label={t('verification.selfiePhoto')} value={selfie ? t('verification.uploaded') : t('verification.missing')} valueColor={selfie ? KaaryaColors.success : KaaryaColors.danger} />
               <ReviewRow label={t('verification.citizenshipFront')} value={citizenshipFront ? t('verification.uploaded') : t('verification.missing')} valueColor={citizenshipFront ? KaaryaColors.success : KaaryaColors.danger} />
               <ReviewRow label={t('verification.citizenshipBack')} value={citizenshipBack ? t('verification.uploaded') : t('verification.missing')} valueColor={citizenshipBack ? KaaryaColors.success : KaaryaColors.danger} />
@@ -657,6 +719,31 @@ const styles = StyleSheet.create({
 
   /* Upload cards */
   uploadCard: { backgroundColor: KaaryaColors.card, borderRadius: BorderRadius.lg, padding: Spacing.md, marginBottom: Spacing.md },
+
+  /* Document type dropdown */
+  dropdownWrap: { marginBottom: Spacing.md },
+  dropdownTrigger: {
+    backgroundColor: KaaryaColors.card, borderRadius: BorderRadius.lg,
+    padding: Spacing.md, borderWidth: 2, borderColor: 'transparent',
+  },
+  dropdownTriggerOpen: { borderColor: KaaryaColors.brand[500] },
+  dropdownLabel: { fontSize: FontSizes.xs, fontWeight: '600', color: KaaryaColors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  dropdownInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  dropdownValue: { fontSize: FontSizes.base, fontWeight: '600', color: KaaryaColors.text },
+  dropdownPlaceholder: { fontSize: FontSizes.base, color: KaaryaColors.muted },
+  dropdownMenu: {
+    backgroundColor: KaaryaColors.card, borderRadius: BorderRadius.md, marginTop: 6,
+    overflow: 'hidden', borderWidth: 1, borderColor: KaaryaColors.border,
+  },
+  dropdownOption: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md, paddingVertical: 12,
+  },
+  dropdownOptionBorder: { borderBottomWidth: 1, borderBottomColor: KaaryaColors.border },
+  dropdownOptionLeft: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  dropdownOptionText: { fontSize: FontSizes.sm, color: KaaryaColors.text },
+  dropdownOptionTextSelected: { color: KaaryaColors.brand[500], fontWeight: '600' },
+  dropdownHint: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 6 },
   uploadHeader: { marginBottom: Spacing.sm },
   uploadTitle: { fontSize: FontSizes.base, fontWeight: '600', color: KaaryaColors.text },
   required: { color: KaaryaColors.danger },

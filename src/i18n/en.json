@@ -642,7 +642,12 @@
     "moreInfoNeededMessage": "Our team needs more information to verify your identity. Please review the note below and resubmit.",
     "rejectionReasonLabel": "Reason",
     "noRejectionReason": "No additional details were provided.",
-    "resubmitDocuments": "Resubmit Documents"
+    "resubmitDocuments": "Resubmit Documents",
+    "documentTypeLabel": "Document Type",
+    "documentTypeNid": "NID",
+    "documentTypeCitizenship": "Citizenship",
+    "selectDocumentType": "Select document type",
+    "documentTypeDescription": "Choose the identity document you are uploading."
   },
   "paymentMethods": {
     "title": "Payment Methods",

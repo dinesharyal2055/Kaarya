@@ -636,7 +636,12 @@
     "moreInfoNeededMessage": "तपाईंको पहिचान प्रमाणित गर्न हामीलाई थप जानकारी चाहिन्छ। तलको नोट समीक्षा गरी पुनः पेश गर्नुहोस्।",
     "rejectionReasonLabel": "कारण",
     "noRejectionReason": "कुनै थप विवरण उपलब्ध छैन।",
-    "resubmitDocuments": "कागजातहरू पुनः पेश गर्नुहोस्"
+    "resubmitDocuments": "कागजातहरू पुनः पेश गर्नुहोस्",
+    "documentTypeLabel": "कागजात प्रकार",
+    "documentTypeNid": "NID",
+    "documentTypeCitizenship": "नागरिकता",
+    "selectDocumentType": "कागजात प्रकार चयन गर्नुहोस्",
+    "documentTypeDescription": "तपाईं अपलोड गर्दै गरेको पहिचान कागजात रोज्नुहोस्।"
   },
   "paymentMethods": {
     "title": "भुक्तानी विधिहरू",

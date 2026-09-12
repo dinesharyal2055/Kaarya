@@ -2,6 +2,15 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useParams, useNavigate } from 'react-router-dom';
 
+const documentTypeLabel = (documentType?: string) => {
+  switch ((documentType || '').toLowerCase()) {
+    case 'nid': return 'NID';
+    case 'citizenship':
+    case 'citizenship_card': return 'Citizenship';
+    default: return documentType || '—';
+  }
+};
+
 const VerificationDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -128,7 +137,7 @@ const VerificationDetail: React.FC = () => {
               </div>
               <div>
                 <span className="neu-field-label">Document Type</span>
-                <p className="neu-field-value">{verification.documentType}</p>
+                <p className="neu-field-value">{documentTypeLabel(verification.documentType)}</p>
               </div>
               <div>
                 <span className="neu-field-label">Submitted</span>

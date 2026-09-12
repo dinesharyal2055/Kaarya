@@ -2,6 +2,15 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
+const documentTypeLabel = (documentType?: string) => {
+  switch ((documentType || '').toLowerCase()) {
+    case 'nid': return 'NID';
+    case 'citizenship':
+    case 'citizenship_card': return 'Citizenship';
+    default: return documentType || '—';
+  }
+};
+
 const Verifications: React.FC = () => {
   const [verifications, setVerifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -158,7 +167,7 @@ const Verifications: React.FC = () => {
                         </span>
                       </td>
                       <td>
-                        <div className="neu-cell-sub text-sm">{v.documentType}</div>
+                        <div className="neu-cell-sub text-sm">{documentTypeLabel(v.documentType)}</div>
                       </td>
                       <td>
                         {getStatusBadge(v.status)}
