@@ -214,6 +214,16 @@ describe('verification storage — R2 mode (mocked S3 client)', () => {
     expect(Buffer.from(m.__commands[0].input.Body).equals(SAMPLE_JPEG)).toBe(true);
   });
 
+  test('the download proxy allows cross-origin embedding of verification images', async () => {
+    const res = await request(app)
+      .get('/uploads/verification/999999999_citizenship_front.jpg')
+      .buffer(true)
+      .parse(binaryParser);
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/^image\/jpeg/);
+    expect(res.headers['cross-origin-resource-policy']).toBe('cross-origin');
+  });
+
   test('getVerificationImage streams the object with its content type', async () => {
     const file = await storage.getVerificationImage('999999999_citizenship_front.jpg');
     expect(file).not.toBeNull();

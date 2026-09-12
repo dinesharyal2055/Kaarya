@@ -32,6 +32,8 @@ function isR2Configured() {
   );
 }
 
+console.log(`[storage] Verification storage: ${isR2Configured() ? 'R2' : 'R2 not configured'}`);
+
 let s3Client = null;
 function getS3Client() {
   if (!s3Client) {
@@ -135,6 +137,7 @@ function createVerificationDownloadHandler() {
         return res.status(404).json({ error: 'Not found' });
       }
 
+      res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
       res.setHeader('Content-Type', file.contentType);
       file.stream.pipe(res);
     } catch (err) {
