@@ -236,6 +236,78 @@ router.get('/mine', requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/offers/received — seekers' received offers across jobs they own
+router.get('/received', requireAuth, async (req, res) => {
+  try {
+    const db = await getDb();
+    if (usePostgres) {
+      const userRes = await db.query('SELECT role FROM users WHERE id = $1', [req.userId]);
+      if (userRes.rowCount === 0) return res.status(404).json({ error: 'User not found' });
+      if (userRes.rows[0].role !== 'seeker') return res.status(403).json({ error: 'Only seekers can view received offers' });
+
+      const offRes = await db.query(
+        `SELECT o.* FROM offers o
+         INNER JOIN jobs j ON j.id = o.job_id
+         WHERE j.seeker_id = $1
+         ORDER BY o.created_at DESC`,
+        [req.userId]
+      );
+      const offers = [];
+      for (const row of offRes.rows) {
+        const providerRow = await getProviderInfo(row.provider_id);
+        const offer = offerFromRow(row, providerRow);
+        offer.id = row.id; // offerFromRow's provider spread overwrites id; restore the offer's own id for seeker accept/reject
+        offer.providerName = offer.name ?? null;   // provider spread emits un-prefixed keys; mobile expects provider*
+        offer.providerAvatar = offer.avatarUrl ?? null;
+        offer.providerRating = offer.rating ?? null;
+        offer.providerReviewCount = offer.reviewCount ?? null;
+        const jobRes = await db.query('SELECT id, title, category, location, budget_min, budget_max, status FROM jobs WHERE id = $1', [row.job_id]);
+        if (jobRes.rowCount > 0) {
+          const j = jobRes.rows[0];
+          offer.job = { id: j.id, title: j.title, category: j.category, area: j.location, budgetMin: j.budget_min, budgetMax: j.budget_max, status: j.status };
+        }
+        offers.push(offer);
+      }
+      res.json({ offers });
+    } else {
+      // SQLite implementation
+      const userResult = db.exec('SELECT role FROM users WHERE id = ?', [req.userId]);
+      if (userResult.length === 0 || userResult[0].values.length === 0) return res.status(404).json({ error: 'User not found' });
+      if (userResult[0].values[0][0] !== 'seeker') return res.status(403).json({ error: 'Only seekers can view received offers' });
+
+      const result = db.exec(
+        `SELECT o.* FROM offers o
+         INNER JOIN jobs j ON j.id = o.job_id
+         WHERE j.seeker_id = ?
+         ORDER BY o.created_at DESC`,
+        [req.userId]
+      );
+      const offers = [];
+      if (result.length > 0) {
+        for (const row of result[0].values) {
+          const providerRow = await getProviderInfo(row[2]);
+          const offer = offerFromRow(row, providerRow);
+          offer.id = row[0]; // offerFromRow's provider spread overwrites id; restore the offer's own id for seeker accept/reject
+          offer.providerName = offer.name ?? null;   // provider spread emits un-prefixed keys; mobile expects provider*
+          offer.providerAvatar = offer.avatarUrl ?? null;
+          offer.providerRating = offer.rating ?? null;
+          offer.providerReviewCount = offer.reviewCount ?? null;
+          const jobResult = db.exec('SELECT id, title, category, location, budget_min, budget_max, status FROM jobs WHERE id = ?', [row[1]]);
+          if (jobResult.length > 0 && jobResult[0].values.length > 0) {
+            const j = jobResult[0].values[0];
+            offer.job = { id: j[0], title: j[1], category: j[2], area: j[3], budgetMin: j[4], budgetMax: j[5], status: j[6] };
+          }
+          offers.push(offer);
+        }
+      }
+      res.json({ offers });
+    }
+  } catch (err) {
+    console.error('[offers/received]', err);
+    res.status(500).json({ error: 'Failed to list received offers' });
+  }
+});
+
 // POST /api/offers/:id/accept — seeker accepts offer (MANDATORY TRANSACTION)
 router.post('/:id/accept', requireAuth, async (req, res) => {
   let client;
