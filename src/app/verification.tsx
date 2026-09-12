@@ -17,6 +17,7 @@ import { useRouter, useNavigation } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, BorderRadius, Shadows } from '@/constants/theme';
 import { Button, Badge } from '@/components/ui';
@@ -75,13 +76,44 @@ type UploadedImage = {
   uploadedUrl?: string;
 };
 
+const UPLOAD_MAX_DIMENSION = 1000;
+const UPLOAD_JPEG_QUALITY = 0.6;
+
+async function prepareUploadImage(
+  type: 'selfie' | 'front' | 'back',
+  asset: ImagePicker.ImagePickerAsset
+): Promise<UploadedImage> {
+  const filename = `${type}_${Date.now()}`;
+  const longestSide = Math.max(asset.width || 0, asset.height || 0);
+  const actions: ImageManipulator.Action[] = [];
+  if (longestSide > UPLOAD_MAX_DIMENSION) {
+    const scale = UPLOAD_MAX_DIMENSION / longestSide;
+    actions.push({
+      resize: {
+        width: Math.max(1, Math.round(asset.width * scale)),
+        height: Math.max(1, Math.round(asset.height * scale)),
+      },
+    });
+  }
+  try {
+    const result = await ImageManipulator.manipulateAsync(asset.uri, actions, {
+      compress: UPLOAD_JPEG_QUALITY,
+      format: ImageManipulator.SaveFormat.JPEG,
+      base64: true,
+    });
+    return { uri: result.uri, base64: result.base64 ?? '', filename };
+  } catch {
+    return { uri: asset.uri, base64: asset.base64 ?? '', filename };
+  }
+}
+
 export default function VerificationScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const navigation = useNavigation();
   const { refreshUser } = useAuth();
 
-  const [step, setStep] = useState<1 | 2 | 3 | 4>(1); // 4 = success
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1); // 4 = success, 5 = rejected/resubmit
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -111,10 +143,10 @@ export default function VerificationScreen() {
       const result = await verificationApi.getStatus();
       if (result.request) {
         setExistingRequest(result.request);
-        if (result.request.status === 'pending') {
+        if (result.request.status === 'pending' || result.request.status === 'approved') {
           setStep(4);
-        } else if (result.request.status === 'approved') {
-          setStep(4);
+        } else if (result.request.status === 'rejected' || result.request.status === 'more_info_needed') {
+          setStep(5);
         } else {
           setStep(1);
         }
@@ -143,11 +175,7 @@ export default function VerificationScreen() {
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
-    const uri = asset.uri;
-    const base64 = asset.base64 ?? '';
-    const filename = `${type}_${Date.now()}`;
-
-    const uploaded: UploadedImage = { uri, base64, filename };
+    const uploaded = await prepareUploadImage(type, asset);
 
     if (type === 'selfie') setSelfie(uploaded);
     else if (type === 'front') setCitizenshipFront(uploaded);
@@ -170,11 +198,7 @@ export default function VerificationScreen() {
     if (result.canceled || !result.assets[0]) return;
 
     const asset = result.assets[0];
-    const uri = asset.uri;
-    const base64 = asset.base64 ?? '';
-    const filename = `${type}_${Date.now()}`;
-
-    const uploaded: UploadedImage = { uri, base64, filename };
+    const uploaded = await prepareUploadImage(type, asset);
 
     if (type === 'selfie') setSelfie(uploaded);
     else if (type === 'front') setCitizenshipFront(uploaded);
@@ -236,6 +260,15 @@ export default function VerificationScreen() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function handleResubmit() {
+    const previousTier = existingRequest ? tiers.find((tier) => tier.id === existingRequest.level) : null;
+    setSelectedTier(previousTier ?? null);
+    setSelfie(null);
+    setCitizenshipFront(null);
+    setCitizenshipBack(null);
+    setStep(2);
   }
 
   if (loading) {
@@ -460,6 +493,57 @@ export default function VerificationScreen() {
           </View>
         )}
 
+        {/* Step 5: Rejected — show reason and allow resubmission */}
+        {step === 5 && (
+          <View style={styles.successContainer}>
+            <View style={[styles.successIcon, Shadows.lg]}>
+              <MaterialCommunityIcons
+                name={existingRequest?.status === 'more_info_needed' ? 'information-outline' : 'alert-circle'}
+                size={64}
+                color={KaaryaColors.danger}
+              />
+            </View>
+            <Text style={styles.successTitle}>
+              {existingRequest?.status === 'more_info_needed' ? t('verification.moreInfoNeededTitle') : t('verification.rejectedTitle')}
+            </Text>
+            <Text style={styles.successSubtitle}>
+              {existingRequest?.status === 'more_info_needed' ? t('verification.moreInfoNeededMessage') : t('verification.rejectedMessage')}
+            </Text>
+
+            {existingRequest && (
+              <View style={[styles.statusCard, Shadows.sm]}>
+                <View style={styles.statusRow}>
+                  <Text style={styles.statusLabel}>{t('verification.status')}</Text>
+                  <Badge
+                    label={existingRequest.status === 'more_info_needed' ? t('verification.moreInfoNeeded') : t('verification.rejected')}
+                    variant="danger"
+                  />
+                </View>
+                <View style={styles.statusRow}>
+                  <Text style={styles.statusLabel}>{t('verification.rejectionReasonLabel')}</Text>
+                  <Text style={styles.rejectionReason}>
+                    {existingRequest.adminNotes || t('verification.noRejectionReason')}
+                  </Text>
+                </View>
+              </View>
+            )}
+
+            <Button
+              title={t('verification.resubmitDocuments')}
+              onPress={handleResubmit}
+              fullWidth
+              style={{ marginTop: Spacing.lg }}
+            />
+            <Button
+              title={t('verification.backToProfile')}
+              variant="ghost"
+              onPress={async () => { await refreshUser(); router.back(); }}
+              fullWidth
+              style={{ marginTop: Spacing.sm }}
+            />
+          </View>
+        )}
+
       </ScrollView>
     </SafeAreaView>
   );
@@ -609,6 +693,7 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.sm, borderBottomWidth: 1, borderBottomColor: KaaryaColors.border },
   statusLabel: { fontSize: FontSizes.sm, color: KaaryaColors.muted },
   statusValue: { fontSize: FontSizes.sm, fontWeight: '600', color: KaaryaColors.text },
+  rejectionReason: { flex: 1, fontSize: FontSizes.sm, color: KaaryaColors.text, textAlign: 'right', marginLeft: Spacing.sm, lineHeight: 20 },
 
   /* Shared */
   textMuted: { color: KaaryaColors.muted },

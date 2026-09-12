@@ -79,7 +79,8 @@ router.post('/submit', requireAuth, async (req, res) => {
       );
       const request = {
         ...reqRes.rows[0],
-        documents: typeof reqRes.rows[0].documents === 'string' ? JSON.parse(reqRes.rows[0].documents) : reqRes.rows[0].documents
+        documents: typeof reqRes.rows[0].documents === 'string' ? JSON.parse(reqRes.rows[0].documents) : reqRes.rows[0].documents,
+        adminNotes: reqRes.rows[0].admin_notes ?? undefined,
       };
 
       res.json(request);
@@ -142,7 +143,8 @@ router.get('/status', requireAuth, async (req, res) => {
 
       const request = {
         ...resReq.rows[0],
-        documents: typeof resReq.rows[0].documents === 'string' ? JSON.parse(resReq.rows[0].documents) : resReq.rows[0].documents
+        documents: typeof resReq.rows[0].documents === 'string' ? JSON.parse(resReq.rows[0].documents) : resReq.rows[0].documents,
+        adminNotes: resReq.rows[0].admin_notes ?? undefined,
       };
       res.json({ request, status: request.status });
     } else {

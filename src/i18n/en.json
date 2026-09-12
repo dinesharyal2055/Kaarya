@@ -635,7 +635,14 @@
     "esewaSubtitle": "Payment KYC (Instant)",
     "esewaDescription": "Verify using your eSewa or Khalti KYC. Fast and trusted.",
     "manualSubtitle": "Citizenship Documents",
-    "manualDescription": "Upload your citizenship card photos and a selfie. Reviewed within 12 hours."
+    "manualDescription": "Upload your citizenship card photos and a selfie. Reviewed within 12 hours.",
+    "rejectedTitle": "Verification Rejected",
+    "rejectedMessage": "Your verification request was not approved. Please review the reason below and resubmit your documents.",
+    "moreInfoNeededTitle": "Additional Information Needed",
+    "moreInfoNeededMessage": "Our team needs more information to verify your identity. Please review the note below and resubmit.",
+    "rejectionReasonLabel": "Reason",
+    "noRejectionReason": "No additional details were provided.",
+    "resubmitDocuments": "Resubmit Documents"
   },
   "paymentMethods": {
     "title": "Payment Methods",

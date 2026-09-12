@@ -56,7 +56,7 @@ app.use(helmet({
 }));
 
 app.use(cors(getCorsOptions()));
-app.use(express.json({ limit: '2mb' })); // larger limit for base64 image uploads
+app.use(express.json({ limit: '12mb' })); // larger limit for base64 image uploads (verification route enforces its own 10MB decoded check)
 
 // Serve verification documents via the storage proxy (R2 in production, local
 // filesystem in development). Mounted BEFORE the static folder so documents are
@@ -72,7 +72,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Route placeholders — filled in by later tasks
-let authRoutes, jobsRoutes, offersRoutes, conversationsRoutes, verificationRoutes, adminRoutes, notificationsRoutes, reviewsRoutes, pushRoutes;
+let authRoutes, jobsRoutes, offersRoutes, conversationsRoutes, verificationRoutes, adminRoutes, notificationsRoutes, reviewsRoutes, pushRoutes, devRoutes;
 
 try { authRoutes = require('./routes/auth'); } catch (e) { authRoutes = express.Router(); }
 try { jobsRoutes = require('./routes/jobs'); } catch (e) { jobsRoutes = express.Router(); }
@@ -83,6 +83,7 @@ try { adminRoutes = require('./routes/admin'); } catch (e) { adminRoutes = expre
 try { notificationsRoutes = require('./routes/notifications'); } catch (e) { notificationsRoutes = express.Router(); }
 try { reviewsRoutes = require('./routes/reviews'); } catch (e) { reviewsRoutes = express.Router(); }
 try { pushRoutes = require('./routes/push'); } catch (e) { pushRoutes = express.Router(); }
+try { devRoutes = require('./routes/demo').router; } catch (e) { devRoutes = express.Router(); }
 
 app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobsRoutes);
@@ -93,6 +94,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/dev', devRoutes);
 
 // Global error handler
 app.use((err, req, res, next) => {
