@@ -148,7 +148,7 @@ router.post('/login', async (req, res) => {
 
     if (usePostgres) {
       const result = await db.query(
-        'SELECT id, name, email, phone, password_hash, role, avatar_url, bio, rating, review_count, is_verified, is_active, fcm_token, created_at, updated_at FROM users WHERE email = $1',
+        'SELECT id, name, email, phone, password_hash, role, avatar_url, bio, rating, review_count, is_verified, is_active, fcm_token, created_at, updated_at, is_admin FROM users WHERE email = $1',
         [email]
       );
       if (result.rowCount > 0) {
@@ -157,7 +157,7 @@ router.post('/login', async (req, res) => {
       }
     } else {
       const result = db.exec(
-        'SELECT id, name, email, phone, password_hash, role, avatar_url, bio, rating, review_count, is_verified, is_active, fcm_token, created_at, updated_at FROM users WHERE email = ?',
+        'SELECT id, name, email, phone, password_hash, role, avatar_url, bio, rating, review_count, is_verified, is_active, fcm_token, created_at, updated_at, is_admin FROM users WHERE email = ?',
         [email]
       );
       if (result.length > 0 && result[0].values.length > 0) {
@@ -178,7 +178,7 @@ router.post('/login', async (req, res) => {
     }
 
     // Check if user is admin
-    const isAdmin = usePostgres ? userRow.is_admin : !!userRow[16]; // Assuming is_admin is at index 16
+    const isAdmin = usePostgres ? userRow.is_admin : !!userRow[15]; // is_admin is the 16th selected column (index 15)
     if (!isAdmin) {
       return res.status(403).json({ error: 'Forbidden: Admin access required' });
     }

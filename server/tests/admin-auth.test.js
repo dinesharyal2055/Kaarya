@@ -137,6 +137,24 @@ describe('Admin routes — authorization', () => {
     });
   });
 
+  describe('POST /api/admin/login', () => {
+    it('signs in the seeded super admin', async () => {
+      const res = await post(null, '/api/admin/login',
+        { email: 'admin@kaarya.demo', password: process.env.DEMO_PASSWORD });
+      expect(res.status).toBe(200);
+      expect(res.body.token).toBeTruthy();
+      expect(res.body.user.name).toBe('Super Admin');
+    });
+
+    it('rejects a non-admin account with 403', async () => {
+      // id=102 (Dinesh) is a regular seeker; his seeded password is also DEMO_PASSWORD
+      const res = await post(null, '/api/admin/login',
+        { email: 'dinesh@kaarya.demo', password: process.env.DEMO_PASSWORD });
+      expect(res.status).toBe(403);
+      expect(res.body.error).toBe('Forbidden: Admin access required');
+    });
+  });
+
   describe('Internal state leakage — error messages', () => {
     it('review route does not leak internal status in error message', async () => {
       // First create a pending verification request to test against
