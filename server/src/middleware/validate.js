@@ -206,7 +206,7 @@ function validate(schema) {
     const result = schema.safeParse(req.body);
     if (!result.success) {
       // Return the first validation error message for clarity
-      const errors = result.error?.errors;
+      const errors = result.error?.issues;
       const message = (errors && errors.length > 0) ? errors[0].message : 'Invalid request body';
       return res.status(400).json({ error: message });
     }
