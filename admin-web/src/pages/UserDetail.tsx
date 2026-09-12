@@ -83,123 +83,135 @@ const UserDetail: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="p-6 text-center py-10">Loading...</div>;
+    return (
+      <div className="neu-page">
+        <div className="neu-card neu-loading">Loading...</div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="p-6"><div className="mb-4 p-3 bg-red-100 text-red-800 rounded">{error}</div></div>;
+    return (
+      <div className="neu-page">
+        <div className="neu-error" role="alert">{error}</div>
+      </div>
+    );
   }
 
   if (!user) {
-    return <div className="p-6 text-center py-10">User not found</div>;
+    return (
+      <div className="neu-page">
+        <div className="neu-card neu-empty">User not found</div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">User Detail</h1>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => navigate('/users')}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-          >
-            Back to Users
-          </button>
-        </div>
+    <div className="neu-page">
+      <div className="neu-page-head">
+        <h1 className="neu-page-title">User Detail</h1>
+        <button
+          onClick={() => navigate('/users')}
+          className="neu-btn neu-btn-sm"
+        >
+          Back to Users
+        </button>
       </div>
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold">{user.name}</h2>
-            <p className="text-gray-500 mt-1">{user.email}</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <h3 className="text-lg font-medium mb-2">Contact Information</h3>
-              <p className="text-gray-600"><strong>Phone:</strong> {user.phone}</p>
-              <p className="text-gray-600"><strong>Role:</strong>
-                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+      {error && <div className="neu-error" role="alert">{error}</div>}
+      <div className="neu-card">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold">{user.name}</h2>
+          <p className="neu-cell-sub mt-1">{user.email}</p>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div>
+            <h3 className="neu-section-title">Contact Information</h3>
+            <div className="neu-stack">
+              <p className="neu-cell-sub text-sm"><strong>Phone:</strong> {user.phone}</p>
+              <p className="neu-cell-sub text-sm"><strong>Role:</strong>{' '}
+                <span className="neu-badge neu-badge-gray">
                   {user.role}
                 </span>
               </p>
             </div>
-            <div>
-              <h3 className="text-lg font-medium mb-2">Account Status</h3>
-              <p className="text-gray-600"><strong>Verification:</strong>
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                  ${verificationStatus === 'verified' ? 'bg-green-100 text-green-800'
-                    : verificationStatus === 'pending' ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'}`}>
+          </div>
+          <div>
+            <h3 className="neu-section-title">Account Status</h3>
+            <div className="neu-stack">
+              <p className="neu-cell-sub text-sm"><strong>Verification:</strong>{' '}
+                <span className={`neu-badge
+                  ${verificationStatus === 'verified' ? 'neu-badge-green'
+                    : verificationStatus === 'pending' ? 'neu-badge-yellow'
+                    : 'neu-badge-red'}`}>
                   {verificationStatus.charAt(0).toUpperCase() + verificationStatus.slice(1)}
                 </span>
               </p>
-              <p className="text-gray-600"><strong>Active:</strong>
-                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                  ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              <p className="neu-cell-sub text-sm"><strong>Active:</strong>{' '}
+                <span className={`neu-badge
+                  ${user.isActive ? 'neu-badge-green' : 'neu-badge-red'}`}>
                   {user.isActive ? 'Yes' : 'No'}
                 </span>
               </p>
             </div>
-            <div>
-              <h3 className="text-lg font-medium mb-2">Timestamps</h3>
-              <p className="text-gray-600"><strong>Created:</strong> {new Date(user.createdAt).toLocaleString()}</p>
-              <p className="text-gray-600"><strong>Updated:</strong> {new Date(user.updatedAt).toLocaleString()}</p>
+          </div>
+          <div>
+            <h3 className="neu-section-title">Timestamps</h3>
+            <div className="neu-stack">
+              <p className="neu-cell-sub text-sm"><strong>Created:</strong> {new Date(user.createdAt).toLocaleString()}</p>
+              <p className="neu-cell-sub text-sm"><strong>Updated:</strong> {new Date(user.updatedAt).toLocaleString()}</p>
             </div>
           </div>
-          {user.bio && (
-            <div className="mt-6">
-              <h3 className="text-lg font-medium mb-2">Bio</h3>
-              <p className="text-gray-700">{user.bio}</p>
-            </div>
-          )}
         </div>
-        <div className="border-t border-gray-200">
-          <div className="p-6">
-            <h3 className="text-lg font-medium mb-4">Verification Actions</h3>
-            <div className="space-y-3">
-              {verificationStatus !== 'verified' && (
-                <button
-                  onClick={handleVerify}
-                  className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary/90 transition-colors"
-                >
-                  Verify User
-                </button>
-              )}
-              {verificationStatus === 'verified' && (
-                <button
-                  onClick={handleUnverify}
-                  className="w-full bg-yellow-500 text-white py-2 px-4 rounded-md hover:bg-yellow-600 transition-colors"
-                >
-                  Unverify User
-                </button>
-              )}
-              {!user.isActive && (
-                <button
-                  onClick={() => {
-                    // Reactivate user
-                    api.put(`/api/admin/users/${id}`, { isActive: true })
-                      .then(() => {
-                        setUser(prev => ({ ...prev, isActive: true }));
-                      })
-                      .catch(err => {
-                        setError(err.response?.data?.error || 'Failed to reactivate user');
-                      });
-                  }}
-                  className="w-full bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600 transition-colors"
-                >
-                  Reactivate User
-                </button>
-              )}
-              {user.isActive && (
-                <button
-                  onClick={handleDeactivate}
-                  className="w-full bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-600 transition-colors"
-                >
-                  Deactivate User
-                </button>
-              )}
-            </div>
+        {user.bio && (
+          <div className="mt-6">
+            <h3 className="neu-section-title">Bio</h3>
+            <p className="neu-cell-sub">{user.bio}</p>
           </div>
+        )}
+        <hr className="neu-divider" />
+        <h3 className="neu-section-title">Verification Actions</h3>
+        <div className="neu-login-form">
+          {verificationStatus !== 'verified' && (
+            <button
+              onClick={handleVerify}
+              className="neu-btn neu-btn-primary neu-btn-block"
+            >
+              Verify User
+            </button>
+          )}
+          {verificationStatus === 'verified' && (
+            <button
+              onClick={handleUnverify}
+              className="neu-btn neu-btn-warn neu-btn-block"
+            >
+              Unverify User
+            </button>
+          )}
+          {!user.isActive && (
+            <button
+              onClick={() => {
+                // Reactivate user
+                api.put(`/api/admin/users/${id}`, { isActive: true })
+                  .then(() => {
+                    setUser(prev => ({ ...prev, isActive: true }));
+                  })
+                  .catch(err => {
+                    setError(err.response?.data?.error || 'Failed to reactivate user');
+                  });
+              }}
+              className="neu-btn neu-btn-success neu-btn-block"
+            >
+              Reactivate User
+            </button>
+          )}
+          {user.isActive && (
+            <button
+              onClick={handleDeactivate}
+              className="neu-btn neu-btn-danger neu-btn-block"
+            >
+              Deactivate User
+            </button>
+          )}
         </div>
       </div>
     </div>

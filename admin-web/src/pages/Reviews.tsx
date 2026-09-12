@@ -66,24 +66,24 @@ const Reviews: React.FC = () => {
 
   const renderStars = (rating: number) => {
     return (
-      <div className="flex items-center">
-        <span className="text-yellow-400 mr-1">{'★'.repeat(rating)}</span>
-        <span className="text-gray-300">{'★'.repeat(5 - rating)}</span>
-        <span className="ml-2 text-sm text-gray-500">{rating}.0</span>
+      <div className="flex items-center" aria-label={`${rating} out of 5 stars`}>
+        <span className="text-yellow-400 mr-1" aria-hidden="true">{'★'.repeat(rating)}</span>
+        <span className="text-gray-300" aria-hidden="true">{'★'.repeat(5 - rating)}</span>
+        <span className="ml-2 text-sm neu-cell-sub">{rating}.0</span>
       </div>
     );
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Reviews</h1>
+    <div className="neu-page">
+      <div className="neu-page-head">
+        <h1 className="neu-page-title">Reviews</h1>
       </div>
-      {error && <div className="mb-4 p-3 bg-red-100 text-red-800 rounded">{error}</div>}
-      <div className="mb-4">
-        <div className="grid grid-cols-2 gap-4">
+      {error && <div className="neu-error" role="alert">{error}</div>}
+      <div className="neu-card neu-filters">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="search" className="neu-label">
               Search
             </label>
             <input
@@ -93,11 +93,11 @@ const Reviews: React.FC = () => {
               value={filters.search}
               onChange={handleFilterChange}
               placeholder="Search by reviewer or reviewee..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="neu-input"
             />
           </div>
           <div>
-            <label htmlFor="rating" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="rating" className="neu-label">
               Rating
             </label>
             <select
@@ -105,7 +105,7 @@ const Reviews: React.FC = () => {
               name="rating"
               value={filters.rating}
               onChange={handleFilterChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="neu-input"
             >
               <option value="">All Ratings</option>
               <option value="1">1 Star</option>
@@ -118,85 +118,89 @@ const Reviews: React.FC = () => {
         </div>
       </div>
       {loading ? (
-        <div className="text-center py-10">Loading...</div>
+        <div className="neu-card neu-loading">Loading...</div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reviewer
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Reviewee
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Job
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rating
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Comment
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {reviews.length === 0 ? (
+        <div className="neu-card neu-table-wrap">
+          <div className="neu-table-scroll">
+            <table className="neu-table">
+              <thead>
                 <tr>
-                  <td colSpan={7} className="px-6 py-4 text-center text-gray-500">
-                    No reviews found
-                  </td>
+                  <th scope="col">
+                    Reviewer
+                  </th>
+                  <th scope="col">
+                    Reviewee
+                  </th>
+                  <th scope="col">
+                    Job
+                  </th>
+                  <th scope="col">
+                    Rating
+                  </th>
+                  <th scope="col">
+                    Comment
+                  </th>
+                  <th scope="col">
+                    Date
+                  </th>
+                  <th scope="col">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                reviews.map((review) => (
-                  <tr key={review.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{review.reviewerName}</div>
-                      <div className="text-sm text-gray-500">{review.reviewerEmail}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{review.revieweeName}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{review.jobTitle}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {renderStars(review.rating)}
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="text-sm text-gray-700 max-w-xs truncate">{review.comment || 'No comment'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(review.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => handleDelete(review.id)}
-                        disabled={deletingId === review.id}
-                        className="text-red-500 hover:text-red-700 disabled:opacity-50"
-                      >
-                        {deletingId === review.id ? 'Deleting...' : 'Delete'}
-                      </button>
+              </thead>
+              <tbody>
+                {reviews.length === 0 ? (
+                  <tr>
+                    <td colSpan={7}>
+                      <div className="neu-empty">
+                        No reviews found
+                      </div>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-sm text-gray-500">
+                ) : (
+                  reviews.map((review) => (
+                    <tr key={review.id}>
+                      <td>
+                        <div className="neu-cell-main text-sm">{review.reviewerName}</div>
+                        <div className="neu-cell-sub text-sm">{review.reviewerEmail}</div>
+                      </td>
+                      <td>
+                        <div className="neu-cell-sub text-sm">{review.revieweeName}</div>
+                      </td>
+                      <td>
+                        <div className="neu-cell-sub text-sm">{review.jobTitle}</div>
+                      </td>
+                      <td>
+                        {renderStars(review.rating)}
+                      </td>
+                      <td>
+                        <div className="neu-cell-sub text-sm max-w-xs truncate">{review.comment || 'No comment'}</div>
+                      </td>
+                      <td className="neu-cell-sub text-sm">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="text-sm font-medium">
+                        <button
+                          onClick={() => handleDelete(review.id)}
+                          disabled={deletingId === review.id}
+                          className="neu-link"
+                        >
+                          {deletingId === review.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="neu-pagination">
+            <div className="neu-pagination-count">
               Showing {pagination.page * pagination.limit - pagination.limit + 1}-{
                 Math.min(pagination.page * pagination.limit, pagination.totalCount)
               } of {pagination.totalCount} reviews
             </div>
-            <div>
+            <div className="neu-pagination-actions">
               <button
                 onClick={() => {
                   if (pagination.page > 1) {
@@ -204,7 +208,7 @@ const Reviews: React.FC = () => {
                   }
                 }}
                 disabled={pagination.page === 1}
-                className="px-3 py-1 mr-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
+                className="neu-btn neu-btn-primary neu-btn-sm"
               >
                 Previous
               </button>
@@ -215,7 +219,7 @@ const Reviews: React.FC = () => {
                   }
                 }}
                 disabled={pagination.page === pagination.totalPages}
-                className="px-3 py-1 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90"
+                className="neu-btn neu-btn-primary neu-btn-sm"
               >
                 Next
               </button>

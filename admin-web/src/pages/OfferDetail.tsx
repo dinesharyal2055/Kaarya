@@ -28,29 +28,33 @@ const OfferDetail: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-blue-100 text-blue-800">Pending</span>;
+        return <span className="neu-badge neu-badge-blue">Pending</span>;
       case 'accepted':
-        return <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-green-100 text-green-800">Accepted</span>;
+        return <span className="neu-badge neu-badge-green">Accepted</span>;
       case 'rejected':
-        return <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-red-100 text-red-800">Rejected</span>;
+        return <span className="neu-badge neu-badge-red">Rejected</span>;
       case 'withdrawn':
-        return <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-gray-100 text-gray-800">Withdrawn</span>;
+        return <span className="neu-badge neu-badge-gray">Withdrawn</span>;
       case 'countered':
-        return <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-yellow-100 text-yellow-800">Countered</span>;
+        return <span className="neu-badge neu-badge-yellow">Countered</span>;
       default:
-        return <span className="px-3 py-1 inline-flex text-sm font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
+        return <span className="neu-badge neu-badge-gray">{status}</span>;
     }
   };
 
   if (loading) {
-    return <div className="text-center py-10">Loading...</div>;
+    return (
+      <div className="neu-page">
+        <div className="neu-card neu-loading">Loading...</div>
+      </div>
+    );
   }
 
   if (error && !offer) {
     return (
-      <div className="p-6">
-        <div className="bg-red-100 text-red-800 p-4 rounded mb-4">{error}</div>
-        <button onClick={() => navigate('/offers')} className="text-primary hover:underline">
+      <div className="neu-page">
+        <div className="neu-error" role="alert">{error}</div>
+        <button onClick={() => navigate('/offers')} className="neu-link">
           Back to Offers
         </button>
       </div>
@@ -58,116 +62,116 @@ const OfferDetail: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <button onClick={() => navigate('/offers')} className="text-primary hover:underline mb-4 inline-block">
-          &larr; Back to Offers
-        </button>
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Offer #{id}</h1>
-          {offer && getStatusBadge(offer.status)}
+    <div className="neu-page">
+      <div className="neu-page-head">
+        <div>
+          <button onClick={() => navigate('/offers')} className="neu-link">
+            &larr; Back to Offers
+          </button>
+          <h1 className="neu-page-title">Offer #{id}</h1>
         </div>
+        {offer && getStatusBadge(offer.status)}
       </div>
 
-      {error && <div className="mb-4 p-3 bg-red-100 text-red-800 rounded">{error}</div>}
+      {error && <div className="neu-error" role="alert">{error}</div>}
 
       {offer && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Offer Details */}
-          <div className="bg-white p-6 rounded-lg shadow lg:col-span-1">
-            <h2 className="text-lg font-semibold mb-4">Offer Details</h2>
-            <div className="space-y-3">
+          <div className="neu-card lg:col-span-1">
+            <h2 className="neu-card-title">Offer Details</h2>
+            <div className="neu-stack">
               <div>
-                <span className="text-gray-500 text-sm">Amount:</span>
+                <span className="neu-field-label">Amount</span>
                 <p className="text-xl font-bold">Rs. {Number(offer.amount).toLocaleString()}</p>
               </div>
               <div>
-                <span className="text-gray-500 text-sm">Status:</span>
-                <p className="font-medium capitalize">{offer.status}</p>
+                <span className="neu-field-label">Status</span>
+                <p className="neu-field-value capitalize">{offer.status}</p>
               </div>
               <div>
-                <span className="text-gray-500 text-sm">Submitted:</span>
-                <p className="font-medium">{new Date(offer.createdAt).toLocaleString()}</p>
+                <span className="neu-field-label">Submitted</span>
+                <p className="neu-field-value">{new Date(offer.createdAt).toLocaleString()}</p>
               </div>
               {offer.message && (
                 <div>
-                  <span className="text-gray-500 text-sm">Message:</span>
-                  <p className="font-medium">{offer.message}</p>
+                  <span className="neu-field-label">Message</span>
+                  <p className="neu-field-value">{offer.message}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Job Details */}
-          <div className="bg-white p-6 rounded-lg shadow lg:col-span-1">
-            <h2 className="text-lg font-semibold mb-4">Job Details</h2>
-            <div className="space-y-3">
+          <div className="neu-card lg:col-span-1">
+            <h2 className="neu-card-title">Job Details</h2>
+            <div className="neu-stack">
               <div>
-                <span className="text-gray-500 text-sm">Title:</span>
-                <p className="font-medium">{offer.job?.title}</p>
+                <span className="neu-field-label">Title</span>
+                <p className="neu-field-value">{offer.job?.title}</p>
               </div>
               <div>
-                <span className="text-gray-500 text-sm">Category:</span>
-                <p className="font-medium capitalize">{offer.job?.category}</p>
+                <span className="neu-field-label">Category</span>
+                <p className="neu-field-value capitalize">{offer.job?.category}</p>
               </div>
               <div>
-                <span className="text-gray-500 text-sm">Location:</span>
-                <p className="font-medium">{offer.job?.location || 'N/A'}</p>
+                <span className="neu-field-label">Location</span>
+                <p className="neu-field-value">{offer.job?.location || 'N/A'}</p>
               </div>
               <div>
-                <span className="text-gray-500 text-sm">Budget:</span>
-                <p className="font-medium">
+                <span className="neu-field-label">Budget</span>
+                <p className="neu-field-value">
                   Rs. {Number(offer.job?.budgetMin || 0).toLocaleString()} - Rs. {Number(offer.job?.budgetMax || 0).toLocaleString()}
                 </p>
               </div>
               <div>
-                <span className="text-gray-500 text-sm">Status:</span>
-                <p className="font-medium capitalize">{offer.job?.status}</p>
+                <span className="neu-field-label">Status</span>
+                <p className="neu-field-value capitalize">{offer.job?.status}</p>
               </div>
               {offer.job?.description && (
                 <div>
-                  <span className="text-gray-500 text-sm">Description:</span>
-                  <p className="text-sm mt-1">{offer.job.description}</p>
+                  <span className="neu-field-label">Description</span>
+                  <p className="text-sm mt-1 neu-cell-sub">{offer.job.description}</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Provider Details */}
-          <div className="bg-white p-6 rounded-lg shadow lg:col-span-1">
-            <h2 className="text-lg font-semibold mb-4">Provider Details</h2>
-            <div className="space-y-3">
+          <div className="neu-card lg:col-span-1">
+            <h2 className="neu-card-title">Provider Details</h2>
+            <div className="neu-stack">
               <div>
-                <span className="text-gray-500 text-sm">Name:</span>
-                <p className="font-medium">{offer.provider?.name}</p>
+                <span className="neu-field-label">Name</span>
+                <p className="neu-field-value">{offer.provider?.name}</p>
               </div>
               <div>
-                <span className="text-gray-500 text-sm">Email:</span>
-                <p className="font-medium">{offer.provider?.email}</p>
+                <span className="neu-field-label">Email</span>
+                <p className="neu-field-value">{offer.provider?.email}</p>
               </div>
               <div>
-                <span className="text-gray-500 text-sm">Phone:</span>
-                <p className="font-medium">{offer.provider?.phone || 'N/A'}</p>
+                <span className="neu-field-label">Phone</span>
+                <p className="neu-field-value">{offer.provider?.phone || 'N/A'}</p>
               </div>
               <div className="flex items-center space-x-4">
                 <div>
-                  <span className="text-gray-500 text-sm">Rating:</span>
-                  <p className="font-medium">
+                  <span className="neu-field-label">Rating</span>
+                  <p className="neu-field-value">
                     {offer.provider?.rating ? `${Number(offer.provider.rating).toFixed(1)}/5` : 'No ratings'}
                   </p>
                 </div>
                 <div>
-                  <span className="text-gray-500 text-sm">Reviews:</span>
-                  <p className="font-medium">{offer.provider?.reviewCount || 0}</p>
+                  <span className="neu-field-label">Reviews</span>
+                  <p className="neu-field-value">{offer.provider?.reviewCount || 0}</p>
                 </div>
               </div>
               <div>
-                <span className="text-gray-500 text-sm">Verified:</span>
-                <p className="font-medium">
-                  <span className={`px-2 py-0.5 inline-flex text-xs font-semibold rounded-full ${
+                <span className="neu-field-label">Verified</span>
+                <p className="neu-field-value">
+                  <span className={`neu-badge ${
                     offer.provider?.isVerified
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
+                      ? 'neu-badge-green'
+                      : 'neu-badge-red'
                   }`}>
                     {offer.provider?.isVerified ? 'Verified' : 'Unverified'}
                   </span>
@@ -178,41 +182,43 @@ const OfferDetail: React.FC = () => {
 
           {/* Negotiations */}
           {offer.negotiations && offer.negotiations.length > 0 && (
-            <div className="bg-white p-6 rounded-lg shadow lg:col-span-3">
-              <h2 className="text-lg font-semibold mb-4">Negotiation History</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+            <div className="neu-card neu-table-wrap lg:col-span-3">
+              <div className="p-5 pb-1">
+                <h2 className="neu-card-title">Negotiation History</h2>
+              </div>
+              <div className="neu-table-scroll">
+                <table className="neu-table">
+                  <thead>
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col">
                         Proposed Amount
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col">
                         Status
                       </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col">
                         Date
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody>
                     {offer.negotiations.map((neg: any) => (
                       <tr key={neg.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900">Rs. {Number(neg.proposedAmount).toLocaleString()}</div>
+                        <td>
+                          <div className="neu-cell-main text-sm">Rs. {Number(neg.proposedAmount).toLocaleString()}</div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        <td>
+                          <span className={`neu-badge ${
                             neg.status === 'accepted'
-                              ? 'bg-green-100 text-green-800'
+                              ? 'neu-badge-green'
                               : neg.status === 'rejected'
-                                ? 'bg-red-100 text-red-800'
-                                : 'bg-yellow-100 text-yellow-800'
+                                ? 'neu-badge-red'
+                                : 'neu-badge-yellow'
                           }`}>
                             {neg.status}
                           </span>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <td className="neu-cell-sub text-sm">
                           {new Date(neg.createdAt).toLocaleString()}
                         </td>
                       </tr>

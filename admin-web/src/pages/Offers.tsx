@@ -54,30 +54,30 @@ const Offers: React.FC = () => {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending':
-        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">Pending</span>;
+        return <span className="neu-badge neu-badge-blue">Pending</span>;
       case 'accepted':
-        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Accepted</span>;
+        return <span className="neu-badge neu-badge-green">Accepted</span>;
       case 'rejected':
-        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Rejected</span>;
+        return <span className="neu-badge neu-badge-red">Rejected</span>;
       case 'withdrawn':
-        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Withdrawn</span>;
+        return <span className="neu-badge neu-badge-gray">Withdrawn</span>;
       case 'countered':
-        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Countered</span>;
+        return <span className="neu-badge neu-badge-yellow">Countered</span>;
       default:
-        return <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">{status}</span>;
+        return <span className="neu-badge neu-badge-gray">{status}</span>;
     }
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Offers</h1>
+    <div className="neu-page">
+      <div className="neu-page-head">
+        <h1 className="neu-page-title">Offers</h1>
       </div>
-      {error && <div className="mb-4 p-3 bg-red-100 text-red-800 rounded">{error}</div>}
-      <div className="mb-4">
-        <div className="grid grid-cols-2 gap-4">
+      {error && <div className="neu-error" role="alert">{error}</div>}
+      <div className="neu-card neu-filters">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="search" className="neu-label">
               Search
             </label>
             <input
@@ -87,11 +87,11 @@ const Offers: React.FC = () => {
               value={filters.search}
               onChange={handleFilterChange}
               placeholder="Search by job title or provider..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="neu-input"
             />
           </div>
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="status" className="neu-label">
               Status
             </label>
             <select
@@ -99,7 +99,7 @@ const Offers: React.FC = () => {
               name="status"
               value={filters.status}
               onChange={handleFilterChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="neu-input"
             >
               <option value="">All Status</option>
               <option value="pending">Pending</option>
@@ -112,80 +112,84 @@ const Offers: React.FC = () => {
         </div>
       </div>
       {loading ? (
-        <div className="text-center py-10">Loading...</div>
+        <div className="neu-card neu-loading">Loading...</div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Job
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Provider
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {offers.length === 0 ? (
+        <div className="neu-card neu-table-wrap">
+          <div className="neu-table-scroll">
+            <table className="neu-table">
+              <thead>
                 <tr>
-                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                    No offers found
-                  </td>
+                  <th scope="col">
+                    Job
+                  </th>
+                  <th scope="col">
+                    Provider
+                  </th>
+                  <th scope="col">
+                    Amount
+                  </th>
+                  <th scope="col">
+                    Status
+                  </th>
+                  <th scope="col">
+                    Created
+                  </th>
+                  <th scope="col">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                offers.map((offer) => (
-                  <tr key={offer.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{offer.jobTitle}</div>
-                      <div className="text-sm text-gray-500">{offer.jobCategory}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{offer.providerName}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        Rs. {Number(offer.amount).toLocaleString()}
+              </thead>
+              <tbody>
+                {offers.length === 0 ? (
+                  <tr>
+                    <td colSpan={6}>
+                      <div className="neu-empty">
+                        No offers found
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(offer.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(offer.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => navigate(`/offers/${offer.id}`)}
-                        className="text-primary hover:text-primary/80"
-                      >
-                        View
-                      </button>
-                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-sm text-gray-500">
+                ) : (
+                  offers.map((offer) => (
+                    <tr key={offer.id}>
+                      <td>
+                        <div className="neu-cell-main text-sm">{offer.jobTitle}</div>
+                        <div className="neu-cell-sub text-sm">{offer.jobCategory}</div>
+                      </td>
+                      <td>
+                        <div className="neu-cell-sub text-sm">{offer.providerName}</div>
+                      </td>
+                      <td>
+                        <div className="neu-cell-main text-sm">
+                          Rs. {Number(offer.amount).toLocaleString()}
+                        </div>
+                      </td>
+                      <td>
+                        {getStatusBadge(offer.status)}
+                      </td>
+                      <td className="neu-cell-sub text-sm">
+                        {new Date(offer.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="text-sm font-medium">
+                        <button
+                          onClick={() => navigate(`/offers/${offer.id}`)}
+                          className="neu-link"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="neu-pagination">
+            <div className="neu-pagination-count">
               Showing {pagination.page * pagination.limit - pagination.limit + 1}-{
                 Math.min(pagination.page * pagination.limit, pagination.totalCount)
               } of {pagination.totalCount} offers
             </div>
-            <div>
+            <div className="neu-pagination-actions">
               <button
                 onClick={() => {
                   if (pagination.page > 1) {
@@ -193,7 +197,7 @@ const Offers: React.FC = () => {
                   }
                 }}
                 disabled={pagination.page === 1}
-                className="px-3 py-1 mr-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
+                className="neu-btn neu-btn-primary neu-btn-sm"
               >
                 Previous
               </button>
@@ -204,7 +208,7 @@ const Offers: React.FC = () => {
                   }
                 }}
                 disabled={pagination.page === pagination.totalPages}
-                className="px-3 py-1 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90"
+                className="neu-btn neu-btn-primary neu-btn-sm"
               >
                 Next
               </button>

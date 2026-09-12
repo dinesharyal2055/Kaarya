@@ -2,6 +2,48 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useParams, useNavigate } from 'react-router-dom';
 
+const getJobStatusBadge = (status: string) => {
+  const tone =
+    status === 'open' ? 'neu-badge-blue'
+      : status === 'assigned' ? 'neu-badge-yellow'
+        : status === 'in_progress' ? 'neu-badge-orange'
+          : status === 'completed' ? 'neu-badge-green'
+            : status === 'cancelled' ? 'neu-badge-red'
+              : 'neu-badge-gray';
+  return (
+    <span className={`neu-badge ${tone}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+};
+
+const getOfferStatusBadge = (status: string) => {
+  const tone =
+    status === 'pending' ? 'neu-badge-yellow'
+      : status === 'accepted' ? 'neu-badge-green'
+        : status === 'rejected' ? 'neu-badge-red'
+          : status === 'withdrawn' ? 'neu-badge-gray'
+            : status === 'countered' ? 'neu-badge-blue'
+              : 'neu-badge-gray';
+  return (
+    <span className={`neu-badge ${tone}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+};
+
+const getUrgencyBadge = (urgency: string) => {
+  const tone =
+    urgency === 'normal' ? 'neu-badge-gray'
+      : urgency === 'high' ? 'neu-badge-yellow'
+        : 'neu-badge-blue';
+  return (
+    <span className={`neu-badge ${tone}`}>
+      {urgency.charAt(0).toUpperCase() + urgency.slice(1)}
+    </span>
+  );
+};
+
 const JobDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -32,131 +74,124 @@ const JobDetail: React.FC = () => {
   }, [id, navigate]);
 
   if (loading) {
-    return <div className="p-6 text-center py-10">Loading...</div>;
+    return (
+      <div className="neu-page">
+        <div className="neu-card neu-loading">Loading...</div>
+      </div>
+    );
   }
 
   if (error) {
-    return <div className="p-6"><div className="mb-4 p-3 bg-red-100 text-red-800 rounded">{error}</div></div>;
+    return (
+      <div className="neu-page">
+        <div className="neu-error" role="alert">{error}</div>
+      </div>
+    );
   }
 
   if (!job) {
-    return <div className="p-6 text-center py-10">Job not found</div>;
+    return (
+      <div className="neu-page">
+        <div className="neu-card neu-empty">Job not found</div>
+      </div>
+    );
   }
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Job Detail</h1>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => navigate('/jobs')}
-            className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-          >
-            Back to Jobs
-          </button>
-        </div>
+    <div className="neu-page">
+      <div className="neu-page-head">
+        <h1 className="neu-page-title">Job Detail</h1>
+        <button
+          onClick={() => navigate('/jobs')}
+          className="neu-btn neu-btn-sm"
+        >
+          Back to Jobs
+        </button>
       </div>
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-6">
-          <div className="mb-4">
-            <h2 className="text-xl font-bold">{job.title}</h2>
-            <p className="text-gray-500 mt-1">Job ID: {job.id}</p>
+      <div className="neu-card">
+        <div className="mb-4">
+          <h2 className="text-xl font-bold">{job.title}</h2>
+          <p className="neu-cell-sub mt-1">Job ID: {job.id}</p>
+        </div>
+        <div className="neu-stack">
+          <div>
+            <h3 className="neu-section-title">Description</h3>
+            <p className="neu-cell-sub">{job.description}</p>
           </div>
-          <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-              <h3 className="text-lg font-medium mb-2">Description</h3>
-              <p className="text-gray-700">{job.description}</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <div>
-                <h3 className="text-lg font-medium mb-2">Basic Information</h3>
-                <p className="text-gray-600"><strong>Category:</strong> {job.category}</p>
-                <p className="text-gray-600"><strong>Location:</strong> {job.location}</p>
-                <p className="text-gray-600"><strong>Budget:</strong> ${job.budgetMin} - ${job.budgetMax}</p>
-                <p className="text-gray-600"><strong>Urgency:</strong>
-                  <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                    ${job.urgency === 'normal' ? 'bg-gray-100 text-gray-800'
-                      : job.urgency === 'high' ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-blue-100 text-blue-800'}">
-                    {job.urgency.charAt(0).toUpperCase() + job.urgency.slice(1)}
-                  </span>
+              <h3 className="neu-section-title">Basic Information</h3>
+              <div className="neu-stack">
+                <p className="neu-cell-sub text-sm"><strong>Category:</strong> {job.category}</p>
+                <p className="neu-cell-sub text-sm"><strong>Location:</strong> {job.location}</p>
+                <p className="neu-cell-sub text-sm"><strong>Budget:</strong> ${job.budgetMin} - ${job.budgetMax}</p>
+                <p className="neu-cell-sub text-sm"><strong>Urgency:</strong>{' '}
+                  {getUrgencyBadge(job.urgency)}
                 </p>
                 {job.scheduledDate && (
-                  <p className="text-gray-600"><strong>Scheduled Date:</strong> {new Date(job.scheduledDate).toLocaleDateString()}</p>
+                  <p className="neu-cell-sub text-sm"><strong>Scheduled Date:</strong> {new Date(job.scheduledDate).toLocaleDateString()}</p>
                 )}
               </div>
-              <div>
-                <h3 className="text-lg font-medium mb-2">Status</h3>
-                <p className="text-gray-600"><strong>Current Status:</strong>
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                    ${job.status === 'open' ? 'bg-blue-100 text-blue-800'
-                      : job.status === 'assigned' ? 'bg-yellow-100 text-yellow-800'
-                      : job.status === 'in_progress' ? 'bg-orange-100 text-orange-800'
-                      : job.status === 'completed' ? 'bg-green-100 text-green-800'
-                      : job.status === 'cancelled' ? 'bg-red-100 text-red-800'
-                      : 'bg-gray-100 text-gray-800'}`}>
-                  {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                </span>
-                </p>
-              </div>
-              <div>
-                <h3 className="text-lg font-medium mb-2">Timestamps</h3>
-                <p className="text-gray-600"><strong>Created:</strong> {new Date(job.createdAt).toLocaleString()}</p>
-                <p className="text-gray-600"><strong>Updated:</strong> {new Date(job.updatedAt).toLocaleString()}</p>
-              </div>
             </div>
             <div>
-              <h3 className="text-lg font-medium mb-2">Poster Information</h3>
-              <p className="text-gray-600"><strong>Name:</strong> {job.seekerName}</p>
-              <p className="text-gray-600"><strong>Email:</strong> {job.seekerEmail}</p>
+              <h3 className="neu-section-title">Status</h3>
+              <p className="neu-cell-sub text-sm"><strong>Current Status:</strong>{' '}
+                {getJobStatusBadge(job.status)}
+              </p>
             </div>
             <div>
-              <h3 className="text-lg font-medium mb-2">Assigned Provider</h3>
-              {job.providerId ? (
-                <>
-                  <p className="text-gray-600"><strong>Name:</strong> {job.providerName}</p>
-                  <p className="text-gray-600"><strong>Email:</strong> {job.providerEmail}</p>
-                </>
-              ) : (
-                <p className="text-gray-600 italic">Not assigned yet</p>
-              )}
+              <h3 className="neu-section-title">Timestamps</h3>
+              <div className="neu-stack">
+                <p className="neu-cell-sub text-sm"><strong>Created:</strong> {new Date(job.createdAt).toLocaleString()}</p>
+                <p className="neu-cell-sub text-sm"><strong>Updated:</strong> {new Date(job.updatedAt).toLocaleString()}</p>
+              </div>
             </div>
           </div>
-          {job.offers && job.offers.length > 0 && (
-            <div className="border-t border-gray-200 pt-6">
-              <h3 className="text-lg font-medium mb-4">Offers ({job.offers.length})</h3>
-              <div className="space-y-4">
-                {job.offers.map((offer: any, index: number) => (
-                  <div key={offer.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-gray-600"><strong>Offer #{index + 1}</strong></p>
-                        <p className="text-gray-600"><strong>Amount:</strong> ${offer.amount}</p>
-                        <p className="text-gray-600"><strong>Status:</strong>
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                            ${offer.status === 'pending' ? 'bg-yellow-100 text-yellow-800'
-                              : offer.status === 'accepted' ? 'bg-green-100 text-green-800'
-                              : offer.status === 'rejected' ? 'bg-red-100 text-red-800'
-                              : offer.status === 'withdrawn' ? 'bg-gray-100 text-gray-800'
-                              : offer.status === 'countered' ? 'bg-blue-100 text-blue-800'
-                              : 'bg-gray-100 text-gray-800'}">
-                            {offer.status.charAt(0).toUpperCase() + offer.status.slice(1)}
-                          </span>
-                        </p>
-                        {offer.message && (
-                          <p className="text-gray-700 mt-1">{offer.message}</p>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(offer.createdAt).toLocaleString()}
-                      </div>
+          <div>
+            <h3 className="neu-section-title">Poster Information</h3>
+            <div className="neu-stack">
+              <p className="neu-cell-sub text-sm"><strong>Name:</strong> {job.seekerName}</p>
+              <p className="neu-cell-sub text-sm"><strong>Email:</strong> {job.seekerEmail}</p>
+            </div>
+          </div>
+          <div>
+            <h3 className="neu-section-title">Assigned Provider</h3>
+            {job.providerId ? (
+              <div className="neu-stack">
+                <p className="neu-cell-sub text-sm"><strong>Name:</strong> {job.providerName}</p>
+                <p className="neu-cell-sub text-sm"><strong>Email:</strong> {job.providerEmail}</p>
+              </div>
+            ) : (
+              <p className="neu-cell-sub italic">Not assigned yet</p>
+            )}
+          </div>
+        </div>
+        {job.offers && job.offers.length > 0 && (
+          <div className="neu-divider">
+            <h3 className="neu-section-title">Offers ({job.offers.length})</h3>
+            <div className="neu-stack">
+              {job.offers.map((offer: any, index: number) => (
+                <div key={offer.id} className="neu-card">
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="neu-stack">
+                      <p className="neu-cell-sub text-sm"><strong>Offer #{index + 1}</strong></p>
+                      <p className="neu-cell-sub text-sm"><strong>Amount:</strong> ${offer.amount}</p>
+                      <p className="neu-cell-sub text-sm"><strong>Status:</strong>{' '}
+                        {getOfferStatusBadge(offer.status)}
+                      </p>
+                      {offer.message && (
+                        <p className="neu-cell-sub mt-1">{offer.message}</p>
+                      )}
+                    </div>
+                    <div className="text-sm neu-cell-sub whitespace-nowrap">
+                      {new Date(offer.createdAt).toLocaleString()}
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2,6 +2,20 @@ import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { useNavigate } from 'react-router-dom';
 
+const getJobStatusBadge = (status: string) => {
+  const tone =
+    status === 'open' ? 'neu-badge-blue'
+      : status === 'assigned' ? 'neu-badge-yellow'
+        : status === 'in_progress' ? 'neu-badge-orange'
+          : status === 'completed' ? 'neu-badge-green'
+            : 'neu-badge-red';
+  return (
+    <span className={`neu-badge ${tone}`}>
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+};
+
 const Jobs: React.FC = () => {
   const [jobs, setJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,15 +68,15 @@ const Jobs: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Jobs</h1>
+    <div className="neu-page">
+      <div className="neu-page-head">
+        <h1 className="neu-page-title">Jobs</h1>
       </div>
-      {error && <div className="mb-4 p-3 bg-red-100 text-red-800 rounded">{error}</div>}
-      <div className="mb-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      {error && <div className="neu-error" role="alert">{error}</div>}
+      <div className="neu-card neu-filters">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="search" className="neu-label">
               Search
             </label>
             <input
@@ -71,11 +85,11 @@ const Jobs: React.FC = () => {
               name="search"
               value={filters.search}
               onChange={handleFilterChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="neu-input"
             />
           </div>
           <div>
-            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="status" className="neu-label">
               Status
             </label>
             <select
@@ -83,7 +97,7 @@ const Jobs: React.FC = () => {
               name="status"
               value={filters.status}
               onChange={handleFilterChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="neu-input"
             >
               <option value="">All Status</option>
               <option value="open">Open</option>
@@ -94,7 +108,7 @@ const Jobs: React.FC = () => {
             </select>
           </div>
           <div>
-            <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="category" className="neu-label">
               Category
             </label>
             <select
@@ -102,7 +116,7 @@ const Jobs: React.FC = () => {
               name="category"
               value={filters.category}
               onChange={handleFilterChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+              className="neu-input"
             >
               <option value="">All Categories</option>
               {/* These categories should match the ones in the backend seed data */}
@@ -118,102 +132,99 @@ const Jobs: React.FC = () => {
         </div>
       </div>
       {loading ? (
-        <div className="text-center py-10">Loading...</div>
+        <div className="neu-card neu-loading">Loading...</div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Title
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Budget
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Poster
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Provider
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {jobs.length === 0 ? (
+        <div className="neu-card neu-table-wrap">
+          <div className="neu-table-scroll">
+            <table className="neu-table">
+              <thead>
                 <tr>
-                  <td colspan="8" className="px-6 py-4 text-center text-gray-500">
-                    No jobs found
-                  </td>
+                  <th scope="col">
+                    Title
+                  </th>
+                  <th scope="col">
+                    Category
+                  </th>
+                  <th scope="col">
+                    Budget
+                  </th>
+                  <th scope="col">
+                    Status
+                  </th>
+                  <th scope="col">
+                    Poster
+                  </th>
+                  <th scope="col">
+                    Provider
+                  </th>
+                  <th scope="col">
+                    Created
+                  </th>
+                  <th scope="col">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                jobs.map((job) => (
-                  <tr key={job.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{job.title}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{job.category}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        ${job.budgetMin} - ${job.budgetMax}
+              </thead>
+              <tbody>
+                {jobs.length === 0 ? (
+                  <tr>
+                    <td colSpan={8}>
+                      <div className="neu-empty">
+                        No jobs found
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                        ${job.status === 'open' ? 'bg-blue-100 text-blue-800'
-                          : job.status === 'assigned' ? 'bg-yellow-100 text-yellow-800'
-                          : job.status === 'in_progress' ? 'bg-orange-100 text-orange-800'
-                          : job.status === 'completed' ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'}`}>
-                        {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{job.seekerName}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">
-                        {job.providerName || 'Not assigned'}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(job.createdAt).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button
-                        onClick={() => {
-                          navigate(`/jobs/${job.id}`);
-                        }}
-                        className="text-primary hover:text-primary/80"
-                      >
-                        View
-                      </button>
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-          <div className="mt-4 flex justify-between items-center">
-            <div className="text-sm text-gray-500">
+                ) : (
+                  jobs.map((job) => (
+                    <tr key={job.id}>
+                      <td>
+                        <div className="neu-cell-main text-sm">{job.title}</div>
+                      </td>
+                      <td>
+                        <div className="neu-cell-sub text-sm">{job.category}</div>
+                      </td>
+                      <td>
+                        <div className="neu-cell-sub text-sm">
+                          ${job.budgetMin} - ${job.budgetMax}
+                        </div>
+                      </td>
+                      <td>
+                        {getJobStatusBadge(job.status)}
+                      </td>
+                      <td>
+                        <div className="neu-cell-sub text-sm">{job.seekerName}</div>
+                      </td>
+                      <td>
+                        <div className="neu-cell-sub text-sm">
+                          {job.providerName || 'Not assigned'}
+                        </div>
+                      </td>
+                      <td className="neu-cell-sub text-sm">
+                        {new Date(job.createdAt).toLocaleDateString()}
+                      </td>
+                      <td className="text-sm font-medium">
+                        <button
+                          onClick={() => {
+                            navigate(`/jobs/${job.id}`);
+                          }}
+                          className="neu-link"
+                        >
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="neu-pagination">
+            <div className="neu-pagination-count">
               Showing {pagination.page * pagination.limit - pagination.limit + 1}-{
                 Math.min(pagination.page * pagination.limit, pagination.totalCount)
               } of {pagination.totalCount} jobs
             </div>
-            <div>
+            <div className="neu-pagination-actions">
               <button
                 onClick={() => {
                   if (pagination.page > 1) {
@@ -221,7 +232,7 @@ const Jobs: React.FC = () => {
                   }
                 }}
                 disabled={pagination.page === 1}
-                className="px-3 py-1 mr-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
+                className="neu-btn neu-btn-primary neu-btn-sm"
               >
                 Previous
               </button>
@@ -232,7 +243,7 @@ const Jobs: React.FC = () => {
                   }
                 }}
                 disabled={pagination.page === pagination.totalPages}
-                className="px-3 py-1 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90"
+                className="neu-btn neu-btn-primary neu-btn-sm"
               >
                 Next
               </button>
