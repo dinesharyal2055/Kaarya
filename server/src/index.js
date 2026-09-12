@@ -13,16 +13,25 @@ const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 
 // ── CORS ──────────────────────────────────────────────────────────────────────
-// Restrict to allowed origins. In production the variable is required.
-// In development, allow localhost variants.
+// Restrict to allowed origins. Never '*'.
+// Production: always allow the deployed Super Admin web app(s), merged with any
+// explicit ALLOWED_ORIGINS configured via environment. If neither yields an
+// allowed origin, block all cross-origin requests.
+// Development: allow localhost variants plus all paths removed at deploy time.
+const ADMIN_WEB_ORIGINS = ['https://kaarya-mu.vercel.app'];
+
 function getCorsOptions() {
   const allowed = process.env.ALLOWED_ORIGINS;
+  const extraOrigins = allowed
+    ? allowed.split(',').map((o) => o.trim()).filter((o) => o && o !== '*')
+    : [];
+
   if (process.env.NODE_ENV === 'production') {
-    if (!allowed) {
-      console.warn('[cors] WARNING: ALLOWED_ORIGINS not set — blocking all cross-origin requests.');
+    const origins = [...new Set([...ADMIN_WEB_ORIGINS, ...extraOrigins])];
+    if (origins.length === 0) {
+      console.warn('[cors] WARNING: no allowed origins configured — blocking all cross-origin requests.');
       return { origin: false };
     }
-    const origins = allowed.split(',').map((o) => o.trim());
     return { origin: origins, credentials: true };
   }
   // Development: allow localhost, file://, and the Expo dev server
@@ -34,10 +43,9 @@ function getCorsOptions() {
     'exp://localhost:8081',
     'exp://127.0.0.1:8081',
   ];
-  if (allowed) {
-    // Also honour the env var in dev so testers can add extra origins
-    allowed.split(',').forEach((o) => devOrigins.push(o.trim()));
-  }
+  extraOrigins.forEach((o) => {
+    if (!devOrigins.includes(o)) devOrigins.push(o);
+  });
   return { origin: devOrigins, credentials: false };
 }
 
