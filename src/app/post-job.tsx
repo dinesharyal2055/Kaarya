@@ -3,13 +3,15 @@
  */
 
 import { useRouter, Stack } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
+import MapView, { Marker } from 'react-native-maps';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
 import { Button, Input } from '@/components/ui';
@@ -26,10 +28,38 @@ type UploadedImage = {
   uploadedUrl?: string;
 };
 
+const UPLOAD_MAX_DIMENSION = 1000;
+const UPLOAD_JPEG_QUALITY = 0.6;
+
+async function prepareJobPhoto(asset: ImagePicker.ImagePickerAsset): Promise<UploadedImage> {
+  const filename = `job_photo_${Date.now()}`;
+  const longestSide = Math.max(asset.width || 0, asset.height || 0);
+  const actions: ImageManipulator.Action[] = [];
+  if (longestSide > UPLOAD_MAX_DIMENSION) {
+    const scale = UPLOAD_MAX_DIMENSION / longestSide;
+    actions.push({
+      resize: {
+        width: Math.max(1, Math.round((asset.width || 0) * scale)),
+        height: Math.max(1, Math.round((asset.height || 0) * scale)),
+      },
+    });
+  }
+  try {
+    const result = await ImageManipulator.manipulateAsync(asset.uri, actions, {
+      compress: UPLOAD_JPEG_QUALITY,
+      format: ImageManipulator.SaveFormat.JPEG,
+      base64: true,
+    });
+    return { uri: result.uri, base64: result.base64 ?? '', filename };
+  } catch {
+    return { uri: asset.uri, base64: asset.base64 ?? '', filename };
+  }
+}
+
 export default function PostJobScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, switchRole, refreshUser } = useAuth();
   const [step, setStep] = useState<Step>('category');
   const [category, setCategory] = useState('');
   const [title, setTitle] = useState('');
@@ -45,6 +75,38 @@ export default function PostJobScreen() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
+  const [switching, setSwitching] = useState(false);
+  const mapRef = useRef<MapView>(null);
+
+  async function handleSwitchToTaskPoster() {
+    Alert.alert(
+      t('alerts.switchRole'),
+      t('alerts.switchToSeeker'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('alerts.switch'),
+          onPress: async () => {
+            setSwitching(true);
+            try {
+              await switchRole('seeker');
+              await refreshUser();
+            } catch (e: any) {
+              Alert.alert(t('common.error'), e.message ?? t('alerts.failedToSwitch'));
+            } finally {
+              setSwitching(false);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  function updatePreciseLocation(lat: number, lng: number) {
+    setLatitude(lat);
+    setLongitude(lng);
+    mapRef.current?.animateToRegion({ latitude: lat, longitude: lng, latitudeDelta: 0.01, longitudeDelta: 0.01 }, 200);
+  }
 
   async function captureLocation() {
     setLocating(true);
@@ -57,6 +119,15 @@ export default function PostJobScreen() {
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.High });
       setLatitude(pos.coords.latitude);
       setLongitude(pos.coords.longitude);
+      mapRef.current?.animateToRegion(
+        {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        200
+      );
       Alert.alert(t('postJob.locationSaved'), t('postJob.locationSavedHint'));
     } catch {
       Alert.alert(t('postJob.locationError'), t('postJob.locationErrorHint'));
@@ -107,14 +178,8 @@ export default function PostJobScreen() {
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
-    setPhotos(prev => [
-      ...prev,
-      {
-        uri: asset.uri,
-        base64: asset.base64 ?? '',
-        filename: `job_photo_${Date.now()}.jpg`,
-      },
-    ]);
+    const prepared = await prepareJobPhoto(asset);
+    setPhotos(prev => [...prev, prepared]);
   }
 
   async function takePhoto() {
@@ -134,14 +199,8 @@ export default function PostJobScreen() {
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
-    setPhotos(prev => [
-      ...prev,
-      {
-        uri: asset.uri,
-        base64: asset.base64 ?? '',
-        filename: `job_photo_${Date.now()}.jpg`,
-      },
-    ]);
+    const prepared = await prepareJobPhoto(asset);
+    setPhotos(prev => [...prev, prepared]);
   }
 
   function removePhoto(index: number) {
@@ -234,6 +293,25 @@ export default function PostJobScreen() {
         </View>
 
         {/* Progress */}
+        {user?.role === 'provider' ? (
+          <View style={styles.restrictedWrap}>
+            <View style={[styles.restrictedCard, Shadows.sm]}>
+              <MaterialCommunityIcons name="shield-lock-outline" size={40} color={KaaryaColors.warning} />
+              <Text style={styles.restrictedTitle}>{t('postJob.posterOnlyTitle')}</Text>
+              <Text style={styles.restrictedMessage}>{t('postJob.posterOnlyMessage')}</Text>
+              <View style={{ marginTop: Spacing.lg, width: '100%' }}>
+                <Button
+                  title={t('postJob.switchToTaskPoster')}
+                  onPress={handleSwitchToTaskPoster}
+                  loading={switching}
+                  disabled={switching}
+                  fullWidth
+                />
+              </View>
+            </View>
+          </View>
+        ) : (
+        <>
         <View style={styles.progress}>
           {steps.map((s, i) => (
             <View key={s} style={[styles.progressDot, i <= stepIndex && styles.progressDotActive]} />
@@ -260,7 +338,7 @@ export default function PostJobScreen() {
 
         {/* Step: Details */}
         {step === 'details' && (
-          <ScrollView style={styles.stepContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.stepContent} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
             <Text style={styles.stepTitle}>{t('postJob.stepDetailsTitle')}</Text>
             <Text style={styles.stepSubtitle}>{t('postJob.stepDetailsSubtitle')}</Text>
             <View style={{ marginTop: Spacing.lg, gap: Spacing.md }}>
@@ -311,6 +389,28 @@ export default function PostJobScreen() {
                   </Text>
                 )}
                 <Text style={styles.locationHint}>{t('postJob.locationPrivacyNote')}</Text>
+                {latitude !== null && longitude !== null && (
+                  <View style={styles.preciseMapCard}>
+                    <MapView
+                      ref={mapRef}
+                      style={styles.preciseMap}
+                      initialRegion={{
+                        latitude,
+                        longitude,
+                        latitudeDelta: 0.01,
+                        longitudeDelta: 0.01,
+                      }}
+                      onPress={(e) => updatePreciseLocation(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude)}
+                    >
+                      <Marker
+                        draggable
+                        coordinate={{ latitude, longitude }}
+                        onDragEnd={(e) => updatePreciseLocation(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude)}
+                      />
+                    </MapView>
+                    <Text style={styles.locationHint}>{t('postJob.dragPinHint')}</Text>
+                  </View>
+                )}
               </View>
             </View>
           </ScrollView>
@@ -356,7 +456,7 @@ export default function PostJobScreen() {
 
         {/* Step: Budget */}
         {step === 'budget' && (
-          <ScrollView style={styles.stepContent} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.stepContent} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
             <Text style={styles.stepTitle}>{t('postJob.stepBudgetTitle')}</Text>
             <Text style={styles.stepSubtitle}>{t('postJob.stepBudgetSubtitle')}</Text>
             <View style={{ marginTop: Spacing.lg, gap: Spacing.md }}>
@@ -396,7 +496,7 @@ export default function PostJobScreen() {
               {catData && <SummaryRow icon={catData.icon as any} iconColor={catData.color} label={t('postJob.category')} value={catData.name} />}
               <SummaryRow icon="text" iconColor={KaaryaColors.brand[500]} label={t('postJob.title')} value={title} />
               <SummaryRow icon="map-marker" iconColor={KaaryaColors.brand[500]} label={t('postJob.area')} value={area} />
-              {photos.length > 0 && <SummaryRow icon="camera" iconColor={KaaryaColors.brand[500]} label={t('postJob.photos')} value={`${photos.length} ${t('postJob.photosAttached')}`} />}
+              {photos.length > 0 && <SummaryRow icon="camera" iconColor={KaaryaColors.brand[500]} label={t('postJob.photos')} value={t('postJob.photosAttached', { count: photos.length })} />}
               {budgetMin && budgetMax && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label={t('postJob.budget')} value={`Rs. ${budgetMin} – ${budgetMax}`} />}
               <SummaryRow icon="swap-horizontal" iconColor={KaaryaColors.brand[500]} label={t('postJob.negotiation')} value={negotiation.charAt(0).toUpperCase() + negotiation.slice(1)} />
             </View>
@@ -418,6 +518,8 @@ export default function PostJobScreen() {
             <Button title={t('common.continue')} onPress={next} fullWidth />
           )}
         </View>
+        </>
+        )}
       </SafeAreaView>
     </>
   );
@@ -441,6 +543,10 @@ const styles = StyleSheet.create({
   progress: { flexDirection: 'row', gap: 6, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
   progressDot: { flex: 1, height: 4, borderRadius: 2, backgroundColor: KaaryaColors.border },
   progressDotActive: { backgroundColor: KaaryaColors.brand[500] },
+  restrictedWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.lg },
+  restrictedCard: { width: '100%', backgroundColor: KaaryaColors.card, borderRadius: BorderRadius.lg, padding: Spacing.lg, alignItems: 'center' },
+  restrictedTitle: { fontSize: FontSizes.lg, fontWeight: '700', color: KaaryaColors.text, marginTop: Spacing.md, textAlign: 'center' },
+  restrictedMessage: { fontSize: FontSizes.sm, color: KaaryaColors.textSecondary, marginTop: 4, textAlign: 'center', lineHeight: 20 },
   stepContent: { flex: 1, paddingHorizontal: Spacing.lg },
   stepTitle: { fontSize: FontSizes['2xl'], fontWeight: '800', color: KaaryaColors.text, marginTop: Spacing.md },
   stepSubtitle: { fontSize: FontSizes.base, color: KaaryaColors.textSecondary, marginTop: 4, marginBottom: Spacing.lg },
@@ -473,6 +579,8 @@ const styles = StyleSheet.create({
   locationBtnTextActive: { color: KaaryaColors.success },
   locationCoords: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 4, marginLeft: 30 },
   locationHint: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 4 },
+  preciseMapCard: { marginTop: Spacing.md, borderRadius: BorderRadius.lg, overflow: 'hidden' },
+  preciseMap: { width: '100%', height: 220 },
 
   // Photo styles
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },

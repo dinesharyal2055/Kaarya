@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES } from '@/constants/categories';
 import { fetchJob } from '@/services/jobs';
-import { offersApi, reviewsApi, jobsApi, API_ROOT } from '@/lib/api';
+import { offersApi, reviewsApi, jobsApi, resolveStaticUrl } from '@/lib/api';
 import { parseServerTime, formatNepalMedium } from '@/lib/time';
 import { Button } from '@/components/ui';
 import type { Job } from '@/types';
@@ -206,7 +206,7 @@ export default function JobDetailScreen() {
                 color={isSaved ? KaaryaColors.brand[500] : KaaryaColors.muted}
               />
             </Pressable>
-          ) : user?.role === 'seeker' && isSeekerOwner && job.status === 'open' ? (
+          ) : isSeekerOwner && job.status === 'open' ? (
             <Pressable
               onPress={() => router.push({ pathname: '/edit-job', params: { id: job.id } })}
               style={styles.saveBtn}
@@ -255,7 +255,7 @@ export default function JobDetailScreen() {
               {job.photoUrls.map((url, index) => (
                 <View key={index} style={styles.photoFrame}>
                   <Image
-                    source={{ uri: `${API_ROOT}${url}` }}
+                    source={{ uri: resolveStaticUrl(url) }}
                     style={styles.photoThumb}
                     resizeMode="cover"
                   />
@@ -322,7 +322,7 @@ export default function JobDetailScreen() {
           {/* Offers summary */}
           <View style={[styles.section, Shadows.sm]}>
             <Text style={styles.sectionTitle}>{t('jobDetail.offers')}</Text>
-            {user?.role === 'seeker' && isSeekerOwner ? (
+            {isSeekerOwner ? (
               receivedOffers.length > 0 ? (
                 <Pressable
                   style={styles.offersAction}
@@ -356,7 +356,16 @@ export default function JobDetailScreen() {
           {/* OPEN jobs */}
           {job.status === 'open' && (
             <>
-              {user?.role === 'provider' && (
+              {isSeekerOwner ? (
+                receivedOffers.length > 0 ? (
+                  <Button title={t('jobDetail.viewOffers')} onPress={() => router.push('/offers')} fullWidth />
+                ) : (
+                  <View style={styles.noOffersBar}>
+                    <MaterialCommunityIcons name="inbox-outline" size={18} color={KaaryaColors.muted} />
+                    <Text style={styles.noOffersText}>{t('jobDetail.youPostedThisTask')}</Text>
+                  </View>
+                )
+              ) : user?.role === 'provider' ? (
                 myOffer ? (
                   <View style={styles.submittedOfferBar}>
                     <MaterialCommunityIcons name="check-circle" size={18} color={KaaryaColors.success} />
@@ -389,14 +398,7 @@ export default function JobDetailScreen() {
                     fullWidth
                   />
                 )
-              )}
-              {user?.role === 'seeker' && isSeekerOwner && (
-                <View style={styles.noOffersBar}>
-                  <MaterialCommunityIcons name="inbox-outline" size={18} color={KaaryaColors.muted} />
-                  <Text style={styles.noOffersText}>{t('jobDetail.checkOffersSection')}</Text>
-                </View>
-              )}
-              {user?.role === 'seeker' && !isSeekerOwner && (
+              ) : (
                 <Button
                   title={t('post.findWork')}
                   onPress={() => router.push('/(tabs)/profile')}
@@ -410,7 +412,7 @@ export default function JobDetailScreen() {
           {/* ASSIGNED jobs */}
           {job.status === 'assigned' && (
             <>
-              {user?.role === 'seeker' && isSeekerOwner && (
+              {isSeekerOwner && (
                 <View style={styles.infoBar}>
                   <MaterialCommunityIcons name="check-circle-outline" size={18} color={KaaryaColors.warning} />
                   <Text style={styles.infoText}>
@@ -442,7 +444,7 @@ export default function JobDetailScreen() {
           {/* IN_PROGRESS jobs */}
           {job.status === 'in_progress' && (
             <>
-              {user?.role === 'seeker' && isSeekerOwner && (
+              {isSeekerOwner && (
                 <Button
                   title="Mark as Complete"
                   onPress={async () => {
@@ -472,7 +474,7 @@ export default function JobDetailScreen() {
           {/* COMPLETED jobs */}
           {job.status === 'completed' && (
             <>
-              {user?.role === 'seeker' && isSeekerOwner && (
+              {isSeekerOwner && (
                 hasReviewed ? (
                   <View style={styles.submittedOfferBar}>
                     <MaterialCommunityIcons name="check-circle" size={18} color={KaaryaColors.success} />

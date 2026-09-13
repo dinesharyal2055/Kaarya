@@ -37,6 +37,10 @@ function relativeTime(dateStr: string, t: (key: string) => string): string {
   return formatNepalShort(ms);
 }
 
+function displayBody(body: string): string {
+  return body.replace(/^undefined(?=\s+submitted)/i, 'A new service provider');
+}
+
 function NotifCard({ item, onPress, t }: { item: Notification; onPress: () => void; t: (key: string) => string }) {
   const meta = TYPE_META[item.type] ?? { icon: 'bell', color: KaaryaColors.brand[500], labelKey: 'notifications.types.notification' };
 
@@ -51,7 +55,7 @@ function NotifCard({ item, onPress, t }: { item: Notification; onPress: () => vo
       </View>
       <View style={styles.cardBody}>
         <Text style={[styles.cardTitle, !item.read && styles.cardTitleUnread]}>{item.title}</Text>
-        <Text style={styles.cardBody2} numberOfLines={2}>{item.body}</Text>
+        <Text style={styles.cardBody2} numberOfLines={2}>{displayBody(item.body)}</Text>
         <Text style={styles.cardTime}>{relativeTime(item.createdAt, t)}</Text>
       </View>
       {!item.read && (

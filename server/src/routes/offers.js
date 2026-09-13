@@ -35,6 +35,7 @@ function providerFromRow(row) {
 
 function offerFromRow(offerRow, providerRow) {
   const isObj = typeof offerRow === 'object' && !Array.isArray(offerRow);
+  const provider = providerRow ? providerFromRow(providerRow) : null;
   return {
     id: isObj ? offerRow.id : offerRow[0],
     jobId: isObj ? offerRow.job_id : offerRow[1],
@@ -44,7 +45,10 @@ function offerFromRow(offerRow, providerRow) {
     status: isObj ? offerRow.status : offerRow[5],
     createdAt: isObj ? offerRow.created_at : offerRow[6],
     updatedAt: isObj ? offerRow.updated_at : offerRow[7],
-    ...(providerRow ? providerFromRow(providerRow) : {
+    ...(provider ? {
+      ...provider,
+      providerName: provider.name ?? null,
+    } : {
       providerName: null, providerAvatar: null, providerRating: null,
       providerReviewCount: 0, providerCompletionRate: null, providerVerified: false
     }),
@@ -135,6 +139,9 @@ router.post('/', offersLimiter, requireAuth, sanitize('message'), validate(creat
       const jobRes = await db.query('SELECT status, seeker_id, title FROM jobs WHERE id = $1', [jobId]);
       if (jobRes.rowCount === 0) return res.status(404).json({ error: 'Job not found' });
       if (jobRes.rows[0].status !== 'open') return res.status(400).json({ error: 'Job is not open for offers' });
+      if (String(jobRes.rows[0].seeker_id) === String(req.userId)) {
+        return res.status(400).json({ error: 'You cannot make an offer on your own task' });
+      }
 
       const insRes = await db.query(
         'INSERT INTO offers (job_id, provider_id, amount, message, status) VALUES ($1, $2, $3, $4, $5) RETURNING id',
@@ -147,12 +154,12 @@ router.post('/', offersLimiter, requireAuth, sanitize('message'), validate(creat
       const { seeker_id, title: jobTitle } = jobRes.rows[0];
       createNotification(db, seeker_id, 'new_offer',
         'New offer on your job',
-        `${offer.providerName} submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`,
+        `A new service provider submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`,
         { jobId, offerId: String(newId) }
       );
       pushNotify(seeker_id, {
         title: 'New offer on your job',
-        body: `${offer.providerName} submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`,
+        body: `A new service provider submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`,
         data: { type: 'new_offer', jobId, offerId: String(newId) },
       });
 
@@ -169,14 +176,17 @@ router.post('/', offersLimiter, requireAuth, sanitize('message'), validate(creat
       const jobResult = db.exec('SELECT status, seeker_id, title FROM jobs WHERE id = ?', [jobId]);
       if (jobResult.length === 0 || jobResult[0].values.length === 0) return res.status(404).json({ error: 'Job not found' });
       if (jobResult[0].values[0][0] !== 'open') return res.status(400).json({ error: 'Job is not open for offers' });
+      if (String(jobResult[0].values[0][1]) === String(req.userId)) {
+        return res.status(400).json({ error: 'You cannot make an offer on your own task' });
+      }
 
       db.run('INSERT INTO offers (job_id, provider_id, amount, message, status) VALUES (?, ?, ?, ?, ?)', [jobId, req.userId, price, message || null, 'pending']);
       const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
       const offer = await getOfferWithDetails(newId);
 
       const [seekerId, jobTitle] = jobResult[0].values[0].slice(1);
-      createNotification(db, seekerId, 'new_offer', 'New offer on your job', `${offer.providerName} submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`, { jobId, offerId: String(newId) });
-      pushNotify(seekerId, { title: 'New offer on your job', body: `${offer.providerName} submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`, data: { type: 'new_offer', jobId, offerId: String(newId) } });
+      createNotification(db, seekerId, 'new_offer', 'New offer on your job', `A new service provider submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`, { jobId, offerId: String(newId) });
+      pushNotify(seekerId, { title: 'New offer on your job', body: `A new service provider submitted Rs. ${price.toLocaleString()} for "${jobTitle}"`, data: { type: 'new_offer', jobId, offerId: String(newId) } });
       save();
 
       res.status(201).json(offer);

@@ -21,6 +21,12 @@ const BASE_URL: string =
 // API_ROOT is BASE_URL without the /api suffix — use for serving static files (avatars, uploads)
 const API_ROOT = BASE_URL.replace(/\/api$/, '');
 
+function resolveStaticUrl(url: string): string {
+  const trimmed = url.trim();
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) return trimmed;
+  return `${API_ROOT}${trimmed.startsWith('/') ? '' : '/'}${trimmed}`;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -122,7 +128,7 @@ export const profileApi = {
 
 /* ─── Auth ────────────────────────────────────────────────────────── */
 
-export { BASE_URL, API_ROOT };
+export { BASE_URL, API_ROOT, resolveStaticUrl };
 export const authApi = {
   /** Step 1: Initiate registration — sends OTP */
   registerInitiate: (data: {

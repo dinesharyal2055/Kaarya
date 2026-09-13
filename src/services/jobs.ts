@@ -1,7 +1,7 @@
 /**
  * Jobs service — wraps the jobs API with typed methods
  */
-import { jobsApi, BASE_URL } from '@/lib/api';
+import { jobsApi, BASE_URL, resolveStaticUrl } from '@/lib/api';
 import { getToken } from '@/lib/storage';
 import type { Job } from '@/types';
 
@@ -37,7 +37,9 @@ export async function uploadJobImage(image: ImagePickerResult): Promise<string> 
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Upload failed');
-  return data.url as string;
+  const rawUrl = data.url as string | undefined;
+  if (!rawUrl) throw new Error(data.error || 'Upload failed');
+  return resolveStaticUrl(rawUrl);
 }
 
 export interface JobListParams {

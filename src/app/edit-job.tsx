@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as Location from 'expo-location';
 import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
@@ -25,7 +26,7 @@ import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
 import { Button, Input } from '@/components/ui';
 import { updateJob, uploadJobImage } from '@/services/jobs';
 import { fetchJob } from '@/services/jobs';
-import { API_ROOT } from '@/lib/api';
+import { resolveStaticUrl } from '@/lib/api';
 import type { Job, NegotiationMode } from '@/types';
 
 type UploadedImage = {
@@ -34,6 +35,34 @@ type UploadedImage = {
   filename: string;
   uploadedUrl?: string;
 };
+
+const UPLOAD_MAX_DIMENSION = 1000;
+const UPLOAD_JPEG_QUALITY = 0.6;
+
+async function prepareJobPhoto(asset: ImagePicker.ImagePickerAsset): Promise<UploadedImage> {
+  const filename = `job_photo_${Date.now()}`;
+  const longestSide = Math.max(asset.width || 0, asset.height || 0);
+  const actions: ImageManipulator.Action[] = [];
+  if (longestSide > UPLOAD_MAX_DIMENSION) {
+    const scale = UPLOAD_MAX_DIMENSION / longestSide;
+    actions.push({
+      resize: {
+        width: Math.max(1, Math.round((asset.width || 0) * scale)),
+        height: Math.max(1, Math.round((asset.height || 0) * scale)),
+      },
+    });
+  }
+  try {
+    const result = await ImageManipulator.manipulateAsync(asset.uri, actions, {
+      compress: UPLOAD_JPEG_QUALITY,
+      format: ImageManipulator.SaveFormat.JPEG,
+      base64: true,
+    });
+    return { uri: result.uri, base64: result.base64 ?? '', filename };
+  } catch {
+    return { uri: asset.uri, base64: asset.base64 ?? '', filename };
+  }
+}
 
 export default function EditJobScreen() {
   const { t } = useTranslation();
@@ -76,10 +105,10 @@ export default function EditJobScreen() {
         // Load existing photo URLs as local UploadedImage entries
         if (data.photoUrls && data.photoUrls.length > 0) {
           const existing: UploadedImage[] = data.photoUrls.map((url) => ({
-            uri: `${API_ROOT}${url}`,
+            uri: resolveStaticUrl(url),
             base64: '',
             filename: url.split('/').pop() ?? 'photo.jpg',
-            uploadedUrl: url,
+            uploadedUrl: resolveStaticUrl(url),
           }));
           setPhotos(existing);
         }
@@ -112,14 +141,8 @@ export default function EditJobScreen() {
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
-    setPhotos((prev) => [
-      ...prev,
-      {
-        uri: asset.uri,
-        base64: asset.base64 ?? '',
-        filename: `job_photo_${Date.now()}.jpg`,
-      },
-    ]);
+    const prepared = await prepareJobPhoto(asset);
+    setPhotos((prev) => [...prev, prepared]);
   }
 
   async function takePhoto() {
@@ -139,14 +162,8 @@ export default function EditJobScreen() {
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
-    setPhotos((prev) => [
-      ...prev,
-      {
-        uri: asset.uri,
-        base64: asset.base64 ?? '',
-        filename: `job_photo_${Date.now()}.jpg`,
-      },
-    ]);
+    const prepared = await prepareJobPhoto(asset);
+    setPhotos((prev) => [...prev, prepared]);
   }
 
   function removePhoto(index: number) {
