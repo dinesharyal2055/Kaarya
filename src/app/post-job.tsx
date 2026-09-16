@@ -147,6 +147,13 @@ export default function PostJobScreen() {
       Alert.alert(t('postJob.locationRequiredTitle'), t('postJob.locationRequiredMessage'));
       return;
     }
+    if (step === 'budget' && negotiation === 'open_offers') {
+      const n = parseFloat(budgetMin || '');
+      if (!budgetMin || isNaN(n) || n < 300) {
+        Alert.alert(t('postJob.startingPriceTooLow'), t('postJob.startingPriceMin'));
+        return;
+      }
+    }
     const idx = steps.indexOf(step);
     if (idx < steps.length - 1) setStep(steps[idx + 1]);
   }
@@ -255,13 +262,20 @@ export default function PostJobScreen() {
         setUploadingPhotos(false);
       }
 
+      const bMin = budgetMin ? parseFloat(budgetMin) : undefined;
+      const bMax = negotiation === 'negotiable'
+        ? (budgetMax ? parseFloat(budgetMax) : undefined)
+        : negotiation === 'fixed' && bMin
+          ? bMin
+          : undefined;
+
       await createJob({
         title: title.trim(),
         description: description.trim(),
         category,
         location: area,
-        budgetMin: budgetMin ? parseFloat(budgetMin) : undefined,
-        budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
+        budgetMin: bMin,
+        budgetMax: bMax,
         negotiationMode: negotiation,
         photoUrls: uploadedUrls,
         latitude: latitude ?? undefined,
@@ -458,16 +472,7 @@ export default function PostJobScreen() {
         {step === 'budget' && (
           <ScrollView style={styles.stepContent} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
             <Text style={styles.stepTitle}>{t('postJob.stepBudgetTitle')}</Text>
-            <Text style={styles.stepSubtitle}>{t('postJob.stepBudgetSubtitle')}</Text>
             <View style={{ marginTop: Spacing.lg, gap: Spacing.md }}>
-              <View style={styles.budgetRow}>
-                <View style={{ flex: 1 }}>
-                  <Input label={t('postJob.minBudget')} placeholder="500" value={budgetMin} onChangeText={setBudgetMin} keyboardType="numeric" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Input label={t('postJob.maxBudget')} placeholder="3000" value={budgetMax} onChangeText={setBudgetMax} keyboardType="numeric" />
-                </View>
-              </View>
               <Text style={styles.fieldLabel}>{t('postJob.negotiationStyle')}</Text>
               {([
                 { value: 'negotiable', label: t('postJob.negotiable'), icon: 'swap-horizontal', desc: t('postJob.negotiableDesc') },
@@ -483,6 +488,49 @@ export default function PostJobScreen() {
                   {negotiation === opt.value && <MaterialCommunityIcons name="check-circle" size={20} color={KaaryaColors.brand[500]} />}
                 </Pressable>
               ))}
+
+              {negotiation === 'negotiable' && (
+                <>
+                  <Text style={styles.inlineHint}>{t('postJob.budgetNegotiableHint')}</Text>
+                  <View style={styles.budgetRow}>
+                    <View style={{ flex: 1 }}>
+                      <Input label={t('postJob.minBudget')} placeholder="500" value={budgetMin} onChangeText={setBudgetMin} keyboardType="numeric" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Input label={t('postJob.maxBudget')} placeholder="3000" value={budgetMax} onChangeText={setBudgetMax} keyboardType="numeric" />
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {negotiation === 'open_offers' && (
+                <>
+                  <Text style={styles.inlineHint}>{t('postJob.budgetOpenOffersHint')}</Text>
+                  <Text style={styles.inlineExample}>{t('postJob.budgetOpenOffersExample')}</Text>
+                  <Input
+                    label={t('postJob.startingPrice')}
+                    placeholder="1000"
+                    value={budgetMin}
+                    onChangeText={setBudgetMin}
+                    keyboardType="numeric"
+                    helper={t('postJob.startingPriceMin')}
+                  />
+                </>
+              )}
+
+              {negotiation === 'fixed' && (
+                <>
+                  <Text style={styles.inlineHint}>{t('postJob.budgetFixedHint')}</Text>
+                  <Input
+                    label={t('postJob.fixedPriceLabel')}
+                    placeholder="1500"
+                    value={budgetMin}
+                    onChangeText={setBudgetMin}
+                    keyboardType="numeric"
+                    leftIcon={<MaterialCommunityIcons name="lock" size={18} color={KaaryaColors.muted} />}
+                  />
+                </>
+              )}
             </View>
           </ScrollView>
         )}
@@ -497,7 +545,9 @@ export default function PostJobScreen() {
               <SummaryRow icon="text" iconColor={KaaryaColors.brand[500]} label={t('postJob.title')} value={title} />
               <SummaryRow icon="map-marker" iconColor={KaaryaColors.brand[500]} label={t('postJob.area')} value={area} />
               {photos.length > 0 && <SummaryRow icon="camera" iconColor={KaaryaColors.brand[500]} label={t('postJob.photos')} value={t('postJob.photosAttached', { count: photos.length })} />}
-              {budgetMin && budgetMax && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label={t('postJob.budget')} value={`Rs. ${budgetMin} – ${budgetMax}`} />}
+              {negotiation === 'negotiable' && budgetMin && budgetMax && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label={t('postJob.budget')} value={`Rs. ${budgetMin} – ${budgetMax}`} />}
+              {negotiation === 'open_offers' && budgetMin && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label={t('postJob.startingPrice')} value={`Rs. ${budgetMin}`} />}
+              {negotiation === 'fixed' && budgetMin && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label={t('postJob.fixedPriceLabel')} value={`Rs. ${budgetMin}`} />}
               <SummaryRow icon="swap-horizontal" iconColor={KaaryaColors.brand[500]} label={t('postJob.negotiation')} value={negotiation.charAt(0).toUpperCase() + negotiation.slice(1)} />
             </View>
             <Text style={styles.note}>{t('postJob.addressNote')}</Text>
@@ -557,6 +607,8 @@ const styles = StyleSheet.create({
   catLabel: { fontSize: 11, fontWeight: '600', color: KaaryaColors.text, textAlign: 'center' },
   catLabelSelected: { color: KaaryaColors.brand[600] },
   fieldLabel: { fontSize: FontSizes.sm, fontWeight: '600', color: KaaryaColors.text, marginBottom: 8 },
+  inlineHint: { fontSize: FontSizes.sm, color: KaaryaColors.textSecondary, lineHeight: 20 },
+  inlineExample: { fontSize: FontSizes.xs, color: KaaryaColors.muted, lineHeight: 18 },
   areaGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   areaPill: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: KaaryaColors.card, borderWidth: 1.5, borderColor: KaaryaColors.border },
   areaPillSelected: { borderColor: KaaryaColors.brand[500], backgroundColor: KaaryaColors.brand[50] },

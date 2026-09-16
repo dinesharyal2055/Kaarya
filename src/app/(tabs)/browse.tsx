@@ -15,6 +15,7 @@ import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
 import { fetchJobs } from '@/services/jobs';
 import { offersApi } from '@/lib/api';
 import { parseServerTime, formatNepalShort } from '@/lib/time';
+import { jobStatusLabel } from '@/lib/jobStatus';
 import { useAuth } from '@/context/AuthContext';
 import type { Job } from '@/types';
 
@@ -45,7 +46,9 @@ const getCategoryName = (categoryId: string) =>
 
 const formatBudget = (job: Job) => {
   if (job.budgetMin && job.budgetMax)
-    return `Rs. ${job.budgetMin.toLocaleString()} – ${job.budgetMax.toLocaleString()}`;
+    return job.budgetMin === job.budgetMax
+      ? `Rs. ${job.budgetMin.toLocaleString()}`
+      : `Rs. ${job.budgetMin.toLocaleString()} – ${job.budgetMax.toLocaleString()}`;
   if (job.budgetMax) return `Up to Rs. ${job.budgetMax.toLocaleString()}`;
   if (job.budgetMin) return `Rs. ${job.budgetMin.toLocaleString()}+`;
   return 'Budget TBD';
@@ -97,7 +100,7 @@ function JobCard({ item, myOfferJobIds, onPress, t }: {
             <Text style={[styles.statusText, {
               color: item.status === 'open' ? KaaryaColors.success : KaaryaColors.muted
             }]}>
-              {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+              {jobStatusLabel(t, item.status)}
             </Text>
           </View>
         )}

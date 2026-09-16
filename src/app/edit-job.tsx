@@ -98,7 +98,15 @@ export default function EditJobScreen() {
         setArea(data.area ?? '');
         setBudgetMin(data.budgetMin?.toString() ?? '');
         setBudgetMax(data.budgetMax?.toString() ?? '');
-        setNegotiation((data.negotiationMode as NegotiationMode) ?? 'negotiable');
+        const minV = Number(data.budgetMin ?? NaN);
+        const maxV = Number(data.budgetMax ?? NaN);
+        const hasMin = !isNaN(minV) && minV > 0;
+        const hasMax = !isNaN(maxV) && maxV > 0;
+        const inferred: NegotiationMode = hasMin && hasMax && maxV > minV ? 'negotiable'
+          : hasMin && hasMax && maxV === minV ? 'fixed'
+          : hasMin ? 'open_offers'
+          : 'negotiable';
+        setNegotiation(inferred);
         setLatitude(data.seekerLat ?? null);
         setLongitude(data.seekerLng ?? null);
 
@@ -212,6 +220,21 @@ export default function EditJobScreen() {
       return;
     }
 
+    if (negotiation === 'open_offers') {
+      const n = parseFloat(budgetMin || '');
+      if (!budgetMin || isNaN(n) || n < 300) {
+        Alert.alert(t('postJob.startingPriceTooLow'), t('postJob.startingPriceMin'));
+        return;
+      }
+    }
+
+    const bMin = budgetMin ? parseFloat(budgetMin) : undefined;
+    const bMax = negotiation === 'negotiable'
+      ? (budgetMax ? parseFloat(budgetMax) : undefined)
+      : negotiation === 'fixed' && bMin
+        ? bMin
+        : undefined;
+
     setSubmitting(true);
     try {
       // Upload any new photos (skip existing ones that already have uploadedUrl)
@@ -244,8 +267,8 @@ export default function EditJobScreen() {
         title: title.trim(),
         description: description.trim(),
         location: area,
-        budgetMin: budgetMin ? parseFloat(budgetMin) : undefined,
-        budgetMax: budgetMax ? parseFloat(budgetMax) : undefined,
+        budgetMin: bMin,
+        budgetMax: bMax,
         negotiationMode: negotiation,
         photoUrls: uploadedUrls,
         latitude: latitude ?? undefined,
@@ -416,31 +439,6 @@ export default function EditJobScreen() {
             </View>
           </View>
 
-          {/* Budget */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('editJob.budget')}</Text>
-            <View style={styles.budgetRow}>
-              <View style={{ flex: 1 }}>
-                <Input
-                  label={t('postJob.minBudget')}
-                  placeholder="500"
-                  value={budgetMin}
-                  onChangeText={setBudgetMin}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Input
-                  label={t('postJob.maxBudget')}
-                  placeholder="3000"
-                  value={budgetMax}
-                  onChangeText={setBudgetMax}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-          </View>
-
           {/* Negotiation style */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>{t('editJob.negotiationStyle')}</Text>
@@ -500,6 +498,67 @@ export default function EditJobScreen() {
                     )}
                   </Pressable>
                 )
+              )}
+            </View>
+          </View>
+
+          {/* Budget */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('editJob.budget')}</Text>
+            <View style={{ gap: Spacing.md }}>
+              {negotiation === 'negotiable' && (
+                <>
+                  <Text style={styles.inlineHint}>{t('postJob.budgetNegotiableHint')}</Text>
+                  <View style={styles.budgetRow}>
+                    <View style={{ flex: 1 }}>
+                      <Input
+                        label={t('postJob.minBudget')}
+                        placeholder="500"
+                        value={budgetMin}
+                        onChangeText={setBudgetMin}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Input
+                        label={t('postJob.maxBudget')}
+                        placeholder="3000"
+                        value={budgetMax}
+                        onChangeText={setBudgetMax}
+                        keyboardType="numeric"
+                      />
+                    </View>
+                  </View>
+                </>
+              )}
+
+              {negotiation === 'open_offers' && (
+                <>
+                  <Text style={styles.inlineHint}>{t('postJob.budgetOpenOffersHint')}</Text>
+                  <Text style={styles.inlineExample}>{t('postJob.budgetOpenOffersExample')}</Text>
+                  <Input
+                    label={t('postJob.startingPrice')}
+                    placeholder="1000"
+                    value={budgetMin}
+                    onChangeText={setBudgetMin}
+                    keyboardType="numeric"
+                    helper={t('postJob.startingPriceMin')}
+                  />
+                </>
+              )}
+
+              {negotiation === 'fixed' && (
+                <>
+                  <Text style={styles.inlineHint}>{t('postJob.budgetFixedHint')}</Text>
+                  <Input
+                    label={t('postJob.fixedPriceLabel')}
+                    placeholder="1500"
+                    value={budgetMin}
+                    onChangeText={setBudgetMin}
+                    keyboardType="numeric"
+                    leftIcon={<MaterialCommunityIcons name="lock" size={18} color={KaaryaColors.muted} />}
+                  />
+                </>
               )}
             </View>
           </View>
@@ -580,6 +639,8 @@ const styles = StyleSheet.create({
   },
   photoAddText: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 4, fontWeight: '600' },
   budgetRow: { flexDirection: 'row', gap: Spacing.md },
+  inlineHint: { fontSize: FontSizes.sm, color: KaaryaColors.textSecondary, lineHeight: 20 },
+  inlineExample: { fontSize: FontSizes.xs, color: KaaryaColors.muted, lineHeight: 18 },
   negCard: {
     flexDirection: 'row',
     alignItems: 'center',

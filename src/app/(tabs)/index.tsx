@@ -68,7 +68,9 @@ export default function HomeScreen() {
 
   const formatBudget = (job: Job) => {
     if (job.budgetMin && job.budgetMax) {
-      return `Rs. ${job.budgetMin.toLocaleString()} – ${job.budgetMax.toLocaleString()}`;
+      return job.budgetMin === job.budgetMax
+        ? `Rs. ${job.budgetMin.toLocaleString()}`
+        : `Rs. ${job.budgetMin.toLocaleString()} – ${job.budgetMax.toLocaleString()}`;
     }
     if (job.budgetMax) return `Up to Rs. ${job.budgetMax.toLocaleString()}`;
     if (job.budgetMin) return `Rs. ${job.budgetMin.toLocaleString()}+`;

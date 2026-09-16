@@ -14,6 +14,7 @@ import { CATEGORIES } from '@/constants/categories';
 import { fetchJob } from '@/services/jobs';
 import { offersApi, reviewsApi, jobsApi, resolveStaticUrl } from '@/lib/api';
 import { parseServerTime, formatNepalMedium } from '@/lib/time';
+import { jobStatusLabel } from '@/lib/jobStatus';
 import { Button } from '@/components/ui';
 import type { Job } from '@/types';
 
@@ -115,8 +116,9 @@ export default function JobDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      loadJob(true);
       if (job) { loadOfferStatus(); loadSaveStatus(); }
-    }, [job, loadOfferStatus, loadSaveStatus])
+    }, [job, loadJob, loadOfferStatus, loadSaveStatus])
   );
 
   if (loading) {
@@ -150,7 +152,9 @@ export default function JobDetailScreen() {
 
   const formatBudget = () => {
     if (job.budgetMin && job.budgetMax) {
-      return `Rs. ${job.budgetMin.toLocaleString()} – ${job.budgetMax.toLocaleString()}`;
+      return job.budgetMin === job.budgetMax
+        ? `Rs. ${job.budgetMin.toLocaleString()}`
+        : `Rs. ${job.budgetMin.toLocaleString()} – ${job.budgetMax.toLocaleString()}`;
     }
     if (job.budgetMax) return `Up to Rs. ${job.budgetMax.toLocaleString()}`;
     if (job.budgetMin) return `Rs. ${job.budgetMin.toLocaleString()}+`;
@@ -238,7 +242,7 @@ export default function JobDetailScreen() {
           <View style={styles.statusRow}>
             <View style={[styles.statusPill, { backgroundColor: statusColor + '20' }]}>
               <Text style={[styles.statusText, { color: statusColor }]}>
-                {job.status.charAt(0).toUpperCase() + job.status.slice(1).replace('_', ' ')}
+                {jobStatusLabel(t, job.status)}
               </Text>
             </View>
             <Text style={styles.postedAt}>{formatDate(job.createdAt)}</Text>

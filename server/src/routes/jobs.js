@@ -75,6 +75,19 @@ async function getOfferCount(jobId) {
   }
 }
 
+// Only offers a seeker still has to act on block editing. Rejected, accepted,
+// or withdrawn offers must not lock a task forever.
+async function getActiveOfferCount(jobId) {
+  const db = await getDb();
+  if (usePostgres) {
+    const res = await db.query('SELECT COUNT(*) as count FROM offers WHERE job_id = $1 AND status = $2', [jobId, 'pending']);
+    return parseInt(res.rows[0].count, 10);
+  } else {
+    const result = db.exec('SELECT COUNT(*) FROM offers WHERE job_id = ? AND status = ?', [jobId, 'pending']);
+    return result.length > 0 ? result[0].values[0][0] : 0;
+  }
+}
+
 // POST /api/jobs/upload — upload job photo
 router.post('/upload', requireAuth, async (req, res) => {
   try {
@@ -772,7 +785,7 @@ router.patch('/:id', requireAuth, sanitize('title', 'description', 'location'), 
       if (String(ownerId) !== String(req.userId)) return res.status(403).json({ error: 'Only the job owner can edit it' });
       if (jobStatus !== 'open') return res.status(400).json({ error: 'Cannot edit a job after bids have been placed.', code: 'BID_EXISTS' });
 
-      const offerCount = await getOfferCount(id);
+      const offerCount = await getActiveOfferCount(id);
       if (offerCount > 0) return res.status(400).json({ error: 'Cannot edit a job that already has bids.', code: 'BID_EXISTS' });
 
       const updates = [];
@@ -819,7 +832,7 @@ router.patch('/:id', requireAuth, sanitize('title', 'description', 'location'), 
       if (String(ownerId) !== String(req.userId)) return res.status(403).json({ error: 'Only the job owner can edit it' });
       if (jobStatus !== 'open') return res.status(400).json({ error: 'Cannot edit a job after bids have been placed.', code: 'BID_EXISTS' });
 
-      const offerCount = await getOfferCount(id);
+      const offerCount = await getActiveOfferCount(id);
       if (offerCount > 0) return res.status(400).json({ error: 'Cannot edit a job that already has bids.', code: 'BID_EXISTS' });
 
       const updates = [];

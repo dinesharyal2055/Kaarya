@@ -32,6 +32,30 @@ export default function MakeOfferScreen() {
   const catData = CATEGORIES.find((c) => c.id === jobCategory);
   const catColor = catData?.color ?? KaaryaColors.brand[500];
 
+  const minN = budgetMin ? parseFloat(budgetMin) : NaN;
+  const maxN = budgetMax ? parseFloat(budgetMax) : NaN;
+  const hasMin = !isNaN(minN) && minN > 0;
+  const hasMax = !isNaN(maxN) && maxN > 0;
+  const mode: 'negotiable' | 'open_offers' | 'fixed' | null =
+    hasMin && hasMax && maxN > minN ? 'negotiable'
+    : hasMin && hasMax && maxN === minN ? 'fixed'
+    : hasMin ? 'open_offers'
+    : null;
+  const modeConfig = mode && {
+    negotiable: { icon: 'swap-horizontal', color: KaaryaColors.brand[500], label: t('makeOffer.modeNegotiable'), hint: t('makeOffer.modeNegotiableHint') },
+    open_offers: { icon: 'format-list-bulleted', color: KaaryaColors.brand[500], label: t('makeOffer.modeOpenOffers'), hint: t('makeOffer.modeOpenOffersHint') },
+    fixed: { icon: 'lock', color: KaaryaColors.brand[600], label: t('makeOffer.modeFixed'), hint: t('makeOffer.modeFixedHint') },
+  }[mode];
+  const budgetMeta = mode === 'fixed'
+    ? null
+    : mode === 'open_offers'
+      ? `${t('makeOffer.startingPriceLabel')}: Rs. ${budgetMin}`
+      : hasMin && hasMax
+        ? `${t('makeOffer.seekerBudget')}: Rs. ${budgetMin} – ${budgetMax}`
+        : null;
+
+  const fixedPrice = mode === 'fixed' && hasMin ? minN : null;
+
   async function handleSubmit() {
     if (user?.verificationStatus !== 'verified') {
       Alert.alert(
@@ -45,7 +69,8 @@ export default function MakeOfferScreen() {
       return;
     }
 
-    if (!price || parseFloat(price) <= 0) {
+    const offerPrice = fixedPrice ?? (price ? parseFloat(price) : NaN);
+    if (!offerPrice || offerPrice <= 0) {
       Alert.alert(t('makeOffer.invalidPrice'), t('makeOffer.enterValidAmount'));
       return;
     }
@@ -54,7 +79,7 @@ export default function MakeOfferScreen() {
     try {
       await submitOffer({
         jobId: jobId!,
-        price: parseFloat(price),
+        price: offerPrice,
         message: message.trim() || undefined,
       });
       Alert.alert(t('makeOffer.successTitle'), t('makeOffer.successMessage'), [
@@ -93,27 +118,45 @@ export default function MakeOfferScreen() {
               </View>
             )}
             <Text style={styles.jobTitle}>{jobTitle}</Text>
-            {(budgetMin || budgetMax) && (
+            {modeConfig && (
+              <View style={styles.modeWrap}>
+                <View style={[styles.modeChip, { backgroundColor: modeConfig.color + '1A' }]}>
+                  <MaterialCommunityIcons name={modeConfig.icon as any} size={14} color={modeConfig.color} />
+                  <Text style={[styles.modeChipText, { color: modeConfig.color }]}>{modeConfig.label}</Text>
+                </View>
+                <Text style={styles.modeHint}>{modeConfig.hint}</Text>
+              </View>
+            )}
+            {budgetMeta && (
               <Text style={styles.budgetHint}>
-                {t('makeOffer.seekerBudget')}: Rs. {budgetMin ?? '?'} – {budgetMax ?? '?'}
+                {budgetMeta}
               </Text>
             )}
 
-            {/* Price input */}
+            {/* Price input / Fixed-price display */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>{t('makeOffer.yourOffer')}</Text>
-              <View style={styles.priceRow}>
-                <Text style={styles.currency}>Rs.</Text>
-                <Input
-                  placeholder="0"
-                  value={price}
-                  onChangeText={setPrice}
-                  keyboardType="numeric"
-                  containerStyle={{ flex: 1, marginBottom: 0 }}
-                />
-              </View>
+              {mode !== 'fixed' && <Text style={styles.sectionTitle}>{t('makeOffer.yourOffer')}</Text>}
+              {mode === 'fixed' ? (
+                <View style={styles.fixedPriceRow}>
+                  <MaterialCommunityIcons name="lock" size={18} color={KaaryaColors.brand[600]} />
+                  <Text style={styles.fixedPriceValue}>
+                    {`${t('makeOffer.fixedPriceLabel')}: Rs. ${budgetMin}`}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.priceRow}>
+                  <Text style={styles.currency}>Rs.</Text>
+                  <Input
+                    placeholder="0"
+                    value={price}
+                    onChangeText={setPrice}
+                    keyboardType="numeric"
+                    containerStyle={{ flex: 1, marginBottom: 0 }}
+                  />
+                </View>
+              )}
               <Text style={styles.hint}>
-                {t('makeOffer.priceHint')}
+                {mode === 'fixed' ? t('makeOffer.modeFixedHint') : t('makeOffer.priceHint')}
               </Text>
             </View>
 
@@ -145,7 +188,7 @@ export default function MakeOfferScreen() {
               title={t('makeOffer.submitOffer')}
               onPress={handleSubmit}
               loading={loading}
-              disabled={loading || !price}
+              disabled={loading || (!fixedPrice && !price)}
               fullWidth
             />
           </View>
@@ -165,9 +208,15 @@ const styles = StyleSheet.create({
   catBadgeText: { fontSize: FontSizes.xs, fontWeight: '700' },
   jobTitle: { fontSize: FontSizes.xl, fontWeight: '800', color: KaaryaColors.text, marginTop: Spacing.sm },
   budgetHint: { fontSize: FontSizes.sm, color: KaaryaColors.muted, marginTop: 4, marginBottom: Spacing.md },
+  modeWrap: { marginTop: Spacing.sm, gap: 4 },
+  modeChip: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 14, gap: 6 },
+  modeChipText: { fontSize: FontSizes.xs, fontWeight: '700' },
+  modeHint: { fontSize: FontSizes.xs, color: KaaryaColors.muted, lineHeight: 18 },
   section: { marginTop: Spacing.lg },
   sectionTitle: { fontSize: FontSizes.sm, fontWeight: '700', color: KaaryaColors.text, marginBottom: Spacing.sm },
   priceRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  fixedPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: KaaryaColors.brand[50], borderWidth: 1, borderColor: KaaryaColors.brand[100], borderRadius: BorderRadius.md, paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md },
+  fixedPriceValue: { fontSize: FontSizes.lg, fontWeight: '700', color: KaaryaColors.brand[600] },
   currency: { fontSize: FontSizes.xl, fontWeight: '700', color: KaaryaColors.text, marginBottom: 0 },
   hint: { fontSize: FontSizes.xs, color: KaaryaColors.muted, marginTop: 8 },
   tipCard: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, backgroundColor: KaaryaColors.brand[50], borderRadius: BorderRadius.md, padding: Spacing.md, marginTop: Spacing.lg },

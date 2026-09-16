@@ -117,7 +117,7 @@ export default function JobsScreen() {
 
   const formatBudget = (job: Job) => {
     if (job.agreedAmount) return `Rs. ${job.agreedAmount.toLocaleString()}`;
-    if (job.budgetMin && job.budgetMax) return `Rs. ${job.budgetMin.toLocaleString()} – ${job.budgetMax.toLocaleString()}`;
+    if (job.budgetMin && job.budgetMax) return job.budgetMin === job.budgetMax ? `Rs. ${job.budgetMin.toLocaleString()}` : `Rs. ${job.budgetMin.toLocaleString()} – ${job.budgetMax.toLocaleString()}`;
     if (job.budgetMax) return `Up to Rs. ${job.budgetMax.toLocaleString()}`;
     if (job.budgetMin) return `Rs. ${job.budgetMin.toLocaleString()}+`;
     return t('jobDetail.budgetTbd');
