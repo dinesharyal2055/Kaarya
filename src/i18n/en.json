@@ -502,7 +502,8 @@
     "startConversation": "Start the conversation by sending a message below",
     "typeMessage": "Type a message...",
     "taskPoster": "Task Poster",
-    "serviceProvider": "Service Provider"
+    "serviceProvider": "Service Provider",
+    "chat": "Messages"
   },
   "notifications": {
     "title": "Notifications",

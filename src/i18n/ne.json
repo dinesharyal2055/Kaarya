@@ -499,7 +499,8 @@
     "startConversation": "तल सन्देश पठाएर कुराकानी सुरु गर्नुहोस्",
     "typeMessage": "सन्देश टाइप गर्नुहोस्...",
     "taskPoster": "कार्य पोस्टकर्ता",
-    "serviceProvider": "सेवा प्रदायक"
+    "serviceProvider": "सेवा प्रदायक",
+    "chat": "सन्देशहरू"
   },
   "notifications": {
     "title": "सूचनाहरू",
