@@ -14,6 +14,7 @@ import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/const
 import { CATEGORIES } from '@/constants/categories';
 import { jobsApi } from '@/lib/api';
 import { parseServerTime, formatNepalShort } from '@/lib/time';
+import { inferNegotiationMode, negotiationLabel } from '@/lib/negotiation';
 import { useAuth } from '@/context/AuthContext';
 import type { Job } from '@/types';
 
@@ -145,6 +146,7 @@ export default function JobsScreen() {
     };
     const cfg = statusMap[statusKey] ?? { label: job.status, color: KaaryaColors.muted, icon: 'help-circle' };
     const catColor = getCategoryColor(job.category);
+    const mode = inferNegotiationMode(job);
 
     return (
       <View style={[styles.jobCard, Shadows.md]}>
@@ -153,9 +155,12 @@ export default function JobsScreen() {
             <View style={[styles.catBadge, { backgroundColor: catColor + '20' }]}>
               <MaterialCommunityIcons name={getCategoryIcon(job.category) as any} size={14} color={catColor} />
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: cfg.color + '20' }]}>
-              <MaterialCommunityIcons name={cfg.icon as any} size={12} color={cfg.color} />
-              <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+            <View style={styles.statusCol}>
+              <View style={[styles.statusBadge, { backgroundColor: cfg.color + '20' }]}>
+                <MaterialCommunityIcons name={cfg.icon as any} size={12} color={cfg.color} />
+                <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+              </View>
+              <Text style={styles.negLabel}>{negotiationLabel(t, mode)}</Text>
             </View>
           </View>
           <Text style={styles.jobTitle}>{job.title}</Text>
@@ -203,6 +208,7 @@ export default function JobsScreen() {
     };
     const cfg = statusMap[statusKey] ?? { label: job.status, color: KaaryaColors.muted, icon: 'help-circle' };
     const catColor = getCategoryColor(job.category);
+    const mode = inferNegotiationMode(job);
     const myRole = job.userRole === 'provider' ? 'provider' : 'seeker';
 
     return (
@@ -212,9 +218,12 @@ export default function JobsScreen() {
             <View style={[styles.catBadge, { backgroundColor: catColor + '20' }]}>
               <MaterialCommunityIcons name={getCategoryIcon(job.category) as any} size={14} color={catColor} />
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: cfg.color + '20' }]}>
-              <MaterialCommunityIcons name={cfg.icon as any} size={12} color={cfg.color} />
-              <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+            <View style={styles.statusCol}>
+              <View style={[styles.statusBadge, { backgroundColor: cfg.color + '20' }]}>
+                <MaterialCommunityIcons name={cfg.icon as any} size={12} color={cfg.color} />
+                <Text style={[styles.statusText, { color: cfg.color }]}>{cfg.label}</Text>
+              </View>
+              <Text style={styles.negLabel}>{negotiationLabel(t, mode)}</Text>
             </View>
           </View>
           <Text style={styles.jobTitle}>{job.title}</Text>
@@ -249,6 +258,7 @@ export default function JobsScreen() {
   // ── Saved job card ──────────────────────────────────────────────
   const renderSavedJob = ({ item: job }: { item: Job }) => {
     const catColor = getCategoryColor(job.category);
+    const mode = inferNegotiationMode(job);
 
     return (
       <View style={[styles.jobCard, Shadows.md]}>
@@ -257,9 +267,12 @@ export default function JobsScreen() {
             <View style={[styles.catBadge, { backgroundColor: catColor + '20' }]}>
               <MaterialCommunityIcons name={getCategoryIcon(job.category) as any} size={14} color={catColor} />
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: KaaryaColors.success + '20' }]}>
-              <MaterialCommunityIcons name="bookmark" size={12} color={KaaryaColors.success} />
-              <Text style={[styles.statusText, { color: KaaryaColors.success }]}>{t('jobs.saved')}</Text>
+            <View style={styles.statusCol}>
+              <View style={[styles.statusBadge, { backgroundColor: KaaryaColors.success + '20' }]}>
+                <MaterialCommunityIcons name="bookmark" size={12} color={KaaryaColors.success} />
+                <Text style={[styles.statusText, { color: KaaryaColors.success }]}>{t('jobs.saved')}</Text>
+              </View>
+              <Text style={styles.negLabel}>{negotiationLabel(t, mode)}</Text>
             </View>
           </View>
           <Text style={styles.jobTitle}>{job.title}</Text>
@@ -419,6 +432,8 @@ const styles = StyleSheet.create({
   jobHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
   catBadge: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 4 },
+  statusCol: { alignItems: 'flex-end', gap: 4 },
+  negLabel: { fontSize: FontSizes.xs, color: KaaryaColors.muted, fontWeight: '600' },
   statusText: { fontSize: FontSizes.xs, fontWeight: '600' },
   jobTitle: { fontSize: FontSizes.base, fontWeight: '700', color: KaaryaColors.text, marginBottom: 4 },
   jobDesc: { fontSize: FontSizes.sm, color: KaaryaColors.muted, marginBottom: Spacing.sm },

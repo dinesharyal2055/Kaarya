@@ -16,6 +16,7 @@ import { fetchJobs } from '@/services/jobs';
 import { offersApi } from '@/lib/api';
 import { parseServerTime, formatNepalShort } from '@/lib/time';
 import { jobStatusLabel } from '@/lib/jobStatus';
+import { inferNegotiationMode, negotiationLabel } from '@/lib/negotiation';
 import { useAuth } from '@/context/AuthContext';
 import type { Job } from '@/types';
 
@@ -73,6 +74,7 @@ function JobCard({ item, myOfferJobIds, onPress, t }: {
 }) {
   const catColor = getCategoryColor(item.category);
   const hasOffer = myOfferJobIds.has(item.id);
+  const mode = inferNegotiationMode(item);
 
   return (
     <Pressable style={[styles.jobCard, Shadows.md]} onPress={onPress}>
@@ -87,23 +89,26 @@ function JobCard({ item, myOfferJobIds, onPress, t }: {
             {getCategoryName(item.category)}
           </Text>
         </View>
-        {hasOffer ? (
-          <View style={[styles.statusBadge, { backgroundColor: KaaryaColors.brand[100] }]}>
-            <Text style={[styles.statusText, { color: KaaryaColors.brand[500] }]}>{t('browse.offerSent')}</Text>
-          </View>
-        ) : (
-          <View style={[styles.statusBadge, {
-            backgroundColor: item.status === 'open'
-              ? KaaryaColors.success + '20'
-              : KaaryaColors.muted + '20'
-          }]}>
-            <Text style={[styles.statusText, {
-              color: item.status === 'open' ? KaaryaColors.success : KaaryaColors.muted
+        <View style={styles.headerRight}>
+          {hasOffer ? (
+            <View style={[styles.statusBadge, { backgroundColor: KaaryaColors.brand[100] }]}>
+              <Text style={[styles.statusText, { color: KaaryaColors.brand[500] }]}>{t('browse.offerSent')}</Text>
+            </View>
+          ) : (
+            <View style={[styles.statusBadge, {
+              backgroundColor: item.status === 'open'
+                ? KaaryaColors.success + '20'
+                : KaaryaColors.muted + '20'
             }]}>
-              {jobStatusLabel(t, item.status)}
-            </Text>
-          </View>
-        )}
+              <Text style={[styles.statusText, {
+                color: item.status === 'open' ? KaaryaColors.success : KaaryaColors.muted
+              }]}>
+                {jobStatusLabel(t, item.status)}
+              </Text>
+            </View>
+          )}
+          <Text style={styles.negLabel}>{negotiationLabel(t, mode)}</Text>
+        </View>
       </View>
 
       <Text style={styles.jobTitle}>{item.title}</Text>
@@ -646,6 +651,8 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: Spacing.lg, paddingTop: Spacing.sm, paddingBottom: 100 },
   jobCard: { backgroundColor: KaaryaColors.card, borderRadius: BorderRadius.lg, padding: Spacing.lg, marginBottom: Spacing.md },
   jobHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: Spacing.sm },
+  headerRight: { alignItems: 'flex-end', gap: 4 },
+  negLabel: { fontSize: FontSizes.xs, color: KaaryaColors.muted, fontWeight: '600' },
   catBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, gap: 4 },
   catBadgeText: { fontSize: FontSizes.xs, fontWeight: '600' },
   statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
