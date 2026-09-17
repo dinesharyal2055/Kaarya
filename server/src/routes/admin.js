@@ -178,6 +178,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
+    // Deactivated accounts are not allowed to sign in
+    const isActiveVal = usePostgres ? userRow.is_active : userRow[11];
+    const isActive = usePostgres ? (isActiveVal === true) : (isActiveVal === 1);
+    if (!isActive) {
+      return res.status(401).json({ error: 'Your account has been deactivated' });
+    }
+
     // Check if user is admin
     const isAdmin = usePostgres ? userRow.is_admin : !!userRow[15]; // is_admin is the 16th selected column (index 15)
     if (!isAdmin) {

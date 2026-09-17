@@ -511,6 +511,13 @@ router.post('/login', loginLimiter, validate(loginSchema), async (req, res) => {
 
     recordSuccess(email);
 
+    // Deactivated accounts are not allowed to sign in
+    const isActiveVal = usePostgres ? userRow.is_active : userRow[11];
+    const isActive = usePostgres ? (isActiveVal === true) : (isActiveVal === 1);
+    if (!isActive) {
+      return res.status(401).json({ error: 'Your account has been deactivated. Please contact support.' });
+    }
+
     const userId = usePostgres ? userRow.id : userRow[0];
     const { token } = signTokenWithJti(userId);
     const user = userFromRow(userRow);

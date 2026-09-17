@@ -70,6 +70,7 @@
         "fillAllFields": "Please fill in all fields",
         "verifyAccountFirst": "Please verify your account first. Check your email for the OTP.",
         "incorrectCredentials": "Incorrect email or password",
+        "accountDeactivated": "This account has been deactivated. Contact support for help.",
         "loginFailed": "Login failed. Please try again."
       }
     },

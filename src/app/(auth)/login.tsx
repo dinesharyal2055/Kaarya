@@ -38,7 +38,11 @@ export default function LoginScreen() {
     } catch (e: any) {
       const apiErr = e as ApiError;
       if (apiErr.status === 401) {
-        setError(t('auth.login.errors.incorrectCredentials'));
+        if (apiErr.message && /deactivated/i.test(apiErr.message)) {
+          setError(t('auth.login.errors.accountDeactivated'));
+        } else {
+          setError(t('auth.login.errors.incorrectCredentials'));
+        }
       } else {
         setError(e.message ?? t('auth.login.errors.loginFailed'));
       }

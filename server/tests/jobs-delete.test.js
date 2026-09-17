@@ -66,7 +66,7 @@ async function resetFixture() {
     [PROVIDER_ID, 'Bidder Provider', 'bidder@kaarya.demo', '98090002', 'test-hash']);
   db.run(`INSERT OR REPLACE INTO users (id, name, email, phone, password_hash, role, is_verified, is_active, is_admin)
           VALUES (?, ?, ?, ?, ?, 'admin', 1, 1, 1)`,
-    [ADMIN_ID, 'Super Admin', 'admin@kaarya.demo', '98090003', 'test-hash']);
+    [ADMIN_ID, 'Super Admin', 'delete-admin@kaarya.demo', '98090003', 'test-hash']);
   db.run(`INSERT INTO jobs (id, seeker_id, title, description, category, location, budget_min, budget_max, status, urgency)
           VALUES (?, ?, 'Repair balcony', 'Need masonry work', 'maintenance', 'Tokha', 3000, 5000, 'open', 'normal')`,
     [JOB_ID, OWNER_ID]);

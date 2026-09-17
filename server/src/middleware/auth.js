@@ -71,6 +71,30 @@ async function isBlocked(jti) {
 }
 
 /**
+ * Check whether a user account is active (not deactivated by an admin).
+ * Returns:
+ *   - undefined: user does not exist (caller decides how to handle)
+ *   - true:      user exists and is active
+ *   - false:     user exists but has been deactivated
+ */
+async function isAccountActive(userId) {
+  const db = await getDb();
+  const usePostgres = !!process.env.DATABASE_URL;
+
+  let val;
+  if (usePostgres) {
+    const res = await db.query('SELECT is_active FROM users WHERE id = $1', [userId]);
+    if (res.rowCount > 0) val = res.rows[0].is_active;
+  } else {
+    const result = db.exec('SELECT is_active FROM users WHERE id = ?', [userId]);
+    if (result.length > 0 && result[0].values.length > 0) val = result[0].values[0][0];
+  }
+
+  if (val === undefined) return undefined;
+  return usePostgres ? (val === true) : (val === 1);
+}
+
+/**
  * Middleware: verify JWT and check blocklist.
  * Adds req.userId on success.
  * Note: uses Promise.resolve().then() to ensure async errors propagate to Express error handler.
@@ -91,6 +115,13 @@ function requireAuth(req, res, next) {
         if (blocked) {
           return res.status(401).json({ error: 'Token has been revoked' });
         }
+      }
+
+      // Deactivated accounts are locked out of EVERY authenticated endpoint —
+      // existing sessions are kicked out immediately, not just on next login.
+      const active = await isAccountActive(payload.userId);
+      if (active === false) {
+        return res.status(401).json({ error: 'Your account has been deactivated' });
       }
 
       req.userId = payload.userId;
@@ -132,4 +163,4 @@ async function verifyPassword(password, hash) {
   return bcrypt.compare(password, hash);
 }
 
-module.exports = { requireAuth, signToken, signTokenWithJti, addToBlocklist, hashPassword, verifyPassword, JWT_SECRET };
+module.exports = { requireAuth, signToken, signTokenWithJti, addToBlocklist, hashPassword, verifyPassword, isAccountActive, JWT_SECRET };
