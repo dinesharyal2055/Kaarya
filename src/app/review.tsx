@@ -45,7 +45,7 @@ export default function ReviewScreen() {
         comment: comment.trim() || undefined,
       });
       Alert.alert(t('review.reviewSubmitted'), t('review.thankYou'), [
-        { text: t('common.ok'), onPress: () => router.back() },
+        { text: t('common.ok'), onPress: () => router.replace('/(tabs)') },
       ]);
     } catch (e: any) {
       Alert.alert(t('common.error'), e.message ?? t('review.submitFailed'));

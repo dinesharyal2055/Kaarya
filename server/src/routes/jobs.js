@@ -7,6 +7,7 @@ const { requireAuth } = require('../middleware/auth');
 const { validate, createJob, updateJob, updateJobStatus } = require('../middleware/validate');
 const { sanitize } = require('../middleware/sanitize');
 const { sendToUser } = require('../fcm');
+const { deleteJobCascade } = require('../jobCascade');
 
 const router = express.Router();
 const PAGE_SIZE = 20;
@@ -872,6 +873,63 @@ router.patch('/:id', requireAuth, sanitize('title', 'description', 'location'), 
   } catch (err) {
     console.error('[jobs/edit]', err);
     res.status(500).json({ error: 'Failed to edit job' });
+  }
+});
+
+// DELETE /api/jobs/:id — task poster deletes their own open task that has NEVER
+// received an offer (historical). Once any offer has ever been placed, deletion
+// stays forbidden — stricter than editing (which re-opens after all rejections).
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+
+    if (usePostgres) {
+      const jobRes = await db.query('SELECT seeker_id, status FROM jobs WHERE id = $1', [id]);
+      if (jobRes.rowCount === 0) return res.status(404).json({ error: 'Job not found' });
+      const { seeker_id: ownerId, status: jobStatus } = jobRes.rows[0];
+
+      if (String(ownerId) !== String(req.userId)) {
+        return res.status(403).json({ error: 'Only the job poster can delete it' });
+      }
+      if (jobStatus !== 'open') {
+        return res.status(400).json({ error: 'Only open tasks can be deleted. Completed or assigned tasks stay in your history.', code: 'NOT_OPEN' });
+      }
+
+      const offerCount = await getOfferCount(id);
+      if (offerCount > 0) {
+        return res.status(400).json({ error: 'A task that has received offers cannot be deleted.', code: 'OFFERS_EXIST' });
+      }
+
+      await deleteJobCascade(id);
+      res.json({ message: 'Job deleted successfully' });
+    } else {
+      const jobResult = db.exec('SELECT seeker_id, status FROM jobs WHERE id = ?', [id]);
+      if (jobResult.length === 0 || jobResult[0].values.length === 0) {
+        return res.status(404).json({ error: 'Job not found' });
+      }
+
+      const ownerId = jobResult[0].values[0][0];
+      const jobStatus = jobResult[0].values[0][1];
+
+      if (String(ownerId) !== String(req.userId)) {
+        return res.status(403).json({ error: 'Only the job poster can delete it' });
+      }
+      if (jobStatus !== 'open') {
+        return res.status(400).json({ error: 'Only open tasks can be deleted. Completed or assigned tasks stay in your history.', code: 'NOT_OPEN' });
+      }
+
+      const offerCount = await getOfferCount(id);
+      if (offerCount > 0) {
+        return res.status(400).json({ error: 'A task that has received offers cannot be deleted.', code: 'OFFERS_EXIST' });
+      }
+
+      await deleteJobCascade(id);
+      res.json({ message: 'Job deleted successfully' });
+    }
+  } catch (err) {
+    console.error('[jobs/delete]', err);
+    res.status(500).json({ error: 'Failed to delete job' });
   }
 });
 

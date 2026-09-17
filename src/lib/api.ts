@@ -227,6 +227,9 @@ export const jobsApi = {
   update: (id: string, data: Partial<import('@/types').Job>) =>
     request<import('@/types').Job>('PATCH', `/jobs/${id}`, data),
 
+  /** Permanently delete an own open task that has never had an offer */
+  remove: (id: string) => del<{ message: string }>(`/jobs/${id}`),
+
   updateStatus: (id: string, status: string) =>
     put(`/jobs/${id}/status`, { status }),
 

@@ -31,6 +31,7 @@ const Jobs: React.FC = () => {
     totalPages: 0,
     totalCount: 0,
   });
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -65,6 +66,20 @@ const Jobs: React.FC = () => {
     }));
     // Reset to first page when filters change
     setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to delete this task?')) return;
+    setDeletingId(id);
+    try {
+      await api.delete(`/api/admin/jobs/${id}`);
+      setJobs(prev => prev.filter(j => String(j.id) !== String(id)));
+      fetchJobs();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to delete job');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -203,14 +218,23 @@ const Jobs: React.FC = () => {
                         {new Date(job.createdAt).toLocaleDateString()}
                       </td>
                       <td className="text-sm font-medium">
-                        <button
-                          onClick={() => {
-                            navigate(`/jobs/${job.id}`);
-                          }}
-                          className="neu-link"
-                        >
-                          View
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => {
+                              navigate(`/jobs/${job.id}`);
+                            }}
+                            className="neu-link"
+                          >
+                            View
+                          </button>
+                          <button
+                            onClick={() => handleDelete(job.id)}
+                            disabled={deletingId === String(job.id)}
+                            className="neu-link"
+                          >
+                            {deletingId === String(job.id) ? 'Deleting...' : 'Delete'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

@@ -261,6 +261,9 @@
     "editJob": "Edit Job",
     "deleteJob": "Delete Job",
     "confirmDelete": "Are you sure you want to delete this job? This action cannot be undone.",
+    "confirmDeleteTask": "Are you sure you want to delete the task?",
+    "deletedSuccess": "Successfully Deleted",
+    "deleteFailed": "Failed to delete the task",
     "offerAccepted": "Offer accepted!",
     "offerAcceptedHint": "You can now chat with the provider from the Messages tab.",
     "viewLocation": "View Location",
@@ -294,9 +297,10 @@
     "offerRejected": "(rejected)",
     "view": "View",
     "workInProgress": "Work in progress. The seeker will confirm when done.",
-    "reviewSubmitted": "Review submitted!",
+    "reviewSubmitted": "Review Submitted",
     "leaveReview": "Leave a Review",
-    "providerNotAvailable": "Provider info not available"
+    "providerNotAvailable": "Provider info not available",
+    "paymentToProvider": "Please make the payment to the Service Provider."
   },
   "offers": {
     "myBids": "My Bids",
@@ -742,7 +746,7 @@
     "poor": "Poor",
     "excellent": "Excellent",
     "shareExperience": "Share your experience...",
-    "reviewSubmitted": "Review Submitted",
+    "reviewSubmitted": "Review Submitted!",
     "thankYou": "Thank you for your feedback!",
     "selectRatingFirst": "Please select a star rating first",
     "submitFailed": "Failed to submit review. Please try again.",

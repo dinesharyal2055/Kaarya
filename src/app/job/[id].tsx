@@ -111,6 +111,34 @@ export default function JobDetailScreen() {
   // Load job on mount
   useEffect(() => { loadJob(); }, [loadJob]);
 
+  // Delete the task (poster only — open status, no offers ever)
+  const confirmDeleteJob = useCallback(() => {
+    if (!job) return;
+    Alert.alert(
+      t('jobDetail.deleteJob'),
+      t('jobDetail.confirmDeleteTask'),
+      [
+        { text: t('common.no'), style: 'cancel' },
+        {
+          text: t('common.yes'),
+          style: 'destructive',
+          onPress: async () => {
+            setActionLoading(true);
+            try {
+              await jobsApi.remove(job.id);
+              Alert.alert(t('jobDetail.deletedSuccess'));
+              router.back();
+            } catch (e: any) {
+              Alert.alert(t('common.error'), e.message ?? t('jobDetail.deleteFailed'));
+            } finally {
+              setActionLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  }, [job, router, t]);
+
   // Load offer status + save status after job is loaded and whenever screen refocuses
   useEffect(() => { if (job) { loadOfferStatus(); loadSaveStatus(); } }, [job, loadOfferStatus, loadSaveStatus]);
 
@@ -211,12 +239,19 @@ export default function JobDetailScreen() {
               />
             </Pressable>
           ) : isSeekerOwner && job.status === 'open' ? (
-            <Pressable
-              onPress={() => router.push({ pathname: '/edit-job', params: { id: job.id } })}
-              style={styles.saveBtn}
-            >
-              <MaterialCommunityIcons name="pencil" size={22} color={KaaryaColors.brand[500]} />
-            </Pressable>
+            <View style={styles.headerActions}>
+              <Pressable
+                onPress={() => router.push({ pathname: '/edit-job', params: { id: job.id } })}
+                style={styles.saveBtn}
+              >
+                <MaterialCommunityIcons name="pencil" size={22} color={KaaryaColors.brand[500]} />
+              </Pressable>
+              {(job.offerCount ?? 0) === 0 && (
+                <Pressable onPress={confirmDeleteJob} style={styles.saveBtn} disabled={actionLoading}>
+                  <MaterialCommunityIcons name="trash-can-outline" size={22} color={KaaryaColors.danger} />
+                </Pressable>
+              )}
+            </View>
           ) : (
             <View style={{ width: 40 }} />
           )}
@@ -456,6 +491,9 @@ export default function JobDetailScreen() {
                     try {
                       await jobsApi.complete(job.id);
                       await loadJob();
+                      Alert.alert(t('jobDetail.jobCompleted'), t('jobDetail.paymentToProvider'), [
+                        { text: t('common.ok') },
+                      ]);
                     } catch (e: any) {
                       Alert.alert('Error', e.message ?? 'Failed to complete job');
                     } finally {
@@ -533,6 +571,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, borderBottomWidth: 1, borderBottomColor: KaaryaColors.border },
   backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { fontSize: FontSizes.lg, fontWeight: '700', color: KaaryaColors.text },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   saveBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   content: { flex: 1, paddingHorizontal: Spacing.lg },
   catBadge: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, marginTop: Spacing.lg, gap: 6 },

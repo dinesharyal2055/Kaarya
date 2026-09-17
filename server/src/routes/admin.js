@@ -10,6 +10,7 @@ const { getDb, save, usePostgres } = require('../db');
 const { getClient } = require('../db-pg');
 const { signTokenWithJti, hashPassword, verifyPassword } = require('../middleware/auth');
 const { createNotification } = require('./notifications');
+const { deleteJobCascade } = require('../jobCascade');
 
 // Helper function to format user response (avoid returning sensitive data)
 function formatUserForAdmin(row) {
@@ -806,6 +807,37 @@ router.get('/jobs/:id', requireAuth, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error('[admin/jobs/:id] Error:', err);
     res.status(500).json({ error: 'Failed to fetch job detail' });
+  }
+});
+
+// DELETE /api/admin/jobs/:id — Super Admin deletes any task regardless of
+// status or offer history. Cleans up offers, negotiations, reviews, saved
+// bookmarks, job-related notifications, conversations, and stored photos.
+// Never touches users or verification documents.
+router.delete('/jobs/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const jobId = req.params.id;
+    const db = await getDb();
+
+    let exists;
+    if (usePostgres) {
+      const check = await db.query('SELECT id FROM jobs WHERE id = $1', [jobId]);
+      exists = check.rowCount > 0;
+    } else {
+      const check = db.exec('SELECT id FROM jobs WHERE id = ?', [jobId]);
+      exists = check.length > 0 && check[0].values.length > 0;
+    }
+
+    if (!exists) {
+      return res.status(404).json({ error: 'Job not found' });
+    }
+
+    await deleteJobCascade(jobId);
+
+    res.json({ message: 'Job deleted successfully' });
+  } catch (err) {
+    console.error('[admin/jobs/:id DELETE] Error:', err);
+    res.status(500).json({ error: 'Failed to delete job' });
   }
 });
 
