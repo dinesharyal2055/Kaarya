@@ -2,13 +2,17 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const path = require('path');
 
 // Load .env in development
 try { require('dotenv').config(); } catch (_) {}
 
 const { getDb } = require('./db');
-const { createVerificationDownloadHandler } = require('./storage');
+const { requireAuth } = require('./middleware/auth');
+const { 
+  createVerificationDownloadHandler, 
+  createAvatarDownloadHandler,
+  createJobPhotoDownloadHandler 
+} = require('./storage');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -51,20 +55,40 @@ function getCorsOptions() {
 }
 
 app.use(helmet({
-  // Disable Content-Security-Policy — this is a JSON API, not a website
-  contentSecurityPolicy: false,
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'none'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'"],
+      imgSrc: ["'self'", 'data:', 'blob:'],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+      baseUri: ["'self'"],
+      formAction: ["'self'"],
+    },
+  },
 }));
 
 app.use(cors(getCorsOptions()));
 app.use(express.json({ limit: '12mb' })); // larger limit for base64 image uploads (verification route enforces its own 10MB decoded check)
 
 // Serve verification documents via the storage proxy (R2 in production, local
-// filesystem in development). Mounted BEFORE the static folder so documents are
-// fetched securely from private R2 instead of the public uploads directory.
-app.get('/uploads/verification/:filename', createVerificationDownloadHandler());
+// filesystem in development). PRIVATE: only the owning user or an admin can
+// stream them, and the documents are fetched from the private R2 bucket rather
+// than a public uploads directory.
+app.get('/uploads/verification/:filename', requireAuth, createVerificationDownloadHandler());
 
-// Serve uploaded files (job photos, avatars, legacy local files)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve avatar images. Public read: avatars are marketplace-shareable content
+// shown on task cards, offers, chat, and portfolios; the app's <Image> renders
+// them without an Authorization header, matching their public role.
+app.get('/uploads/avatars/:filename', createAvatarDownloadHandler());
+
+// Serve job photos. Public read: job photos are intentionally visible to users
+// browsing tasks, and the app's Browse/Task-Details <Image> consumers load them
+// without an Authorization header.
+app.get('/uploads/jobs/:filename', createJobPhotoDownloadHandler());
 
 // Health check
 app.get('/api/health', (req, res) => {

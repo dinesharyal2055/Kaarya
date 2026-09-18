@@ -48,7 +48,12 @@ describe('verification upload — JSON body limit mirrors index.js (12mb)', () =
   app.use('/api/verification', verificationRouter);
 
   test('accepts a base64 image body that exceeds the old 2mb parser cap', async () => {
-    const payload = Buffer.alloc(3 * 1024 * 1024, 1); // decoded ~3MB → ~4MB JSON body
+    // Start the payload with a JPEG signature so the content validation passes;
+    // this test pins the BODY LIMIT, not content sniffing.
+    const payload = Buffer.concat([
+      Buffer.from([0xff, 0xd8, 0xff]),
+      Buffer.alloc(3 * 1024 * 1024 - 3, 1), // decoded ~3MB → ~4MB JSON body
+    ]);
     const body = `data:image/jpeg;base64,${payload.toString('base64')}`;
     const res = await request(app)
       .post('/api/verification/upload')

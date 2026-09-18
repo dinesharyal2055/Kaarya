@@ -289,13 +289,11 @@ function initSchema(db) {
  * Insert the 4 permanent demo accounts.
  * Uses INSERT OR IGNORE with fixed IDs so it is idempotent — calling it
  * repeatedly never creates duplicates. Accounts are skipped if they already exist.
+ * Only runs in development (no DATABASE_URL).
  */
 function seedDemoAccounts(db) {
-  const demoPassword = process.env.DEMO_PASSWORD;
-  if (!demoPassword) {
-    console.warn('[db] WARNING: DEMO_PASSWORD is not set — demo accounts will not be seeded.');
-    return;
-  }
+  // Generate a random password for demo accounts (dev-only, not used in production)
+  const demoPassword = process.env.DEMO_PASSWORD || require('crypto').randomBytes(16).toString('hex');
   const pwHash = bcrypt.hashSync(demoPassword, 10);
 
   const demoUsers = [
@@ -315,6 +313,10 @@ function seedDemoAccounts(db) {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
       [id, name, email, phone, pwHash, role, isVerified, isAdmin]
     );
+  }
+
+  if (!process.env.DEMO_PASSWORD) {
+    console.log('[db] Demo accounts seeded with generated password (DEMO_PASSWORD not set)');
   }
 }
 

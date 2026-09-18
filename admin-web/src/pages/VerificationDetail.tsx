@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import AuthedImage from '../components/AuthedImage';
 import { useParams, useNavigate } from 'react-router-dom';
 
 const documentTypeLabel = (documentType?: string) => {
@@ -163,8 +164,8 @@ const VerificationDetail: React.FC = () => {
                     className="neu-doc-thumb"
                     onClick={() => setSelectedImage(doc)}
                   >
-                    <img
-                      src={doc.startsWith('http') ? doc : `https://kaarya-4qft.onrender.com${doc}`}
+                    <AuthedImage
+                      src={doc}
                       alt={`Document ${index + 1}`}
                     />
                     <div className="neu-doc-thumb-caption">
@@ -244,8 +245,8 @@ const VerificationDetail: React.FC = () => {
             >
               &times;
             </button>
-            <img
-              src={selectedImage.startsWith('http') ? selectedImage : `https://kaarya-4qft.onrender.com${selectedImage}`}
+            <AuthedImage
+              src={selectedImage}
               alt="Document"
               className="max-w-full max-h-[80vh] object-contain rounded"
             />

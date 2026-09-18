@@ -13,8 +13,8 @@ if (!process.env.JWT_SECRET) {
   throw new Error('FATAL: JWT_SECRET environment variable is not set. Aborting startup.');
 }
 const JWT_SECRET = process.env.JWT_SECRET;
-const JWT_EXPIRY = process.env.JWT_EXPIRY || '7d';
-const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 10;
+const JWT_EXPIRY = process.env.JWT_EXPIRY || '1d';
+const BCRYPT_ROUNDS = Number(process.env.BCRYPT_ROUNDS) || 12;
 
 // Lazy import to avoid circular dependency — db.js is only needed at runtime
 let _getDb = null;

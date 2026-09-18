@@ -1,7 +1,5 @@
 const express = require('express');
 const crypto = require('crypto');
-const fs = require('fs');
-const path = require('path');
 const { getDb, save, usePostgres } = require('../db');
 const { requireAuth, signToken, signTokenWithJti, addToBlocklist, hashPassword, verifyPassword } = require('../middleware/auth');
 const { sendRegistrationOtp, sendPasswordReset } = require('../mailer');
@@ -9,6 +7,7 @@ const { loginLimiter, otpLimiter, registerLimiter } = require('../middleware/rat
 const { checkGuard, recordFailure, recordSuccess } = require('../middleware/loginGuard');
 const { validate, register, verifyOtp, resendOtp, login: loginSchema, forgotPassword, verifyResetOtp, resetPassword, updateProfile, uploadAvatar, updateRole } = require('../middleware/validate');
 const { sanitize } = require('../middleware/sanitize');
+const { saveAvatarImage, validateImageContent } = require('../storage');
 
 const router = express.Router();
 
@@ -783,13 +782,18 @@ router.put('/avatar', requireAuth, validate(uploadAvatar), async (req, res) => {
     if (buffer.length > 5 * 1024 * 1024) return res.status(400).json({ error: 'Image too large (max 5MB)' });
 
     const mime = req.body.mime || 'image/jpeg';
-    const ext = mime === 'image/png' ? 'png' : 'jpg';
+    // Validate mime type - only allow safe image types
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimes.includes(mime)) {
+      return res.status(400).json({ error: 'Invalid image type (allowed: JPEG, PNG, WebP)' });
+    }
+    // Verify the actual file bytes match the declared type (not just client MIME)
+    if (!validateImageContent(buffer, mime)) {
+      return res.status(400).json({ error: 'Invalid image content - file does not match the declared image type' });
+    }
+    const ext = mime === 'image/png' ? 'png' : (mime === 'image/webp' ? 'webp' : 'jpg');
     const storedFilename = `avatar_${req.userId}_${Date.now()}.${ext}`;
-
-    const avatarsDir = path.join(__dirname, '..', 'uploads', 'avatars');
-    if (!fs.existsSync(avatarsDir)) fs.mkdirSync(avatarsDir, { recursive: true });
-
-    fs.writeFileSync(path.join(avatarsDir, storedFilename), buffer);
+    await saveAvatarImage({ filename: storedFilename, buffer, contentType: mime });
     const avatarUrl = `/uploads/avatars/${storedFilename}`;
 
     const db = await getDb();

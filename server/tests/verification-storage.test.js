@@ -13,6 +13,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const { requireAuth } = require('../src/middleware/auth');
+const { getDb } = require('../src/db');
 
 require('dotenv').config();
 
@@ -69,7 +71,7 @@ const storage = require('../src/storage');
 const app = express();
 app.use(express.json());
 app.use('/api/verification', verificationRouter);
-app.get('/uploads/verification/:filename', storage.createVerificationDownloadHandler());
+app.get('/uploads/verification/:filename', requireAuth, storage.createVerificationDownloadHandler());
 
 const SAMPLE_JPEG = Buffer.from(
   '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAAAAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==',
@@ -101,6 +103,16 @@ describe('verification storage — local filesystem fallback', () => {
     expect(storage.isR2Configured()).toBe(false);
   });
 
+  async function createOwnershipRecord(filename) {
+    const db = await getDb();
+    const documents = JSON.stringify([filename]);
+    db.run(
+      `INSERT INTO verification_requests (user_id, level, document_type, documents, status)
+       VALUES (?, ?, ?, ?, 'pending')`,
+      [601, 'basic', 'citizenship', documents]
+    );
+  }
+
   test('upload then download returns the original bytes with the correct content type', async () => {
     const base64 = `data:image/jpeg;base64,${SAMPLE_JPEG.toString('base64')}`;
     const upRes = await request(app)
@@ -114,9 +126,11 @@ describe('verification storage — local filesystem fallback', () => {
     expect(upRes.body.filename).toBe(upRes.body.url.split('/').pop());
 
     createdFiles.push(path.join(LOCAL_DIR, upRes.body.filename));
+    await createOwnershipRecord(upRes.body.filename);
 
     const dlRes = await request(app)
       .get(upRes.body.url)
+      .set('Authorization', `Bearer ${TEST_USER_TOKEN}`)
       .buffer(true)
       .parse(binaryParser);
     expect(dlRes.status).toBe(200);
@@ -132,9 +146,11 @@ describe('verification storage — local filesystem fallback', () => {
       .send({ image: base64, filename: 'citizenship_back.png', mime: 'image/png' });
     expect(upRes.status).toBe(200);
     createdFiles.push(path.join(LOCAL_DIR, upRes.body.filename));
+    await createOwnershipRecord(upRes.body.filename);
 
     const dlRes = await request(app)
       .get(upRes.body.url)
+      .set('Authorization', `Bearer ${TEST_USER_TOKEN}`)
       .buffer(true)
       .parse(binaryParser);
     expect(dlRes.status).toBe(200);
@@ -143,7 +159,9 @@ describe('verification storage — local filesystem fallback', () => {
   });
 
   test('missing files return 404', async () => {
-    const res = await request(app).get('/uploads/verification/999999999_missing.png');
+    const res = await request(app)
+      .get('/uploads/verification/999999999_missing.png')
+      .set('Authorization', `Bearer ${TEST_USER_TOKEN}`);
     expect(res.status).toBe(404);
   });
 
@@ -155,7 +173,9 @@ describe('verification storage — local filesystem fallback', () => {
       'bad$name.jpg',
       '%2E%2E.jpg',
     ]) {
-      const res = await request(app).get(`/uploads/verification/${bad}`);
+      const res = await request(app)
+        .get(`/uploads/verification/${bad}`)
+        .set('Authorization', `Bearer ${TEST_USER_TOKEN}`);
       expect(res.status).toBe(404);
     }
   });
@@ -170,10 +190,18 @@ describe('verification storage — R2 mode (mocked S3 client)', () => {
   };
   const savedEnv = {};
 
-  beforeAll(() => {
+  beforeAll(async () => {
     for (const k of Object.keys(R2)) savedEnv[k] = process.env[k];
     Object.assign(process.env, R2);
     expect(storage.isR2Configured()).toBe(true);
+    // Create ownership record for the test download
+    const db = await getDb();
+    const documents = JSON.stringify(['999999999_citizenship_front.jpg']);
+    db.run(
+      `INSERT INTO verification_requests (user_id, level, document_type, documents, status)
+       VALUES (?, ?, ?, ?, 'pending')`,
+      [601, 'basic', 'citizenship', documents]
+    );
   });
 
   afterAll(() => {
@@ -217,6 +245,7 @@ describe('verification storage — R2 mode (mocked S3 client)', () => {
   test('the download proxy allows cross-origin embedding of verification images', async () => {
     const res = await request(app)
       .get('/uploads/verification/999999999_citizenship_front.jpg')
+      .set('Authorization', `Bearer ${TEST_USER_TOKEN}`)
       .buffer(true)
       .parse(binaryParser);
     expect(res.status).toBe(200);

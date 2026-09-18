@@ -5,6 +5,7 @@ const express = require('express');
 const { validate, reviewVerification, updateUserRole } = require('../middleware/validate');
 const { requireAuth } = require('../middleware/auth');
 const { requireAdmin } = require('../middleware/adminGuard');
+const { loginLimiter } = require('../middleware/rateLimit');
 const router = express.Router();
 const { getDb, save, usePostgres } = require('../db');
 const { getClient } = require('../db-pg');
@@ -136,7 +137,7 @@ async function getUserDetail(userId) {
 }
 
 // POST /api/admin/login - Admin-specific login endpoint
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 

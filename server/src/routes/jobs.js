@@ -1,6 +1,4 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const { getDb, save, usePostgres } = require('../db');
 const { getClient } = require('../db-pg');
 const { requireAuth } = require('../middleware/auth');
@@ -8,6 +6,7 @@ const { validate, createJob, updateJob, updateJobStatus } = require('../middlewa
 const { sanitize } = require('../middleware/sanitize');
 const { sendToUser } = require('../fcm');
 const { deleteJobCascade } = require('../jobCascade');
+const { saveJobPhotoImage, validateImageContent } = require('../storage');
 
 const router = express.Router();
 const PAGE_SIZE = 20;
@@ -108,14 +107,20 @@ router.post('/upload', requireAuth, async (req, res) => {
     }
 
     const mime = req.body.mime || 'image/jpeg';
-    const ext = mime === 'image/png' ? 'png' : 'jpg';
+    // Validate mime type - only allow safe image types
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimes.includes(mime)) {
+      return res.status(400).json({ error: 'Invalid image type (allowed: JPEG, PNG, WebP)' });
+    }
+    // Verify the actual file bytes match the declared type (not just client MIME)
+    if (!validateImageContent(buffer, mime)) {
+      return res.status(400).json({ error: 'Invalid image content - file does not match the declared image type' });
+    }
+    const ext = mime === 'image/png' ? 'png' : (mime === 'image/webp' ? 'webp' : 'jpg');
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     const storedFilename = `${Date.now()}_${safeName}.${ext}`;
 
-    const uploadsDir = path.join(__dirname, '..', 'uploads', 'jobs');
-    if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-    fs.writeFileSync(path.join(uploadsDir, storedFilename), buffer);
+    await saveJobPhotoImage({ filename: storedFilename, buffer, contentType: mime });
     const url = `/uploads/jobs/${storedFilename}`;
     res.json({ url, filename: storedFilename, size: buffer.length });
   } catch (err) {

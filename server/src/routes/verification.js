@@ -25,7 +25,16 @@ router.post('/upload', requireAuth, async (req, res) => {
     }
 
     const mime = req.body.mime || 'image/jpeg';
-    const ext = mime === 'image/png' ? 'png' : 'jpg';
+    // Validate mime type - only allow safe image types
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimes.includes(mime)) {
+      return res.status(400).json({ error: 'Invalid image type (allowed: JPEG, PNG, WebP)' });
+    }
+    // Verify the actual file bytes match the declared type (not just client MIME)
+    if (!storage.validateImageContent(buffer, mime)) {
+      return res.status(400).json({ error: 'Invalid image content - file does not match the declared image type' });
+    }
+    const ext = mime === 'image/png' ? 'png' : (mime === 'image/webp' ? 'webp' : 'jpg');
     const safeName = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     const storedFilename = `${Date.now()}_${safeName}.${ext}`;
 
