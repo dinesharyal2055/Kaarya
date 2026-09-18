@@ -333,15 +333,33 @@ router.post('/:id/accept', requireAuth, async (req, res) => {
       if (offRes.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Offer not found' }); }
       const { job_id: jobId, provider_id: providerId, status: currentStatus, amount: offerAmount } = offRes.rows[0];
 
-      const jobRes = await client.query('SELECT seeker_id, title FROM jobs WHERE id = $1', [jobId]);
+      const jobRes = await client.query('SELECT status, seeker_id, title FROM jobs WHERE id = $1', [jobId]);
       if (jobRes.rowCount === 0) { await client.query('ROLLBACK'); return res.status(404).json({ error: 'Job not found' }); }
-      const { seeker_id: seekerId, title: jobTitle } = jobRes.rows[0];
+      const { status: jobStatus, seeker_id: seekerId, title: jobTitle } = jobRes.rows[0];
 
-      if (seekerId !== req.userId) { await client.query('ROLLBACK'); return res.status(403).json({ error: 'Only the job seeker can accept offers' }); }
+      if (String(seekerId) !== String(req.userId)) { await client.query('ROLLBACK'); return res.status(403).json({ error: 'Only the job seeker can accept offers' }); }
       if (currentStatus !== 'pending') { await client.query('ROLLBACK'); return res.status(400).json({ error: 'Only pending offers can be accepted' }); }
+      if (jobStatus !== 'open') { await client.query('ROLLBACK'); return res.status(400).json({ error: 'This task has already been assigned to a provider' }); }
 
-      await client.query('UPDATE offers SET status = $1, updated_at = NOW() WHERE id = $2', ['accepted', offerId]);
-      await client.query('UPDATE jobs SET status = $1, updated_at = NOW() WHERE id = $2', ['assigned', jobId]);
+      // Atomic claim: only one concurrent caller can flip the still-open job to 'assigned'.
+      const claimRes = await client.query(
+        "UPDATE jobs SET status = 'assigned', updated_at = NOW() WHERE id = $1 AND status = 'open'",
+        [jobId]
+      );
+      if (claimRes.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'This task has already been assigned to a provider' });
+      }
+
+      const acceptRes = await client.query(
+        "UPDATE offers SET status = 'accepted', updated_at = NOW() WHERE id = $1 AND status = 'pending'",
+        [offerId]
+      );
+      if (acceptRes.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Only pending offers can be accepted' });
+      }
+
       await client.query("UPDATE offers SET status = 'rejected', updated_at = NOW() WHERE job_id = $1 AND id != $2 AND status = 'pending'", [jobId, offerId]);
 
       const convRes = await client.query('SELECT id FROM conversations WHERE job_id = $1', [jobId]);
@@ -374,12 +392,13 @@ router.post('/:id/accept', requireAuth, async (req, res) => {
       if (offerResult.length === 0 || offerResult[0].values.length === 0) return res.status(404).json({ error: 'Offer not found' });
       const [jobId, providerId, currentStatus] = offerResult[0].values[0];
 
-      const jobResult = db.exec('SELECT seeker_id, title FROM jobs WHERE id = ?', [jobId]);
+      const jobResult = db.exec('SELECT status, seeker_id, title FROM jobs WHERE id = ?', [jobId]);
       if (jobResult.length === 0 || jobResult[0].values.length === 0) return res.status(404).json({ error: 'Job not found' });
-      const [seekerId, jobTitle] = jobResult[0].values[0];
+      const [jobStatus, seekerId, jobTitle] = jobResult[0].values[0];
 
-      if (seekerId !== req.userId) return res.status(403).json({ error: 'Only the job seeker can accept offers' });
+      if (String(seekerId) !== String(req.userId)) return res.status(403).json({ error: 'Only the job seeker can accept offers' });
       if (currentStatus !== 'pending') return res.status(400).json({ error: 'Only pending offers can be accepted' });
+      if (jobStatus !== 'open') return res.status(400).json({ error: 'This task has already been assigned to a provider' });
 
       db.run('UPDATE offers SET status = ?, updated_at = datetime("now") WHERE id = ?', ['accepted', offerId]);
       db.run('UPDATE jobs SET status = ?, updated_at = datetime("now") WHERE id = ?', ['assigned', jobId]);

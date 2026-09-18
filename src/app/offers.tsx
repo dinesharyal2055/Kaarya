@@ -322,7 +322,7 @@ function OfferCard({
         <Text style={styles.dateText}>{formatDate(offer.createdAt, t)}</Text>
       </View>
 
-      {!isProvider && offer.status === 'pending' && (
+      {!isProvider && offer.status === 'pending' && (offer.job?.status ?? 'open') === 'open' && (
         <View style={styles.actions}>
           <Pressable
             style={[styles.actionBtn, styles.rejectBtn]}
