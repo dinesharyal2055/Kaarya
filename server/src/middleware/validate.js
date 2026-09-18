@@ -98,6 +98,23 @@ const updateRole = z.object({
 
 const jobStatusEnum = z.enum(['open', 'assigned', 'in_progress', 'completed', 'cancelled']);
 
+// ISO 8601 timestamp with offset, in the future. Kaarya stores scheduled job
+// times as the Nepal wall-clock with the +05:45 offset, so Date.parse on the
+// raw string yields the correct instant regardless of server timezone.
+const scheduledDateField = z
+  .string()
+  .optional()
+  .nullable()
+  .refine(
+    (v) => {
+      if (v == null || v === '') return true;
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?(Z|[+-]\d{2}:?\d{2})$/.test(v)) return false;
+      const ms = Date.parse(v);
+      return !Number.isNaN(ms) && ms > Date.now();
+    },
+    { message: 'Scheduled date must be a valid future ISO timestamp' }
+  );
+
 const createJob = z.object({
   title:           z.string().min(1, 'Title is required').max(100, 'Title must be at most 100 characters'),
   description:     z.string().min(10, 'Description must be at least 10 characters').max(2000, 'Description must be at most 2000 characters'),
@@ -110,6 +127,7 @@ const createJob = z.object({
   photoUrls:       z.array(z.string().url('Invalid photo URL')).max(5, 'At most 5 photos allowed').optional(),
   latitude:        z.coerce.number().min(-90).max(90).optional().nullable(),
   longitude:       z.coerce.number().min(-180).max(180).optional().nullable(),
+  scheduledDate:   scheduledDateField,
 });
 
 const updateJob = z.object({
@@ -122,6 +140,7 @@ const updateJob = z.object({
   photoUrls:       z.array(z.string().url('Invalid photo URL')).max(5, 'At most 5 photos allowed').optional(),
   latitude:        z.coerce.number().min(-90).max(90).optional().nullable(),
   longitude:       z.coerce.number().min(-180).max(180).optional().nullable(),
+  scheduledDate:   scheduledDateField,
 }).refine(data => {
   // At least one field must be provided
   return Object.values(data).some(v => v !== undefined);

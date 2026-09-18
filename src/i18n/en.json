@@ -448,7 +448,28 @@
     "posterOnlyMessage": "You are in Service Provider mode. Switch to Task Poster mode to post a task.",
     "switchToTaskPoster": "Switch to Task Poster mode",
     "budget": "Budget",
-    "photos": "Photos"
+    "photos": "Photos",
+    "invalidScheduled": "When do you need the task done?"
+  },
+  "jobDateTime": {
+    "sectionTitle": "Job Date & Time",
+    "dateLabel": "Job Date",
+    "timeLabel": "Job Time",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "chooseDate": "Choose Date",
+    "manualDatePlaceholder": "YYYY-MM-DD",
+    "manualDateHint": "Use YYYY-MM-DD or DD/MM/YYYY",
+    "pickFromCalendar": "Pick from Calendar",
+    "noDateSelected": "No date selected",
+    "noTimeSet": "No time set",
+    "periodAM": "AM",
+    "periodPM": "PM",
+    "missingDate": "Please select a job date.",
+    "invalidDate": "Please enter a valid date.",
+    "pastDate": "The job date cannot be in the past.",
+    "invalidTime": "Please enter a valid time.",
+    "pastTime": "The selected time has already passed. Please choose a future time."
   },
   "editJob": {
     "title": "Edit Job",

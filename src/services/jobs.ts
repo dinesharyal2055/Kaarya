@@ -71,6 +71,7 @@ export async function createJob(data: {
   photoUrls?: string[];
   latitude?: number | null;
   longitude?: number | null;
+  scheduledDate?: string | null;
 }): Promise<Job> {
   return jobsApi.create({
     title: data.title,
@@ -83,6 +84,7 @@ export async function createJob(data: {
     photoUrls: data.photoUrls,
     latitude: data.latitude,
     longitude: data.longitude,
+    scheduledDate: data.scheduledDate,
   } as any);
 }
 
@@ -96,6 +98,7 @@ export async function updateJob(id: string, data: {
   photoUrls?: string[];
   latitude?: number | null;
   longitude?: number | null;
+  scheduledDate?: string | null;
 }): Promise<Job> {
   return jobsApi.update(id, {
     title: data.title,
@@ -107,5 +110,6 @@ export async function updateJob(id: string, data: {
     photoUrls: data.photoUrls,
     latitude: data.latitude,
     longitude: data.longitude,
+    scheduledDate: data.scheduledDate,
   } as any);
 }

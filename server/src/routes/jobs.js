@@ -358,7 +358,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 // POST /api/jobs — create job
 router.post('/', requireAuth, sanitize('title', 'description', 'location', 'address'), validate(createJob), async (req, res) => {
   try {
-    const { title, description, category, location, address, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude } = res.locals.parsedBody;
+    const { title, description, category, location, address, budgetMin, budgetMax, negotiationMode, photoUrls, latitude, longitude, scheduledDate } = res.locals.parsedBody;
     const db = await getDb();
 
     if (usePostgres) {
@@ -370,9 +370,9 @@ router.post('/', requireAuth, sanitize('title', 'description', 'location', 'addr
       if (!is_verified) return res.status(403).json({ error: 'Only verified users can post tasks' });
 
       const insertRes = await db.query(
-        `INSERT INTO jobs (seeker_id, title, description, category, location, budget_min, budget_max, photo_urls, status, seeker_lat, seeker_lng)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open', $9, $10) RETURNING id`,
-        [req.userId, title, description, category, location, budgetMin ?? null, budgetMax ?? null, JSON.stringify(photoUrls ?? []), latitude ?? null, longitude ?? null]
+        `INSERT INTO jobs (seeker_id, title, description, category, location, budget_min, budget_max, photo_urls, status, seeker_lat, seeker_lng, scheduled_date)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'open', $9, $10, $11) RETURNING id`,
+        [req.userId, title, description, category, location, budgetMin ?? null, budgetMax ?? null, JSON.stringify(photoUrls ?? []), latitude ?? null, longitude ?? null, scheduledDate ?? null]
       );
 
       const newId = insertRes.rows[0].id;
@@ -401,9 +401,9 @@ router.post('/', requireAuth, sanitize('title', 'description', 'location', 'addr
       if (userRow[1] !== 1) return res.status(403).json({ error: 'Only verified users can post tasks' });
 
       db.run(
-        `INSERT INTO jobs (seeker_id, title, description, category, location, budget_min, budget_max, photo_urls, status, seeker_lat, seeker_lng)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`,
-        [req.userId, title, description, category, location, budgetMin ?? null, budgetMax ?? null, JSON.stringify(photoUrls ?? []), latitude ?? null, longitude ?? null]
+        `INSERT INTO jobs (seeker_id, title, description, category, location, budget_min, budget_max, photo_urls, status, seeker_lat, seeker_lng, scheduled_date)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?)`,
+        [req.userId, title, description, category, location, budgetMin ?? null, budgetMax ?? null, JSON.stringify(photoUrls ?? []), latitude ?? null, longitude ?? null, scheduledDate ?? null]
       );
 
       const newId = db.exec('SELECT last_insert_rowid()')[0].values[0][0];
@@ -775,7 +775,7 @@ router.put('/:id/status', requireAuth, validate(updateJobStatus), async (req, re
 router.patch('/:id', requireAuth, sanitize('title', 'description', 'location'), validate(updateJob), async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, location, budgetMin, budgetMax, photoUrls, latitude, longitude } = res.locals.parsedBody;
+    const { title, description, location, budgetMin, budgetMax, photoUrls, latitude, longitude, scheduledDate } = res.locals.parsedBody;
     const db = await getDb();
 
     if (usePostgres) {
@@ -801,6 +801,7 @@ router.patch('/:id', requireAuth, sanitize('title', 'description', 'location'), 
       if (photoUrls !== undefined) { updates.push(`photo_urls = $${pIdx++}`); params.push(JSON.stringify(photoUrls ?? [])); }
       if (latitude !== undefined) { updates.push(`seeker_lat = $${pIdx++}`); params.push(latitude ?? null); }
       if (longitude !== undefined) { updates.push(`seeker_lng = $${pIdx++}`); params.push(longitude ?? null); }
+      if (scheduledDate !== undefined) { updates.push(`scheduled_date = $${pIdx++}`); params.push(scheduledDate ?? null); }
 
       updates.push(`updated_at = NOW()`);
       params.push(id);
@@ -847,6 +848,7 @@ router.patch('/:id', requireAuth, sanitize('title', 'description', 'location'), 
       if (photoUrls !== undefined) { updates.push('photo_urls = ?'); params.push(JSON.stringify(photoUrls ?? [])); }
       if (latitude !== undefined) { updates.push('seeker_lat = ?'); params.push(latitude ?? null); }
       if (longitude !== undefined) { updates.push('seeker_lng = ?'); params.push(longitude ?? null); }
+      if (scheduledDate !== undefined) { updates.push('scheduled_date = ?'); params.push(scheduledDate ?? null); }
 
       updates.push('updated_at = datetime("now")');
       params.push(id);

@@ -445,7 +445,28 @@
     "posterOnlyMessage": "तपाईं सेवा प्रदायक मोडमा हुनुहुन्छ। कार्य पोस्ट गर्न कार्य पोस्टकर्ता मोडमा स्विच गर्नुहोस्।",
     "switchToTaskPoster": "कार्य पोस्टकर्ता मोडमा स्विच गर्नुहोस्",
     "budget": "बजेट",
-    "photos": "फोटोहरू"
+    "photos": "फोटोहरू",
+    "invalidScheduled": "कार्य कहिले सम्पन्न गर्नुपर्ने हो?"
+  },
+  "jobDateTime": {
+    "sectionTitle": "कार्य मिति र समय",
+    "dateLabel": "कार्य मिति",
+    "timeLabel": "कार्य समय",
+    "today": "आज",
+    "tomorrow": "भोलि",
+    "chooseDate": "मिति छान्नुहोस्",
+    "manualDatePlaceholder": "YYYY-MM-DD",
+    "manualDateHint": "YYYY-MM-DD वा DD/MM/YYYY प्रयोग गर्नुहोस्",
+    "pickFromCalendar": "पात्रोबाट छान्नुहोस्",
+    "noDateSelected": "कुनै मिति चयन गरिएको छैन",
+    "noTimeSet": "समय सेट गरिएको छैन",
+    "periodAM": "AM",
+    "periodPM": "PM",
+    "missingDate": "कृपया कार्यको मिति चयन गर्नुहोस्।",
+    "invalidDate": "कृपया मान्य मिति प्रविष्ट गर्नुहोस्।",
+    "pastDate": "कार्यको मिति विगतमा हुन सक्दैन।",
+    "invalidTime": "कृपया मान्य समय प्रविष्ट गर्नुहोस्।",
+    "pastTime": "चयन गरिएको समय बितिसकेको छ। कृपया भविष्यको समय छान्नुहोस्।"
   },
   "editJob": {
     "title": "कार्य सम्पादन गर्नुहोस्",

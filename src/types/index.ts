@@ -47,6 +47,8 @@ export interface Job {
   status: JobStatus;
   photoUrls?: string[];
   offerCount?: number;
+  // Requested job time — ISO 8601 with Nepal offset (+05:45)
+  scheduledDate?: string | null;
   createdAt: string;
   updatedAt?: string;
   // Populated for ongoing/assigned jobs

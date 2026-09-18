@@ -14,6 +14,7 @@ import { CATEGORIES } from '@/constants/categories';
 import { fetchJob } from '@/services/jobs';
 import { offersApi, reviewsApi, jobsApi, resolveStaticUrl } from '@/lib/api';
 import { parseServerTime, formatNepalMedium } from '@/lib/time';
+import { formatScheduledDate, formatScheduledTime } from '@/lib/jobDateTime';
 import { jobStatusLabel } from '@/lib/jobStatus';
 import { Button } from '@/components/ui';
 import type { Job } from '@/types';
@@ -311,6 +312,21 @@ export default function JobDetailScreen() {
               <Text style={styles.budgetValue}>{formatBudget()}</Text>
             </View>
           </View>
+
+          {/* Job Date & Time */}
+          {job.scheduledDate && (
+            <View style={[styles.section, Shadows.sm]}>
+              <Text style={styles.sectionTitle}>{t('jobDateTime.sectionTitle')}</Text>
+              <View style={styles.locationRow}>
+                <MaterialCommunityIcons name="calendar-month" size={18} color={KaaryaColors.brand[500]} />
+                <Text style={styles.locationText}>{formatScheduledDate(job.scheduledDate)}</Text>
+              </View>
+              <View style={styles.locationRow}>
+                <MaterialCommunityIcons name="clock-outline" size={18} color={KaaryaColors.brand[500]} />
+                <Text style={styles.locationText}>{formatScheduledTime(job.scheduledDate)}</Text>
+              </View>
+            </View>
+          )}
 
           {/* Description */}
           {job.description && (

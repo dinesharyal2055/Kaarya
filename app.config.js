@@ -19,6 +19,10 @@ const isProduction = process.env.NODE_ENV === 'production';
 
 module.exports = ({ config }) => ({
   ...config,
+  plugins: [
+    ...(config.plugins || []),
+    '@react-native-community/datetimepicker',
+  ],
   extra: {
     ...(config.extra || {}),
     apiUrl:

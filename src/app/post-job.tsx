@@ -15,8 +15,11 @@ import MapView, { Marker } from 'react-native-maps';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
 import { Button, Input } from '@/components/ui';
+import { JobDateTimeField } from '@/components/JobDateTimeField';
 import { createJob, uploadJobImage } from '@/services/jobs';
 import { useAuth } from '@/context/AuthContext';
+import { buildScheduledIso, defaultSelection, formatScheduledDate, formatScheduledTime } from '@/lib/jobDateTime';
+import type { JobDateTimeResult } from '@/components/JobDateTimeField';
 import type { NegotiationMode } from '@/types';
 
 type Step = 'category' | 'details' | 'photos' | 'budget' | 'confirm';
@@ -76,6 +79,8 @@ export default function PostJobScreen() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const dtResultRef = useRef<JobDateTimeResult | null>(null);
+  const [scheduledIso, setScheduledIso] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
 
   async function handleSwitchToTaskPoster() {
@@ -146,6 +151,13 @@ export default function PostJobScreen() {
     if (step === 'details' && (latitude === null || longitude === null)) {
       Alert.alert(t('postJob.locationRequiredTitle'), t('postJob.locationRequiredMessage'));
       return;
+    }
+    if (step === 'photos') {
+      const scheduled = buildScheduledIso(dtResultRef.current?.selection ?? defaultSelection());
+      if (scheduled.error) {
+        Alert.alert(t('postJob.invalidScheduled'), t(`jobDateTime.${scheduled.error}`));
+        return;
+      }
     }
     if (step === 'budget' && negotiation === 'open_offers') {
       const n = parseFloat(budgetMin || '');
@@ -269,6 +281,13 @@ export default function PostJobScreen() {
       return;
     }
 
+    const scheduled = buildScheduledIso(dtResultRef.current?.selection ?? defaultSelection());
+    if (scheduled.error) {
+      Alert.alert(t('postJob.invalidScheduled'), t(`jobDateTime.${scheduled.error}`));
+      return;
+    }
+    const scheduledIsoValue = scheduled.iso;
+
     setLoading(true);
     try {
       // Upload each photo first
@@ -309,6 +328,7 @@ export default function PostJobScreen() {
         photoUrls: uploadedUrls,
         latitude: latitude ?? undefined,
         longitude: longitude ?? undefined,
+        scheduledDate: scheduledIsoValue,
       });
 
       Alert.alert(t('postJob.successTitle'), t('postJob.successMessage'), [
@@ -494,6 +514,22 @@ export default function PostJobScreen() {
                 </Text>
               </View>
             )}
+
+            <View style={styles.scheduleDivider} />
+
+            {/* Job Date & Time */}
+            <View style={[styles.summaryCard, Shadows.sm]}>
+              <View style={styles.scheduleHeader}>
+                <MaterialCommunityIcons name="calendar-clock" size={20} color={KaaryaColors.brand[500]} />
+                <Text style={styles.scheduleTitle}>{t('jobDateTime.sectionTitle')}</Text>
+              </View>
+              <JobDateTimeField
+                onResult={(r) => {
+                  dtResultRef.current = r;
+                  setScheduledIso(r.iso);
+                }}
+              />
+            </View>
           </ScrollView>
         )}
 
@@ -574,6 +610,7 @@ export default function PostJobScreen() {
               <SummaryRow icon="text" iconColor={KaaryaColors.brand[500]} label={t('postJob.title')} value={title} />
               <SummaryRow icon="map-marker" iconColor={KaaryaColors.brand[500]} label={t('postJob.area')} value={area} />
               {photos.length > 0 && <SummaryRow icon="camera" iconColor={KaaryaColors.brand[500]} label={t('postJob.photos')} value={t('postJob.photosAttached', { count: photos.length })} />}
+              {scheduledIso && <SummaryRow icon="calendar-clock" iconColor={KaaryaColors.brand[500]} label={t('jobDateTime.sectionTitle')} value={`${formatScheduledDate(scheduledIso)} · ${formatScheduledTime(scheduledIso)}`} />}
               {negotiation === 'negotiable' && budgetMin && budgetMax && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label={t('postJob.budget')} value={`Rs. ${budgetMin} – ${budgetMax}`} />}
               {negotiation === 'open_offers' && budgetMin && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label={t('postJob.startingPrice')} value={`Rs. ${budgetMin}`} />}
               {negotiation === 'fixed' && budgetMin && <SummaryRow icon="currency-npr" iconColor={KaaryaColors.brand[500]} label={t('postJob.fixedPriceLabel')} value={`Rs. ${budgetMin}`} />}
@@ -680,6 +717,10 @@ const styles = StyleSheet.create({
     padding: Spacing.lg, marginTop: Spacing.md,
   },
   photosHintText: { flex: 1, fontSize: FontSizes.sm, color: KaaryaColors.brand[600], lineHeight: 20 },
+
+  scheduleDivider: { height: 1, backgroundColor: KaaryaColors.border, marginVertical: Spacing.lg },
+  scheduleHeader: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  scheduleTitle: { fontSize: FontSizes.base, fontWeight: '700', color: KaaryaColors.text },
 
   budgetRow: { flexDirection: 'row', gap: Spacing.md },
   negCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: KaaryaColors.card, borderRadius: BorderRadius.md, padding: Spacing.md, borderWidth: 2, borderColor: 'transparent' },

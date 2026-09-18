@@ -3,7 +3,7 @@
  */
 
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Alert,
   Image,
@@ -24,9 +24,12 @@ import { useTranslation } from 'react-i18next';
 import { KaaryaColors, Spacing, FontSizes, Shadows, BorderRadius } from '@/constants/theme';
 import { CATEGORIES, KATHMANDU_AREAS } from '@/constants/categories';
 import { Button, Input } from '@/components/ui';
+import { JobDateTimeField } from '@/components/JobDateTimeField';
 import { updateJob, uploadJobImage } from '@/services/jobs';
 import { fetchJob } from '@/services/jobs';
 import { resolveStaticUrl } from '@/lib/api';
+import { buildScheduledIso, defaultSelection } from '@/lib/jobDateTime';
+import type { JobDateTimeResult } from '@/components/JobDateTimeField';
 import type { Job, NegotiationMode } from '@/types';
 
 type UploadedImage = {
@@ -85,6 +88,7 @@ export default function EditJobScreen() {
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locating, setLocating] = useState(false);
+  const dtResultRef = useRef<JobDateTimeResult | null>(null);
 
   // Load job data on mount
   useEffect(() => {
@@ -228,6 +232,13 @@ export default function EditJobScreen() {
       }
     }
 
+    const scheduled = buildScheduledIso(dtResultRef.current?.selection ?? defaultSelection());
+    if (scheduled.error) {
+      Alert.alert(t('postJob.invalidScheduled'), t(`jobDateTime.${scheduled.error}`));
+      return;
+    }
+    const scheduledIsoValue = scheduled.iso;
+
     const bMin = budgetMin ? parseFloat(budgetMin) : undefined;
     const bMax = negotiation === 'negotiable'
       ? (budgetMax ? parseFloat(budgetMax) : undefined)
@@ -273,6 +284,7 @@ export default function EditJobScreen() {
         photoUrls: uploadedUrls,
         latitude: latitude ?? undefined,
         longitude: longitude ?? undefined,
+        scheduledDate: scheduledIsoValue,
       });
 
       Alert.alert(t('editJob.successTitle'), t('editJob.successMessage'), [
@@ -437,6 +449,16 @@ export default function EditJobScreen() {
                 </Pressable>
               )}
             </View>
+          </View>
+
+          {/* Job Date & Time */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>{t('jobDateTime.sectionTitle')}</Text>
+            <JobDateTimeField
+              key={`scheduled-${job?.id ?? 'loading'}`}
+              initial={job?.scheduledDate ?? null}
+              onResult={(r) => { dtResultRef.current = r; }}
+            />
           </View>
 
           {/* Negotiation style */}
