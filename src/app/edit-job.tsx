@@ -336,6 +336,7 @@ export default function EditJobScreen() {
         <ScrollView
           style={styles.content}
           keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
           showsVerticalScrollIndicator={false}
         >
           {/* Category (locked — shown for context) */}

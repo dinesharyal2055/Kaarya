@@ -189,7 +189,7 @@ function FilterSheet({ visible, filters, onClose, onApply, t }: {
           <View style={fs.header}>
             <Text style={fs.title}>{t('common.filters')}</Text>
           </View>
-          <ScrollView style={fs.body} showsVerticalScrollIndicator={false}>
+          <ScrollView style={fs.body} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
             <Text style={fs.sectionLabel}>{t('browse.sortBy')}</Text>
             <View style={fs.sortGrid}>
               {SORT_OPTIONS.map(opt => (

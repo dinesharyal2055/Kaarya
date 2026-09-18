@@ -481,7 +481,7 @@ export default function PostJobScreen() {
 
         {/* Step: Photos */}
         {step === 'photos' && (
-          <ScrollView style={styles.stepContent} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.stepContent} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets showsVerticalScrollIndicator={false}>
             <Text style={styles.stepTitle}>{t('postJob.stepPhotosTitle')}</Text>
             <Text style={styles.stepSubtitle}>
               {t('postJob.stepPhotosSubtitle')}{' '}

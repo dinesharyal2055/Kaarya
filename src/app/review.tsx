@@ -66,7 +66,7 @@ export default function ReviewScreen() {
           <View style={{ width: 40 }} />
         </View>
 
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
           <View style={styles.card}>
             <Text style={styles.label}>{t('review.howWasExperience')}</Text>
             <Text style={styles.revieweeName}>{revieweeName ?? t('review.theProvider')}</Text>
