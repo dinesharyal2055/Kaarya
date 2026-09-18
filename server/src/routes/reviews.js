@@ -127,6 +127,38 @@ router.post('/', requireAuth, sanitize('comment'), validate(createReview), async
   }
 });
 
+// GET /api/reviews/job/:jobId — all reviews left on a job (client uses this to
+// detect whether the current user has already reviewed the job).
+router.get('/job/:jobId', async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const db = await getDb();
+
+    if (usePostgres) {
+      const q = await db.query(
+        `SELECT r.*, rev.name as rev_name, rvw.name as rvw_name
+         FROM reviews r
+         JOIN users rev ON r.reviewer_id = rev.id
+         JOIN users rvw ON r.reviewee_id = rvw.id
+         WHERE r.job_id = $1 ORDER BY r.created_at DESC`,
+        [jobId]
+      );
+      const reviews = q.rows.map(r => reviewFromRow(r, r.rev_name, null, r.rvw_name, null));
+      res.json({ reviews });
+    } else {
+      // SQLite
+      const result = db.exec(
+        `SELECT r.id, r.job_id, r.reviewer_id, r.reviewee_id, r.rating, r.comment, r.created_at, rev.name, rvw.name
+         FROM reviews r JOIN users rev ON r.reviewer_id = rev.id JOIN users rvw ON r.reviewee_id = rvw.id
+         WHERE r.job_id = ? ORDER BY r.created_at DESC`,
+        [jobId]
+      );
+      const reviews = result.length > 0 ? result[0].values.map(row => reviewFromRow(row, row[7], null, row[8], null)) : [];
+      res.json({ reviews });
+    }
+  } catch (err) { res.status(500).json({ error: 'Failed' }); }
+});
+
 // GET /api/reviews/user/:id
 router.get('/user/:id', async (req, res) => {
   try {
