@@ -298,11 +298,11 @@
     "offerAccepted": "(accepted!)",
     "offerRejected": "(rejected)",
     "view": "View",
-    "workInProgress": "Work in progress. The seeker will confirm when done.",
+    "workInProgress": "Work is under progress",
     "reviewSubmitted": "Review Submitted",
     "leaveReview": "Leave a Review",
     "providerNotAvailable": "Provider info not available",
-    "paymentToProvider": "Please make the payment to the Service Provider."
+    "paymentToProvider": "Please make a payment to the Service Provider."
   },
   "offers": {
     "myBids": "My Bids",
