@@ -221,7 +221,7 @@ export default function ForgotPasswordScreen() {
                 <View style={{ marginTop: Spacing.xl }}>
                   <Input
                     label={t('auth.forgotPassword.newPassword')}
-                    placeholder={t('auth.forgotPassword.passwordMinChars')}
+                    placeholder={t('auth.forgotPassword.newPasswordPlaceholder')}
                     value={newPassword}
                     onChangeText={setNewPassword}
                     secureTextEntry={!showPassword}

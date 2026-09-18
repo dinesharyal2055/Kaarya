@@ -133,6 +133,7 @@
       "verifyOtp": "OTP प्रमाणित गर्नुहोस्",
       "resendOtp": "पाउनुभएन? पुनः पठाउनुहोस्",
       "newPassword": "नयाँ पासवर्ड",
+      "newPasswordPlaceholder": "नयाँ पासवर्ड प्रविष्टि गर्नुहोस्",
       "confirmNewPassword": "नयाँ पासवर्ड पुष्टि गर्नुहोस्",
       "confirmPassword": "नयाँ पासवर्ड पुष्टि गर्नुहोस्",
       "resetPassword": "पासवर्ड रिसेट गर्नुहोस्",

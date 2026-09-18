@@ -133,6 +133,7 @@
       "verifyOtp": "Verify OTP",
       "resendOtp": "Didn't receive it? Resend",
       "newPassword": "New Password",
+      "newPasswordPlaceholder": "Enter new password",
       "confirmNewPassword": "Confirm New Password",
       "confirmPassword": "Confirm New Password",
       "resetPassword": "Reset Password",
