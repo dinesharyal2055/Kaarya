@@ -146,20 +146,18 @@ export default function ProfileScreen() {
         )}
 
         {/* Portfolio link — visible for both roles */}
-        {(user?.reviewCount ?? 0) > 0 && (
-          <Pressable style={[styles.portfolioBanner, Shadows.sm]} onPress={() => router.push('/portfolio')}>
-            <View style={styles.portfolioIconWrap}>
-              <MaterialCommunityIcons name="star-circle" size={28} color={KaaryaColors.brand[500]} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.portfolioTitle}>{t('portfolio.viewPortfolio')}</Text>
-              <Text style={styles.portfolioSub}>
-                {user?.rating ? `${user.rating.toFixed(1)} ★ · ${user.reviewCount} ${user.reviewCount === 1 ? t('portfolio.review') : t('portfolio.reviews')}` : t('portfolio.seeReviews')}
-              </Text>
-            </View>
-            <MaterialCommunityIcons name="chevron-right" size={22} color={KaaryaColors.muted} />
-          </Pressable>
-        )}
+        <Pressable style={[styles.portfolioBanner, Shadows.sm]} onPress={() => router.push('/portfolio')}>
+          <View style={styles.portfolioIconWrap}>
+            <MaterialCommunityIcons name="star-circle" size={28} color={KaaryaColors.brand[500]} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.portfolioTitle}>{t('portfolio.viewPortfolio')}</Text>
+            <Text style={styles.portfolioSub}>
+              {user?.rating ? `${user.rating.toFixed(1)} ★ · ${user.reviewCount} ${user.reviewCount === 1 ? t('portfolio.review') : t('portfolio.reviews')}` : t('portfolio.seeReviews')}
+            </Text>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={KaaryaColors.muted} />
+        </Pressable>
 
         {/* Bio */}
         {user?.bio ? (

@@ -346,21 +346,48 @@ export default function JobDetailScreen() {
           {job.seekerName && (
             <View style={[styles.section, Shadows.sm]}>
               <Text style={styles.sectionTitle}>{t('jobDetail.postedBy')}</Text>
-              <View style={styles.seekerRow}>
+              <Pressable
+                style={styles.seekerRow}
+                onPress={() =>
+                  router.push({ pathname: '/portfolio', params: { userId: job.seekerId } })
+                }
+              >
                 <View style={[styles.avatar, { backgroundColor: catColor }]}>
                   <Text style={styles.avatarText}>{job.seekerName.charAt(0).toUpperCase()}</Text>
                 </View>
-                <View>
+                <View style={{ flex: 1 }}>
                   <Text style={styles.seekerName}>{job.seekerName}</Text>
                   <Text style={styles.seekerPhone}>{t('jobDetail.jobSeeker')}</Text>
                 </View>
-              </View>
+                <MaterialCommunityIcons name="chevron-right" size={20} color={KaaryaColors.muted} />
+              </Pressable>
+            </View>
+          )}
+
+          {/* Assigned Provider */}
+          {job.acceptedOffer?.providerId && job.acceptedOffer?.providerName && (
+            <View style={[styles.section, Shadows.sm]}>
+              <Text style={styles.sectionTitle}>{t('jobDetail.assignedProvider')}</Text>
+              <Pressable
+                style={styles.seekerRow}
+                onPress={() =>
+                  router.push({ pathname: '/portfolio', params: { userId: job.acceptedOffer!.providerId } })
+                }
+              >
+                <View style={[styles.avatar, { backgroundColor: KaaryaColors.brand[500] }]}>
+                  <Text style={styles.avatarText}>{job.acceptedOffer.providerName.charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.seekerName}>{job.acceptedOffer.providerName}</Text>
+                  <Text style={styles.seekerPhone}>{t('jobDetail.jobProvider')}</Text>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={20} color={KaaryaColors.muted} />
+              </Pressable>
             </View>
           )}
 
           {/* Offers summary */}
-          <View style={[styles.section, Shadows.sm]}>
-            <Text style={styles.sectionTitle}>{t('jobDetail.offers')}</Text>
+          <View style={[styles.section, Shadows.sm]}>            <Text style={styles.sectionTitle}>{t('jobDetail.offers')}</Text>
             {isSeekerOwner ? (
               receivedOffers.length > 0 ? (
                 <Pressable

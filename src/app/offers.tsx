@@ -201,6 +201,7 @@ export default function OffersScreen() {
                 statusConfig={statusConfig}
                 BASE_URL={API_ROOT}
                 onChat={handleChat}
+                onOpenProfile={(userId) => router.push({ pathname: '/portfolio', params: { userId } })}
                 t={t}
               />
             )}
@@ -222,6 +223,7 @@ function OfferCard({
   statusConfig,
   BASE_URL,
   onChat,
+  onOpenProfile,
   t,
 }: {
   offer: Offer;
@@ -234,6 +236,7 @@ function OfferCard({
   statusConfig: Record<string, { color: string; labelKey: string; bg: string }>;
   BASE_URL: string;
   onChat?: (jobId: string) => void;
+  onOpenProfile?: (userId: string) => void;
   t: (key: string) => string;
 }) {
   const catColor = getCatColor(offer.job?.category ?? '');
@@ -251,6 +254,15 @@ function OfferCard({
         </View>
       )}
       <Text style={styles.jobTitle}>{offer.job?.title ?? `Job #${offer.jobId}`}</Text>
+
+      {isProvider && offer.job?.seekerId && offer.job?.seekerName && (
+        <Pressable style={styles.posterRow} onPress={() => onOpenProfile?.(offer.job!.seekerId!)}>
+          <Text style={styles.posterText}>
+            {t('offers.postedBy')} <Text style={styles.posterName}>{offer.job.seekerName}</Text>
+          </Text>
+          <MaterialCommunityIcons name="chevron-right" size={16} color={KaaryaColors.muted} />
+        </Pressable>
+      )}
 
       <View style={styles.divider} />
 
@@ -288,7 +300,13 @@ function OfferCard({
               </Text>
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.partyName}>{offer.providerName}</Text>
+              <Pressable
+                style={styles.profileLink}
+                onPress={() => onOpenProfile?.(offer.providerId)}
+              >
+                <Text style={styles.partyName}>{offer.providerName}</Text>
+                <MaterialCommunityIcons name="chevron-right" size={16} color={KaaryaColors.muted} />
+              </Pressable>
               {offer.providerRating != null && (
                 <View style={styles.ratingRow}>
                   <MaterialCommunityIcons name="star" size={12} color={KaaryaColors.warning} />
@@ -391,6 +409,10 @@ const styles = StyleSheet.create({
   avatar: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: FontSizes.lg, fontWeight: '800', color: '#fff' },
   partyName: { fontSize: FontSizes.base, fontWeight: '600', color: KaaryaColors.text },
+  profileLink: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  posterRow: { flexDirection: 'row', alignItems: 'center', marginTop: Spacing.sm },
+  posterText: { fontSize: FontSizes.xs, color: KaaryaColors.muted },
+  posterName: { fontSize: FontSizes.xs, fontWeight: '700', color: KaaryaColors.brand[500] },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
   rating: { fontSize: FontSizes.xs, fontWeight: '600', color: KaaryaColors.text },
   ratingCount: { fontSize: FontSizes.xs, color: KaaryaColors.muted },

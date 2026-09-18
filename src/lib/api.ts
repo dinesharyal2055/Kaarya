@@ -272,6 +272,13 @@ export const reviewsApi = {
     get<{ reviews: import('@/types').Review[] }>(`/reviews/job/${jobId}`),
 };
 
+/* ─── Public users / Portfolio ──────────────────────────────────────── */
+
+export const usersApi = {
+  portfolio: (userId: string) =>
+    get<import('@/types').PublicPortfolio>(`/users/${userId}/portfolio`),
+};
+
 /* ─── Offers ──────────────────────────────────────────────────────── */
 
 export const offersApi = {

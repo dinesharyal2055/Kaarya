@@ -72,7 +72,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Route placeholders — filled in by later tasks
-let authRoutes, jobsRoutes, offersRoutes, conversationsRoutes, verificationRoutes, adminRoutes, notificationsRoutes, reviewsRoutes, pushRoutes, devRoutes;
+let authRoutes, jobsRoutes, offersRoutes, conversationsRoutes, verificationRoutes, adminRoutes, notificationsRoutes, reviewsRoutes, pushRoutes, usersRoutes, devRoutes;
 
 try { authRoutes = require('./routes/auth'); } catch (e) { authRoutes = express.Router(); }
 try { jobsRoutes = require('./routes/jobs'); } catch (e) { jobsRoutes = express.Router(); }
@@ -82,6 +82,7 @@ try { verificationRoutes = require('./routes/verification'); } catch (e) { verif
 try { adminRoutes = require('./routes/admin'); } catch (e) { adminRoutes = express.Router(); }
 try { notificationsRoutes = require('./routes/notifications'); } catch (e) { notificationsRoutes = express.Router(); }
 try { reviewsRoutes = require('./routes/reviews'); } catch (e) { reviewsRoutes = express.Router(); }
+try { usersRoutes = require('./routes/users'); } catch (e) { usersRoutes = express.Router(); }
 try { pushRoutes = require('./routes/push'); } catch (e) { pushRoutes = express.Router(); }
 try { devRoutes = require('./routes/demo').router; } catch (e) { devRoutes = express.Router(); }
 
@@ -93,6 +94,7 @@ app.use('/api/verification', verificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reviews', reviewsRoutes);
+app.use('/api/users', usersRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/dev', devRoutes);
 

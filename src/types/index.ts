@@ -105,6 +105,8 @@ export interface Offer {
     budgetMin?: number;
     budgetMax?: number;
     status: JobStatus;
+    seekerId?: string;
+    seekerName?: string;
   };
 }
 
@@ -116,6 +118,42 @@ export interface Negotiation {
   price: number;
   message?: string;
   createdAt: string;
+}
+
+export interface PortfolioReview {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  reviewerId: string;
+  reviewerName: string;
+  reviewerAvatar?: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
+export interface PortfolioTask {
+  id: string;
+  title: string;
+  status: JobStatus;
+  createdAt: string;
+}
+
+export interface PublicPortfolio {
+  user: {
+    id: string;
+    name: string;
+    role: UserRole;
+    avatarUrl?: string;
+    bio?: string;
+    verified: boolean;
+    rating?: number;
+    reviewCount: number;
+    jobsCompleted: number;
+    tasksPosted: number;
+  };
+  reviews: PortfolioReview[];
+  tasks: PortfolioTask[];
 }
 
 export interface Conversation {

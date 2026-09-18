@@ -211,10 +211,14 @@ router.get('/mine', requireAuth, async (req, res) => {
       for (const row of offRes.rows) {
         const providerRow = await getProviderInfo(row.provider_id);
         const offer = offerFromRow(row, providerRow);
-        const jobRes = await db.query('SELECT id, title, category, location, budget_min, budget_max, status FROM jobs WHERE id = $1', [row.job_id]);
+        const jobRes = await db.query(
+          `SELECT j.id, j.title, j.category, j.location, j.budget_min, j.budget_max, j.status, j.seeker_id, u.name AS seeker_name
+           FROM jobs j LEFT JOIN users u ON u.id = j.seeker_id WHERE j.id = $1`,
+          [row.job_id]
+        );
         if (jobRes.rowCount > 0) {
           const j = jobRes.rows[0];
-          offer.job = { id: j.id, title: j.title, category: j.category, area: j.location, budgetMin: j.budget_min, budgetMax: j.budget_max, status: j.status };
+          offer.job = { id: j.id, title: j.title, category: j.category, area: j.location, budgetMin: j.budget_min, budgetMax: j.budget_max, status: j.status, seekerId: String(j.seeker_id), seekerName: j.seeker_name };
         }
         offers.push(offer);
       }
@@ -230,10 +234,14 @@ router.get('/mine', requireAuth, async (req, res) => {
         for (const row of result[0].values) {
           const providerRow = await getProviderInfo(row[2]);
           const offer = offerFromRow(row, providerRow);
-          const jobResult = db.exec('SELECT id, title, category, location, budget_min, budget_max, status FROM jobs WHERE id = ?', [row[1]]);
+          const jobResult = db.exec(
+            `SELECT j.id, j.title, j.category, j.location, j.budget_min, j.budget_max, j.status, j.seeker_id, u.name
+             FROM jobs j LEFT JOIN users u ON u.id = j.seeker_id WHERE j.id = ?`,
+            [row[1]]
+          );
           if (jobResult.length > 0 && jobResult[0].values.length > 0) {
             const j = jobResult[0].values[0];
-            offer.job = { id: j[0], title: j[1], category: j[2], area: j[3], budgetMin: j[4], budgetMax: j[5], status: j[6] };
+            offer.job = { id: j[0], title: j[1], category: j[2], area: j[3], budgetMin: j[4], budgetMax: j[5], status: j[6], seekerId: String(j[7]), seekerName: j[8] };
           }
           offers.push(offer);
         }
