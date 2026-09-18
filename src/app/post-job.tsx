@@ -32,7 +32,7 @@ const UPLOAD_MAX_DIMENSION = 1000;
 const UPLOAD_JPEG_QUALITY = 0.6;
 
 async function prepareJobPhoto(asset: ImagePicker.ImagePickerAsset): Promise<UploadedImage> {
-  const filename = `job_photo_${Date.now()}`;
+  const filename = `job_photo_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
   const longestSide = Math.max(asset.width || 0, asset.height || 0);
   const actions: ImageManipulator.Action[] = [];
   if (longestSide > UPLOAD_MAX_DIMENSION) {
@@ -167,7 +167,7 @@ export default function PostJobScreen() {
   const catData = CATEGORIES.find((c) => c.id === category);
 
   // ─── Image handling ───────────────────────────────────────────────
-  async function pickImage() {
+  async function pickImages() {
     if (photos.length >= 5) {
       Alert.alert(t('postJob.limitReached'), t('postJob.photoLimit'));
       return;
@@ -179,14 +179,43 @@ export default function PostJobScreen() {
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
+      allowsMultipleSelection: true,
+      selectionLimit: 5 - photos.length,
+      allowsEditing: false,
       quality: 0.8,
       base64: true,
     });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    const prepared = await prepareJobPhoto(asset);
-    setPhotos(prev => [...prev, prepared]);
+    if (result.canceled || result.assets.length === 0) return;
+
+    // Prepare the accepted batch, skipping images already in the list and
+    // stopping once the existing 5-photo cap is reached.
+    const seenBase64 = new Set(photos.filter((p) => !!p.base64).map((p) => p.base64));
+    const additions: UploadedImage[] = [];
+    let droppedForLimit = false;
+    for (const asset of result.assets) {
+      if (photos.length + additions.length >= 5) { droppedForLimit = true; break; }
+      const prepared = await prepareJobPhoto(asset);
+      if (prepared.base64 && seenBase64.has(prepared.base64)) continue;
+      if (prepared.base64) seenBase64.add(prepared.base64);
+      additions.push(prepared);
+    }
+    if (additions.length === 0) return;
+
+    setPhotos((prev) => {
+      const have = new Set(prev.filter((p) => !!p.base64).map((p) => p.base64));
+      const merged = [...prev];
+      for (const prepared of additions) {
+        if (prepared.base64 && have.has(prepared.base64)) continue;
+        if (prepared.base64) have.add(prepared.base64);
+        if (merged.length >= 5) break;
+        merged.push(prepared);
+      }
+      return merged;
+    });
+
+    if (droppedForLimit) {
+      Alert.alert(t('postJob.limitReached'), t('postJob.photoLimit'));
+    }
   }
 
   async function takePhoto() {
@@ -220,7 +249,7 @@ export default function PostJobScreen() {
       t('postJob.chooseSource'),
       [
         { text: t('postJob.takePhoto'), onPress: takePhoto },
-        { text: t('postJob.chooseFromLibrary'), onPress: pickImage },
+        { text: t('postJob.chooseFromLibrary'), onPress: pickImages },
         { text: t('common.cancel'), style: 'cancel' },
       ]
     );
