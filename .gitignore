@@ -43,7 +43,6 @@ example
 /android
 
 # Environment / secrets — never commit
-google-services.json
 server/src/firebase-service-account.json
 server/src/database.sqlite
 server/src/uploads/
