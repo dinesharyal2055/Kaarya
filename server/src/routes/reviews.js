@@ -65,10 +65,17 @@ router.post('/', requireAuth, sanitize('comment'), validate(createReview), async
       const offRes = await db.query("SELECT provider_id FROM offers WHERE job_id = $1 AND status = 'accepted'", [jobId]);
       const acceptedProviderId = offRes.rowCount > 0 ? offRes.rows[0].provider_id : null;
 
-      if (String(jobRes.rows[0].seeker_id) !== String(reviewerId) && String(acceptedProviderId) !== String(reviewerId)) {
+      const isSeeker = String(jobRes.rows[0].seeker_id) === String(reviewerId);
+      const isAcceptedProvider = acceptedProviderId !== null && String(acceptedProviderId) === String(reviewerId);
+      if (!isSeeker && !isAcceptedProvider) {
         return res.status(403).json({ error: 'Only participants can review' });
       }
       if (String(revieweeId) === String(reviewerId)) return res.status(400).json({ error: 'Cannot review yourself' });
+
+      const expectedRevieweeId = isSeeker ? acceptedProviderId : jobRes.rows[0].seeker_id;
+      if (expectedRevieweeId !== null && String(revieweeId) !== String(expectedRevieweeId)) {
+        return res.status(400).json({ error: 'Cannot review a user who was not part of this job' });
+      }
 
       const exRes = await db.query('SELECT id FROM reviews WHERE job_id = $1 AND reviewer_id = $2', [jobId, reviewerId]);
       if (exRes.rowCount > 0) return res.status(409).json({ error: 'Already reviewed' });
@@ -100,8 +107,15 @@ router.post('/', requireAuth, sanitize('comment'), validate(createReview), async
       const acceptedOffer = db.exec("SELECT provider_id FROM offers WHERE job_id = ? AND status = 'accepted'", [jobId]);
       const acceptedProviderId = acceptedOffer.length > 0 && acceptedOffer[0].values.length > 0 ? acceptedOffer[0].values[0][0] : null;
 
-      if (String(jobResult[0].values[0][1]) !== String(reviewerId) && String(acceptedProviderId) !== String(reviewerId)) return res.status(403).json({ error: 'Only participants can review' });
+      const isSeeker = String(jobResult[0].values[0][1]) === String(reviewerId);
+      const isAcceptedProvider = acceptedProviderId !== null && String(acceptedProviderId) === String(reviewerId);
+      if (!isSeeker && !isAcceptedProvider) return res.status(403).json({ error: 'Only participants can review' });
       if (String(revieweeId) === String(reviewerId)) return res.status(400).json({ error: 'Cannot review yourself' });
+
+      const expectedRevieweeId = isSeeker ? acceptedProviderId : jobResult[0].values[0][1];
+      if (expectedRevieweeId !== null && String(revieweeId) !== String(expectedRevieweeId)) {
+        return res.status(400).json({ error: 'Cannot review a user who was not part of this job' });
+      }
 
       const existingReview = db.exec('SELECT id FROM reviews WHERE job_id = ? AND reviewer_id = ?', [jobId, reviewerId]);
       if (existingReview.length > 0 && existingReview[0].values.length > 0) return res.status(409).json({ error: 'Already reviewed' });

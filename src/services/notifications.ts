@@ -12,8 +12,7 @@
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import * as Application from 'expo-application';
-import { Platform, Alert } from 'react-native';
+import Constants from 'expo-constants';
 import { pushApi } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────
@@ -74,9 +73,7 @@ export async function setupNotifications(): Promise<boolean> {
     }
 
     // Get Expo push token
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: _getProjectId(),
-    });
+    const tokenData = await getExpoPushToken();
     const token = tokenData.data;
 
     // Persist locally so we can unregister on logout
@@ -116,9 +113,7 @@ export async function unregisterPushToken(): Promise<void> {
  */
 export async function refreshToken(): Promise<void> {
   try {
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: _getProjectId(),
-    });
+    const tokenData = await getExpoPushToken();
     const token = tokenData.data;
     const stored = await AsyncStorage.getItem(FCM_TOKEN_KEY);
     if (token && token !== stored) {
@@ -239,13 +234,21 @@ export async function incrementBadge(): Promise<void> {
 
 // ─── Internal helpers ────────────────────────────────────────────────
 
-/** Get the Expo project ID for push token generation */
-function _getProjectId(): string | undefined {
-  if (Platform.OS === 'android') {
-    return Application.getAndroidId();
+/**
+ * Obtain the Expo push token for the current device.
+ *
+ * The Expo project ID comes from app.config.js → extra.eas.projectId
+ * (EXPO_PUBLIC_EAS_PROJECT_ID env var, inlined at build time by EAS/prebuild).
+ * When it is available it is passed explicitly; otherwise we fall back to the
+ * no-argument call, which auto-resolves the project in Expo Go / dev clients
+ * and throws (and is caught by the caller) in misconfigured standalone builds.
+ */
+async function getExpoPushToken(): Promise<{ data: string }> {
+  const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
+  if (projectId) {
+    return Notifications.getExpoPushTokenAsync({ projectId });
   }
-  // iOS uses the Expo project ID from app.json
-  return undefined;
+  return Notifications.getExpoPushTokenAsync();
 }
 
 /** Lazy-import router to avoid circular dependency */

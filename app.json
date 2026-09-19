@@ -21,6 +21,7 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundColor": "#FF6B35"
       },
+      "googleServicesFile": "./google-services.json",
       "package": "com.kaarya.app"
     },
     "web": {

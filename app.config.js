@@ -5,6 +5,11 @@
  * Constants.expoConfig.extra.apiUrl (read in src/lib/api.ts). Keeping the URL
  * out of service code lets it be swapped per environment without editing source.
  *
+ * The Expo/EAS project ID (used by expo-notifications to mint push tokens) is
+ * likewise injected from EXPO_PUBLIC_EAS_PROJECT_ID and read by the app via
+ * Constants.expoConfig.extra.eas.projectId. It is a public identifier, not a
+ * secret, but keeping it environment-driven mirrors the apiUrl approach.
+ *
  * Resolution order:
  *   1. EXPO_PUBLIC_API_URL env var — overrides everything (set via .env,
  *      .env.local, shell, or EAS secrets)
@@ -28,5 +33,9 @@ module.exports = ({ config }) => ({
     apiUrl:
       process.env.EXPO_PUBLIC_API_URL ||
       (isProduction ? PRODUCTION_API_URL : undefined),
+    eas: {
+      ...(config.extra && config.extra.eas),
+      projectId: process.env.EXPO_PUBLIC_EAS_PROJECT_ID || undefined,
+    },
   },
 });

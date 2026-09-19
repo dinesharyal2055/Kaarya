@@ -1,144 +1,114 @@
 /**
- * Firebase Cloud Messaging (FCM) — Push Notification Service
+ * Push Notification Service — sends via the Expo Push Service.
  *
- * SETUP REQUIRED before use:
- * 1. Go to https://console.firebase.google.com/ and create a project (or use an existing one)
- * 2. Generate a service account key:
- *    - Project Settings → Service Accounts → Generate new private key
- *    - Or use the JSON file path via FCM_SERVICE_ACCOUNT_PATH env var
- * 3. Enable Cloud Messaging API:
- *    - APIs & Services → Library → search "Firebase Cloud Messaging API" → Enable
+ * The mobile app registers an Expo push token (ExpoPushToken[...]) with this
+ * server (POST /api/push/register). Delivery goes through Expo's push API
+ * (https://exp.host), which fans out to APNs (iOS) and FCM (Android) using the
+ * project's EAS/Expo credentials. No native Firebase tokens are involved and
+ * Firebase is never used for anything else (no Firebase Authentication).
  *
- * CREDENTIALS (in order of priority):
- *   1. Env vars (recommended for production):
- *      - FIREBASE_PROJECT_ID
- *      - FIREBASE_PRIVATE_KEY  (the full -----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY----- string)
- *      - FIREBASE_CLIENT_EMAIL
- *   2. JSON file at FCM_SERVICE_ACCOUNT_PATH or ./firebase-service-account.json
+ * REQUIRED CONFIGURATION (no credentials live in this repo):
+ *   EXPO_ACCESS_TOKEN — Expo account access token (expo.dev → account →
+ *   settings → access tokens), sent as "Authorization: Bearer <token>".
  *
- * Without credentials the app logs a warning but continues to function normally
- * (no push notifications will be sent until credentials are configured).
+ * Without the token the service logs a warning and skips sending; the app and
+ * the notification inbox remain fully functional.
  */
 
-const admin = require('firebase-admin');
 const { getDb, save, usePostgres } = require('./db');
 const { getClient } = require('./db-pg');
 
 // Load env
 try { require('dotenv').config(); } catch (_) {}
 
-/** Path to the Firebase service account key JSON file (fallback) */
-const SERVICE_ACCOUNT_PATH = process.env.FCM_SERVICE_ACCOUNT_PATH
-  || process.env.GOOGLE_APPLICATION_CREDENTIALS
-  || require('path').join(__dirname, 'firebase-service-account.json');
+const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
 
-let fcmApp = null;
-let fcmReady = false;
+/** Whether the Expo push service is configured (EXPO_ACCESS_TOKEN present). */
+function isPushReady() {
+  return Boolean(process.env.EXPO_ACCESS_TOKEN);
+}
 
-try {
-  const fs = require('fs');
+// Snapshot kept for existing /status and register responses (fcmEnabled).
+const fcmReady = isPushReady();
 
-  // Prefer env vars (safer — credentials not on disk)
-  const projectId     = process.env.FIREBASE_PROJECT_ID;
-  const privateKey    = process.env.FIREBASE_PRIVATE_KEY;
-  const clientEmail   = process.env.FIREBASE_CLIENT_EMAIL;
-
-  if (projectId && privateKey && clientEmail) {
-    // Build service account object from env vars
-    const serviceAccount = {
-      type: 'service_account',
-      project_id: projectId,
-      private_key: privateKey.replace(/\\n/g, '\n'),
-      client_email: clientEmail,
-    };
-
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-    }
-    fcmApp = admin.app();
-    fcmReady = true;
-    console.log('[fcm] Firebase Admin initialized from env vars');
-  } else if (fs.existsSync(SERVICE_ACCOUNT_PATH)) {
-    // Fallback: load from JSON file
-    const serviceAccount = require(SERVICE_ACCOUNT_PATH);
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-      });
-    }
-    fcmApp = admin.app();
-    fcmReady = true;
-    console.log('[fcm] Firebase Admin initialized from JSON file');
-  } else {
-    console.warn(
-      '[fcm] ⚠️  Firebase credentials not found.\n'
-      + '         Set FIREBASE_PROJECT_ID, FIREBASE_PRIVATE_KEY, FIREBASE_CLIENT_EMAIL env vars\n'
-      + '         or place firebase-service-account.json at the path above.\n'
-      + '         Push notifications are DISABLED.'
-    );
-  }
-} catch (err) {
-  console.warn('[fcm] ⚠️  Failed to initialize Firebase Admin:', err.message);
-  console.warn('[fcm]    Push notifications will be disabled.');
+if (!fcmReady) {
+  console.warn(
+    '[push] ⚠️  EXPO_ACCESS_TOKEN not set. Push notifications are DISABLED.\n'
+    + '         Set EXPO_ACCESS_TOKEN to enable sending via the Expo Push Service.'
+  );
 }
 
 /**
- * Send a push notification to a single FCM registration token.
- * Silently skips if FCM is not configured (no error thrown).
+ * Send a push notification to a single Expo push token.
+ * Silently skips if the service is not configured or the token is not an
+ * Expo push token (no error thrown, no external calls made).
  *
- * @param {string} token — FCM registration token from the client app
+ * @param {string} token — Expo push token (ExpoPushToken[...])
  * @param {object} payload
  * @param {string} payload.title — Notification title
  * @param {string} payload.body — Notification body text
  * @param {object} [payload.data] — Optional arbitrary data payload (passed to the app)
- * @returns {Promise<boolean>} true if sent, false if skipped/failed
+ * @returns {Promise<boolean>} true if accepted by Expo, false if skipped/failed
  */
 async function sendPushNotification(token, { title, body, data = {} }) {
-  if (!fcmReady) return false;
+  if (!isPushReady()) return false;
+  if (typeof token !== 'string' || !token.startsWith('ExpoPushToken[')) {
+    return false;
+  }
+
+  const message = {
+    to: token,
+    title,
+    body,
+    sound: 'default',
+    badge: 1,
+    priority: 'high',
+    channelId: 'kaarya_default',
+    data: Object.fromEntries(
+      Object.entries(data).map(([k, v]) => [k, String(v == null ? '' : v)])
+    ),
+  };
 
   try {
-    const message = {
-      token,
-      notification: { title, body },
-      data: {
-        // Ensure all values are strings (FCM requirement)
-        ...Object.fromEntries(
-          Object.entries(data).map(([k, v]) => [k, String(v ?? '')])
-        ),
+    const res = await fetch(EXPO_PUSH_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.EXPO_ACCESS_TOKEN}`,
       },
-      android: {
-        notification: {
-          channelId: 'kaarya_default',
-          priority: 'high',
-          defaultSound: true,
-          defaultVibrateTimings: true,
-        },
-      },
-      apns: {
-        payload: {
-          aps: {
-            badge: 1,
-            sound: 'default',
-            'mutable-content': 1,
-          },
-        },
-      },
-    };
+      body: JSON.stringify([message]),
+    });
 
-    await admin.messaging().send(message);
-    console.log(`[fcm] ✅ Push sent to token ${token.slice(0, 12)}…`);
+    if (res.status === 401 || res.status === 403) {
+      console.error('[push] ❌ Expo push authorization rejected (check EXPO_ACCESS_TOKEN)');
+      return false;
+    }
+
+    if (!res.ok) {
+      console.error(`[push] ❌ Expo push HTTP ${res.status}`);
+      return false;
+    }
+
+    const tickets = await res.json();
+    const ticket = Array.isArray(tickets) ? tickets[0] : tickets;
+
+    if (ticket && ticket.status === 'error') {
+      const errorCode = ticket.details && ticket.details.error;
+      if (errorCode === 'DeviceNotRegistered') {
+        // Token no longer reachable — remove it so we stop sending to it.
+        console.warn(`[push] ⚠️  Stale token detected: ${token.slice(0, 20)}… — removing from DB`);
+        await removeToken(token).catch(() => {});
+      } else {
+        console.error(`[push] ❌ Message failed: ${ticket.message} (${errorCode || 'unknown'})`);
+      }
+      return false;
+    }
+
+    console.log(`[push] ✅ Push sent to token ${token.slice(0, 20)}…`);
     return true;
   } catch (err) {
-    if (err.code === 'messaging/registration-token-not-registered'
-        || err.code === 'messaging/invalid-argument') {
-      // Token is stale/invalid — mark it for removal
-      console.warn(`[fcm] ⚠️  Stale token detected: ${token.slice(0, 12)}… — removing from DB`);
-      await removeToken(token).catch(() => {});
-    } else {
-      console.error(`[fcm] ❌ Failed to send push: ${err.message}`);
-    }
+    console.error(`[push] ❌ Failed to send push: ${err.message}`);
     return false;
   }
 }
@@ -152,7 +122,7 @@ async function sendPushNotification(token, { title, body, data = {} }) {
  * @returns {Promise<number>} number of successfully sent notifications
  */
 async function sendToUser(userId, payload) {
-  if (!fcmReady) return 0;
+  if (!isPushReady()) return 0;
 
   const db = await getDb();
 
@@ -189,10 +159,10 @@ async function sendToUser(userId, payload) {
 }
 
 /**
- * Store (or refresh) an FCM registration token for a user.
+ * Store (or refresh) a push registration token for a user.
  *
  * @param {number|string} userId
- * @param {string} token — FCM registration token from Expo/FCM
+ * @param {string} token — Expo push token from the app
  */
 async function storeToken(userId, token) {
   const db = await getDb();
@@ -224,7 +194,7 @@ async function storeToken(userId, token) {
 }
 
 /**
- * Remove a specific FCM token (e.g., after it goes stale).
+ * Remove a specific push token (e.g., after it goes stale).
  *
  * @param {string} token
  */
@@ -243,7 +213,7 @@ async function removeToken(token) {
 }
 
 /**
- * Remove all FCM tokens for a user (e.g., on logout).
+ * Remove all push tokens for a user (e.g., on logout).
  *
  * @param {number|string} userId
  */

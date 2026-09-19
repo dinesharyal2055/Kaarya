@@ -225,6 +225,10 @@
     "noPostedJobs": "No posted tasks",
     "noPostedJobsHint": "Tasks you post will appear here. Go to the home screen to post your first task.",
     "loadingPosted": "Loading your posted tasks...",
+    "loadFailed": "Failed to load jobs",
+    "loadingSaved": "Loading saved jobs...",
+    "noActiveJobsHint": "When you accept a provider's bid or have your bid accepted, jobs will appear here.",
+    "noSavedJobsHint": "Tap the bookmark icon on any job to save it here for later.",
     "status": {
       "open": "Available",
       "assigned": "Assigned",
@@ -523,6 +527,7 @@
   "chat": {
     "loadingChat": "Loading chat...",
     "failedToLoad": "Failed to load",
+    "loadFailed": "Failed to load messages",
     "retry": "Retry",
     "noMessagesYet": "No messages yet",
     "startConversation": "Start the conversation by sending a message below",
